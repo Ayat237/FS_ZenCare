@@ -1,0 +1,33 @@
+config:
+  target: "http://localhost:4000"  # Replace with your API base URL
+  phases:
+    - duration: 60  # Run the test for 60 seconds
+      arrivalRate: 10  # Start with 10 new users per second
+  http:
+    timeout: 20  # Set request timeout to 20 seconds
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Register a new patient"
+    flow:
+      - post:
+          url: "/patient/register"  # Replace with actual endpoint
+          json:
+            firstName: "John"
+            lastName: "Doe"
+            userName: "johndoe123"
+            email: "johndoe2344@mail.com"  # Unique email
+            password: "SecureP@ss123"
+            confirmedPassword: "SecureP@ss123"
+            mobilePhone: "01234567890"
+            role: "patient"
+            gender: "male"
+            birthDate: "1990-05-05"
+          expect:
+            - statusCode: 201  # Expect a 201 Created status
+            - contentType: json
+            - contains: "Patient registered successfully"
+
+      - think: 2  # Wait 2 seconds before next request
