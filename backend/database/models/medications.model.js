@@ -9,6 +9,7 @@ import {
 } from "../../src/utils/enums.utils.js";
 import { DateTime } from "luxon";
 import { log } from "console";
+import { logger } from "../../src/utils/logger.utils.js";
 
 const medicationSchema = new Schema(
   {
@@ -331,19 +332,32 @@ medicationSchema.methods.checkMissedDoses = function () {
 medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
   const reminder = this.reminders[reminderIndex];
   if (reminder) {
+    // Check if the dose is already taken or marked as missed
+    if (reminder.isTaken || reminder.status === ReminderStatus.TAKEN) {
+      throw new Error(
+        `Dose at index ${reminderIndex} is already marked as taken`
+      );
+    }
+    if (reminder.status === ReminderStatus.MISSED) {
+      throw new Error(
+        `Dose at index ${reminderIndex} is already marked as missed`
+      );
+    }
+
     reminder.isTaken = true;
     reminder.takenAt = DateTime.now().toJSDate();
     reminder.status = ReminderStatus.TAKEN;
 
     this.quantityLeft = this.calculateQuantityLeft();
 
-    const remainingDoses = this.getRemainingDosesForDay();
-    if (remainingDoses === 0) {
-      const today = DateTime.now().startOf("day");
-    }
     await this.save();
+
+    logger.info(
+      `Dose at index ${reminderIndex} marked as taken at ${reminder.takenAt}`
+    );
+    return reminder;
   } else {
-    throw new Error("Reminder not found");
+    throw new Error(`Reminder at index ${reminderIndex} not found`);
   }
 };
 
@@ -435,7 +449,6 @@ medicationSchema.pre("save", function (next) {
       currentDate = currentDate.plus({ days: 1 });
     }
     this.reminders = reminders;
-
   } else {
     this.quantityLeft = this.calculateQuantityLeft();
     this.checkMissedDoses();
