@@ -8,6 +8,7 @@ import {
   ReminderStatus,
 } from "../../src/utils/enums.utils.js";
 import { DateTime } from "luxon";
+import { log } from "console";
 
 const medicationSchema = new Schema(
   {
@@ -208,8 +209,41 @@ medicationSchema.methods.calculateQuantityLeft = function () {
   return quantityLeft;
 };
 
+medicationSchema.methods.resetRemindersForDay = function (
+  date = DateTime.now().toJSDate()
+) {
+  const targetDay = DateTime.fromJSDate(date, { zone: "UTC" }).startOf("day");
+  const today = DateTime.now().startOf("day").setZone("UTC");
+
+  // Check if the target day is today or in the future
+  if (targetDay >= today) return;
+
+  // Reset reminders for the target day if they haven't been reset yet
+  this.reminders.forEach((reminder) => {
+    const reminderDate = DateTime.fromJSDate(reminder.date, {
+      zone: "UTC",
+    }).startOf("day");
+    const lastReset = reminder.lastResetDate
+      ? DateTime.fromJSDate(reminder.lastResetDate, { zone: "UTC" })
+      : null;
+
+    if (
+      reminderDate.equals(targetDay) &&
+      (!lastReset || lastReset < targetDay)
+    ) {
+      // No need to reset status to PENDING if already PENDING
+      // Optionally reset other fields if needed, but status is handled by checkMissedDoses
+      if (reminder.status === ReminderStatus.PENDING) {
+        reminder.isTaken = false;
+        reminder.takenAt = null;
+        // Remove redundant status set
+      }
+      reminder.lastResetDate = targetDay.toJSDate();
+    }
+  });
+};
 medicationSchema.methods.getRemainingDosesForDay = function (
-  date = new Date()
+  date = DateTime.now().toJSDate()
 ) {
   // Only applicable for Daily frequency
   if (this.frequency !== Frequency.DAILY) return 0;
@@ -223,6 +257,7 @@ medicationSchema.methods.getRemainingDosesForDay = function (
       .startOf("day")
       .equals(targetDay)
   );
+  console.log("dayReminders: ", dayReminders);
 
   // If no reminders exist for the day, return 0 (e.g., day outside schedule)
   if (dayReminders.length === 0) return 0;
@@ -241,45 +276,16 @@ medicationSchema.methods.getRemainingDosesForDay = function (
   return Math.max(0, remainingDoses);
 };
 
-medicationSchema.methods.resetRemindersForDay = function (date = DateTime.now().toJSDate()) {
-  const targetDay = DateTime.fromJSDate(date, { zone: "UTC" }).startOf("day");
-  const now = DateTime.now();
-
-  // Only reset if the target day is done (i.e., it's before today)
-  const today = now.startOf("day");
-  if (!targetDay < today) return; // Do not reset if the day is not done
-
-  // Reset reminders for the target day if they haven't been reset yet
-  this.reminders.forEach((reminder) => {
-    const reminderDate = DateTime.fromJSDate(reminder.date, {
-      zone: "UTC",
-    }).startOf("day");
-    const lastReset = reminder.lastResetDate
-      ? DateTime.fromJSDate(reminder.lastResetDate, { zone: "UTC" })
-      : null;
-
-    if (
-      reminderDate.equals(targetDay) &&
-      (!lastReset || lastReset < targetDay)
-    ) {
-      if (reminder.status === ReminderStatus.PENDING) {
-        reminder.isTaken = false;
-        reminder.takenAt = null;
-        reminder.status = ReminderStatus.PENDING;
-      }
-      reminder.lastResetDate = targetDay.toJSDate();
-    }
-  });
-};
-
 // Method to check for missed doses at the end of the day
 medicationSchema.methods.checkMissedDoses = function () {
-  const now = DateTime.now();
-  const today = now.startOf("day");
+  const today = DateTime.now().startOf("day").setZone("UTC");
 
   // Find all reminders up to yesterday (exclude today since we're checking at the end of the day)
   const pastDays = this.reminders.reduce((acc, reminder, index) => {
-    const reminderDate = DateTime.fromJSDate(reminder.date).startOf("day");
+    const reminderDate = DateTime.fromJSDate(reminder.date, {
+      zone: "UTC",
+    }).startOf("day");
+
     if (reminderDate < today) {
       if (!acc[reminderDate.toISODate()]) {
         acc[reminderDate.toISODate()] = [];
@@ -292,21 +298,20 @@ medicationSchema.methods.checkMissedDoses = function () {
   // For each past day, check the remaining doses
   Object.keys(pastDays).forEach((dateKey) => {
     const dayReminders = pastDays[dateKey];
-    const dayDate = DateTime.fromISO(dateKey);
+    const dayDate = DateTime.fromISO(dateKey, { zone: "UTC" });
 
-    // Reset reminders for the day (since the day is done)
+    // reset reminders for past days since each day is done
     this.resetRemindersForDay(dayDate.toJSDate());
 
-    // Calculate remaining doses for that day
     const remainingDoses = this.getRemainingDosesForDay(dayDate.toJSDate());
 
     if (remainingDoses > 0) {
-      // Mark the remaining doses as missed
       let dosesToMarkAsMissed = remainingDoses;
       for (const { reminder, index } of dayReminders) {
         if (
           dosesToMarkAsMissed > 0 &&
-          reminder.status === ReminderStatus.PENDING
+          reminder.status === ReminderStatus.PENDING &&
+          !this.missedDoses.some((missed) => missed.reminderIndex === index)
         ) {
           reminder.status = ReminderStatus.MISSED;
           this.missedDoses.push({
@@ -322,7 +327,6 @@ medicationSchema.methods.checkMissedDoses = function () {
   this.quantityLeft = this.calculateQuantityLeft();
 };
 
-
 // Method to mark a dose as taken
 medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
   const reminder = this.reminders[reminderIndex];
@@ -335,14 +339,13 @@ medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
 
     const remainingDoses = this.getRemainingDosesForDay();
     if (remainingDoses === 0) {
-      const today = DateTime.now().startOf('day');
+      const today = DateTime.now().startOf("day");
     }
     await this.save();
   } else {
     throw new Error("Reminder not found");
   }
-}
-
+};
 
 // Pre-save hook to calculate totalDoses, initialQuantity, and generate reminders
 medicationSchema.pre("save", function (next) {
@@ -356,7 +359,7 @@ medicationSchema.pre("save", function (next) {
       zone: "UTC",
     });
 
-    if(endDate.endOf('day') > now){
+    if (endDate.endOf("day") > now) {
       this.isActive = true;
     }
 
@@ -432,6 +435,7 @@ medicationSchema.pre("save", function (next) {
       currentDate = currentDate.plus({ days: 1 });
     }
     this.reminders = reminders;
+
   } else {
     this.quantityLeft = this.calculateQuantityLeft();
     this.checkMissedDoses();
@@ -441,9 +445,9 @@ medicationSchema.pre("save", function (next) {
       this.isModified("startHour") ||
       this.isModified("timesPerDay") ||
       this.isModified("frequency") ||
-      this.isModified("daysOfWeek")||
-      this.isModified('startDateTime') ||
-      this.isModified('endDateTime');
+      this.isModified("daysOfWeek") ||
+      this.isModified("startDateTime") ||
+      this.isModified("endDateTime");
     if (isModifiedFields) {
       const startDate = DateTime.fromJSDate(this.startDateTime, {
         zone: "UTC",
@@ -451,7 +455,6 @@ medicationSchema.pre("save", function (next) {
       const endDate = DateTime.fromJSDate(this.endDateTime, {
         zone: "UTC",
       }).startOf("day");
-  
 
       const reminders = [];
       let currentDate = startDate;
@@ -518,9 +521,7 @@ medicationSchema.pre("save", function (next) {
       this.quantityLeft = this.calculateQuantityLeft();
     }
   }
-
   this.checkMissedDoses();
-
   next();
 });
 
