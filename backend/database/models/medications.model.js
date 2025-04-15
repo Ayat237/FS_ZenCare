@@ -241,7 +241,7 @@ medicationSchema.methods.getRemainingDosesForDay = function (
   return Math.max(0, remainingDoses);
 };
 
-medicationSchema.methods.resetRemindersForDay = function (date = new Date()) {
+medicationSchema.methods.resetRemindersForDay = function (date = DateTime.now().toJSDate()) {
   const targetDay = DateTime.fromJSDate(date, { zone: "UTC" }).startOf("day");
   const now = DateTime.now();
 
@@ -322,6 +322,28 @@ medicationSchema.methods.checkMissedDoses = function () {
   this.quantityLeft = this.calculateQuantityLeft();
 };
 
+
+// Method to mark a dose as taken
+medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
+  const reminder = this.reminders[reminderIndex];
+  if (reminder) {
+    reminder.isTaken = true;
+    reminder.takenAt = DateTime.now().toJSDate();
+    reminder.status = ReminderStatus.TAKEN;
+
+    this.quantityLeft = this.calculateQuantityLeft();
+
+    const remainingDoses = this.getRemainingDosesForDay();
+    if (remainingDoses === 0) {
+      const today = DateTime.now().startOf('day');
+    }
+    await this.save();
+  } else {
+    throw new Error("Reminder not found");
+  }
+}
+
+
 // Pre-save hook to calculate totalDoses, initialQuantity, and generate reminders
 medicationSchema.pre("save", function (next) {
   const now = DateTime.now();
@@ -333,6 +355,10 @@ medicationSchema.pre("save", function (next) {
     const endDate = DateTime.fromJSDate(this.endDateTime, {
       zone: "UTC",
     });
+
+    if(endDate.endOf('day') > now){
+      this.isActive = true;
+    }
 
     //calculate total doses
     const totalDoses = this.calculateTotalDoses();

@@ -24,7 +24,7 @@ export const addMedicineSchema = {
       .items(Joi.string().valid(...Object.values(DayOfWeek)))
       .when("frequency", { is: Frequency.WEEKLY, then: Joi.required() }),
     startHour: Joi.number().min(0).max(23).required(),
-    startDateTime: Joi.string().isoDate().required(),
+    startDateTime: generalRules.startDate,
     endDateTime: generalRules.endDate,
     intakeInstructions: Joi.string()
       .valid(...Object.values(IntakeInstructionEnum))
