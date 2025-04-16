@@ -8,10 +8,19 @@ import * as VSchema from "./medication.validtion.js";
 const medicationRouter = Router();
 
 medicationRouter.post(
-    "/addMedicine",
+    "/add-medicine",
     validation(VSchema.addMedicineSchema),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.addMedicine)
 )
+
+medicationRouter.put(
+    "/update-medicine/:id",
+    validation(VSchema.updateMedicineSchema),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.updateMedicationRecord)
+)
+
 export { medicationRouter };

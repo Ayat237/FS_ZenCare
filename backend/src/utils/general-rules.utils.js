@@ -62,8 +62,8 @@ export const generalRules = {
         .required()
     )
     .required(),
-  endDate:Joi.string().isoDate().custom(validateEndDateTime).required(),
-  startDate:Joi.string().isoDate().custom(validateStartDateTime).required(),
+  endDate:Joi.string().isoDate().custom(validateEndDateTime),
+  startDate:Joi.string().isoDate().custom(validateStartDateTime),
   headers: {
     "content-type": Joi.string(),
     accept: Joi.string(),

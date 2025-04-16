@@ -76,3 +76,82 @@ export const addMedicine = async (req, res, next) => {
     },
 })
 };
+
+
+export const updateMedicationRecord = async (req, res, next) => {
+  const { id } = req.params;
+    const {
+        medicineName,
+        medicineType,
+        dose,
+        frequency,
+        timesPerDay,
+        daysOfWeek,
+        startHour,
+        startDateTime,
+        endDateTime,
+        intakeInstructions,
+        notes
+    } = req.body; // Fields to update (e.g., name, dosage, frequency, timesPerDay)
+
+    // Find the medication by ID
+    const medication = await medicationModel.findById(id);
+    if (!medication) {
+        return next(
+            new ErrorHandlerCalss(
+                "Medication not found",
+                404,
+                "Not Found",
+                "Error in update medication"
+            )
+        );
+    }
+
+    if (medicineName) {
+        medication.medicineName = medicineName;
+    }
+    if (medicineType) {
+        medication.medicineType = medicineType;
+    }
+    if (dose) {
+        medication.dose = dose;
+    }
+
+    // Update the frequency and related fields based on the new frequency
+    if (frequency &&frequency !== medication.frequency) {
+        medication.frequency = frequency;
+        medication.timesPerDay = frequency === Frequency.DAILY ? timesPerDay : null;
+        medication.daysOfWeek = frequency === Frequency.WEEKLY ? daysOfWeek : null;
+    }else if (frequency === Frequency.DAILY && timesPerDay) {
+      medication.timesPerDay = timesPerDay;
+    } else if (frequency === Frequency.WEEKLY && daysOfWeek) {
+      medication.daysOfWeek = daysOfWeek;
+    }
+
+    if (startHour) {
+        medication.startHour = startHour;
+    }
+    if (startDateTime) {
+        medication.startDateTime = DateTime.fromISO(startDateTime).toJSDate();
+    }
+    if (endDateTime) {
+        medication.endDateTime = DateTime.fromISO(endDateTime).toJSDate();
+    }
+    if (intakeInstructions) {
+        medication.intakeInstructions = intakeInstructions;
+    }
+    if (notes) {
+        medication.notes = notes;
+    }
+    // Save the updated medication record
+    await medicationModel.save(medication);
+
+    // Respond with the updated medication
+    res.status(200).json({
+        success: true,
+        message: "Medication updated successfully",
+        data: {
+            ...medication.toObject(),
+        },
+    });
+}

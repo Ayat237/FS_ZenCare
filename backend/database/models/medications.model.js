@@ -3,7 +3,7 @@ import BaseModel from "./base.model.js";
 import {
   DayOfWeek,
   Frequency,
-  IntakeInstructionEnum,
+  IntakeInstruction,
   MedicineType,
   ReminderStatus,
 } from "../../src/utils/enums.utils.js";
@@ -87,7 +87,7 @@ const medicationSchema = new Schema(
     },
     intakeInstructions: {
       type: String,
-      enum: Object.values(IntakeInstructionEnum),
+      enum: Object.values(IntakeInstruction),
       required: true,
     },
     notes: {
@@ -160,14 +160,14 @@ medicationSchema.methods.calculateTotalDoses = function () {
   if (this.frequency === Frequency.DAILY) {
     //calculate total days included the current day
     const days = endDate.diff(startDate, "days").days + 1;
-    totalDoses += days * this.timesPerDay;
+    totalDoses += days * (this.timesPerDay || 1);
   } else if (this.frequency === Frequency.WEEKLY) {
     let currentDate = startDate;
 
     while (currentDate <= endDate) {
       const dayName = currentDate.toFormat("ccc");
       if (this.daysOfWeek.includes(dayName)) {
-        totalDoses += this.timesPerDay;
+        totalDoses += this.timesPerDay || 1; 
       }
       //increase one day
       currentDate = currentDate.plus({ days: 1 });
@@ -373,7 +373,9 @@ medicationSchema.pre("save", function (next) {
       zone: "UTC",
     });
 
-    if (endDate.endOf("day") > now) {
+    if (endDate.endOf("day") < now) {
+      this.isActive = false;
+    }   else{
       this.isActive = true;
     }
 
@@ -450,8 +452,16 @@ medicationSchema.pre("save", function (next) {
     }
     this.reminders = reminders;
   } else {
-    this.quantityLeft = this.calculateQuantityLeft();
-    this.checkMissedDoses();
+    
+    // Check if the medication is still active based on the new endDateTime
+    const startDate = DateTime.fromJSDate(this.startDateTime, { zone: "UTC" }).startOf("day");
+    const endDate = DateTime.fromJSDate(this.endDateTime, { zone: "UTC" }).startOf("day");
+    if (endDate.endOf("day") < now) {
+      this.isActive = false;
+    }
+    else{
+      this.isActive = true;
+    }
 
     // Regenerate reminders if scheduling fields are modified
     const isModifiedFields =
@@ -462,14 +472,12 @@ medicationSchema.pre("save", function (next) {
       this.isModified("startDateTime") ||
       this.isModified("endDateTime");
     if (isModifiedFields) {
-      const startDate = DateTime.fromJSDate(this.startDateTime, {
-        zone: "UTC",
-      }).startOf("day");
-      const endDate = DateTime.fromJSDate(this.endDateTime, {
-        zone: "UTC",
-      }).startOf("day");
 
-      const reminders = [];
+      // Preserve old reminders to retain their statuses
+      const oldReminders = this.reminders || [];
+      const oldMissedDoses = this.missedDoses || [];
+      const newReminders = [];
+      
       let currentDate = startDate;
       const scheduledDay = startDate.day;
 
@@ -484,6 +492,7 @@ medicationSchema.pre("save", function (next) {
             currentDate.day === scheduledDay);
 
         if (shouldSchedule) {
+          
           const timesPerDay = this.timesPerDay || 1;
           const interval = 24 / timesPerDay;
           let currentHour = this.startHour;
@@ -498,13 +507,23 @@ medicationSchema.pre("save", function (next) {
               minute: 0,
             });
 
-            reminders.push({
+            // Skip reminders before the current time on the first day
+            if (currentDate.equals(startDate) && reminderDate < now) {
+              continue;
+            }
+
+            // Check if this reminder matches an old reminder
+            const matchingOldReminder = oldReminders.find((old) =>
+              DateTime.fromJSDate(old.date).equals(reminderDate)
+            );
+
+            newReminders.push({
               date: reminderDate.toJSDate(),
               time,
-              isTaken: false,
-              status: ReminderStatus.PENDING,
-              takenAt: null,
-              lastResetDate: null,
+              isTaken: matchingOldReminder ? matchingOldReminder.isTaken : false,
+              status: matchingOldReminder ? matchingOldReminder.status : ReminderStatus.PENDING,
+              takenAt: matchingOldReminder ? matchingOldReminder.takenAt : null,
+              lastResetDate: matchingOldReminder ? matchingOldReminder.lastResetDate : null,
             });
           }
         }
@@ -512,25 +531,40 @@ medicationSchema.pre("save", function (next) {
         currentDate = currentDate.plus({ days: 1 });
       }
 
-      // Preserve existing reminder statuses
-      const oldReminders = this.reminders || [];
-      this.reminders = reminders.map((newReminder, index) => {
-        const matchingOldReminder = oldReminders.find((old) => {
-          return DateTime.fromJSDate(old.date).equals(
-            DateTime.fromJSDate(newReminder.date)
-          );
-        });
-        return matchingOldReminder
-          ? {
-              ...newReminder,
-              isTaken: matchingOldReminder.isTaken,
-              status: matchingOldReminder.status,
-              takenAt: matchingOldReminder.takenAt,
-            }
-          : newReminder;
+      // Update reminders
+      this.reminders = newReminders;
+      this.markModified("reminders");
+
+      // Recalculate missed doses based on the new date range
+      // 1. Clear missed doses outside the new date range or for reminders that no longer exist
+      this.missedDoses= oldMissedDoses.filter((missed) => {
+        const reminderIndex = missed.reminderIndex;
+        const reminderExists = newReminders[reminderIndex];
+        if (!reminderExists) return false; // Remove if the reminder no longer exists
+
+        const missedAt = DateTime.fromJSDate(missed.missedAt, { zone: "UTC" });
+        return missedAt >= startDate && missedAt <= endDate;
       });
 
-      this.initialQuantity = this.totalDoses * this.dose;
+      // 2. Update indices of missed doses to match new reminder array
+      this.missedDoses = this.missedDoses.map((missed) => {
+        const oldReminder = oldReminders[missed.reminderIndex];
+        if (!oldReminder) return null;
+
+        const newIndex = newReminders.findIndex((newReminder) =>
+          DateTime.fromJSDate(newReminder.date).equals(DateTime.fromJSDate(oldReminder.date))
+        );
+
+        return newIndex !== -1 ? { ...missed, reminderIndex: newIndex } : null;
+      }).filter((missed) => missed !== null);
+
+      this.markModified("missedDoses");
+      // Recalculate total doses and quantities
+      const totalDoses = this.calculateTotalDoses();
+      this.initialQuantity = totalDoses * this.dose;   
+      this.quantityLeft = this.calculateQuantityLeft();
+    } else {
+      // If scheduling fields are not modified, just update quantityLeft
       this.quantityLeft = this.calculateQuantityLeft();
     }
   }
