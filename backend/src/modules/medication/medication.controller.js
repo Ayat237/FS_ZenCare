@@ -155,3 +155,79 @@ export const updateMedicationRecord = async (req, res, next) => {
         },
     });
 }
+
+
+export const listAllMedications = async (req, res, next) => {
+  const user = req.authUser;
+
+  const patientId = user.patientID?._id||user.patientID;
+  const medications = await medicationModel.find({ patientId });
+
+  if (!medications) {
+    return next(
+      new ErrorHandlerCalss(
+        "No medications found",
+        404,
+        "Not Found",
+        "Error in fetching medications"
+      )
+    );
+  }
+
+  // Transform medications to return specific fields
+  const formattedMedications = medications.map(medication => ({
+    medicineName: medication.medicineName,
+    medicineType: medication.medicineType,
+    dose: medication.dose,
+    frequency: medication.frequency,
+    timesPerDay: medication.timesPerDay,
+    daysOfWeek: medication.daysOfWeek,
+    intakeInstructions: medication.intakeInstructions,
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: "Medications fetched successfully",
+    data: formattedMedications,
+  });
+}
+
+
+
+export const getMedicationById = async (req, res, next) => {
+  const { id } = req.params;
+
+  // Find the medication by ID
+  const medication = await medicationModel.findById(id);
+  if (!medication) {
+    return next(
+      new ErrorHandlerCalss(
+        "Medication not found",
+        404,
+        "Not Found",
+        "Error in fetching medication"
+      )
+    );
+  }
+
+  // Transform medications to return specific fields
+
+  // Respond with the medication details
+  res.status(200).json({
+    success: true,
+    message: "Medication fetched successfully",
+    data: {
+      medicineName: medication.medicineName,
+      medicineType: medication.medicineType,
+      dose: medication.dose,
+      frequency: medication.frequency,
+      timesPerDay: medication.timesPerDay,
+      daysOfWeek: medication.daysOfWeek,
+      intakeInstructions: medication.intakeInstructions,
+      quantityLeft: medication.quantityLeft,
+      startDateTime: medication.startDateTime,
+      endDateTime: medication.endDateTime,
+      notes: medication.notes,
+    },
+  });
+}

@@ -23,4 +23,17 @@ medicationRouter.put(
     errorHandling(medicationsController.updateMedicationRecord)
 )
 
+medicationRouter.get(
+    "/list-all-medications",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.listAllMedications)
+)
+
+medicationRouter.get(
+    "/get-medication/:id",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.getMedicationById)
+)
 export { medicationRouter };
