@@ -36,4 +36,11 @@ medicationRouter.get(
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.getMedicationById)
 )
+
+medicationRouter.get(
+    "/medDashboard-reminder",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.getDashboardReminders)
+)
 export { medicationRouter };

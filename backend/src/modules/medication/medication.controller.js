@@ -231,3 +231,95 @@ export const getMedicationById = async (req, res, next) => {
     },
   });
 }
+
+
+export const getDashboardReminders = async (req, res, next) => {
+  const user = req.authUser;
+  const patientId = user.patientID?._id||user.patientID;
+  
+
+  // Define date ranges for Yesterday, Today, and Tomorrow
+  const now = DateTime.now().setZone('UTC');
+  const today = now.startOf('day');
+  const yesterday = today.minus({ days: 1 });
+  const tomorrow = today.plus({ days: 1 });
+
+  // Fetch medications for the patient
+  // Fetch all medications for the user
+  const medications = await medicationModel.find({ patientId });
+  if (!medications) {
+    return next(
+      new ErrorHandlerCalss(
+        "No medications found",
+        404,
+        "Not Found",
+        "Error in fetching medications"
+      )
+    );
+  }
+
+  // Organize reminders into Yesterday, Today, Tomorrow
+  const dashboardData = {
+    Yesterday: [],
+    Today: [],
+    Tomorrow: [],
+  };
+
+  medications.forEach(medication => {
+ 
+    const remindersByDay = {
+      Yesterday: [],
+      Today: [],
+      Tomorrow: [],
+    };
+
+    medication.reminders.forEach(reminder => {
+      const reminderDate = DateTime.fromJSDate(reminder.date).setZone('UTC').startOf('day');
+
+      if (reminderDate.equals(yesterday)) {
+        remindersByDay.Yesterday.push(reminder);
+      } else if (reminderDate.equals(today)) {
+        remindersByDay.Today.push(reminder);
+      } else if (reminderDate.equals(tomorrow)) {
+        remindersByDay.Tomorrow.push(reminder);
+      }
+    });
+
+    // Add medication reminders to the dashboard data
+    if (remindersByDay.Yesterday.length > 0) {
+      dashboardData.Yesterday.push({
+        medicineName: medication.medicineName,
+        reminders: remindersByDay.Yesterday,
+      });
+    }
+    // Add medication to dashboard data if it has reminders for that day
+    const frequencyText =
+    medication.frequency === Frequency.DAILY
+      ? `${medication.timesPerDay === 1 ? 'once' : medication.timesPerDay === 2 ? 'twice' : `${medication.timesPerDay} times`} a day`
+      : medication.frequency === Frequency.WEEKLY
+      ? 'weekly'
+      : medication.frequency === Frequency.MONTHLY
+      ? 'monthly'
+      : 'as needed';
+
+      ['Yesterday','Today', 'Tomorrow'].forEach(day => {
+        if (remindersByDay[day].length > 0) {
+          dashboardData[day].push({
+            medicineName: medication.medicineName,
+            medicineType: medication.medicineType,
+            frequency: frequencyText,
+            instruction: medication.instruction,
+            reminderCount: remindersByDay[day].length,
+          });
+        }
+      });
+  });
+
+  // Respond with the dashboard data
+  res.status(200).json({
+    success: true,
+    message: 'Dashboard reminders retrieved successfully',
+    data: dashboardData,
+  });
+  
+}
