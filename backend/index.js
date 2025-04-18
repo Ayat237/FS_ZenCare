@@ -31,6 +31,7 @@ app.use('/medication', router.medicationRouter);
 
 
 import { createClient } from 'redis';
+import { startMissedDosesJob } from './src/modules/medication/utils/cron.utils.js';
 
 const client = createClient();
 
@@ -48,6 +49,9 @@ app.use('/*', (req, res,next) =>{
 })
 
 app.use(globalResponse);
+
+startMissedDosesJob();
+
 app.get('/', (req, res) => res.send('server running!'))
 app.listen(port, () => 
     logger.info(`app listening on port ${port}!`))

@@ -3,9 +3,9 @@ import { PatientModel } from "../../../database/models/patient.model.js";
 import { MedicationModel, Medication } from "../../../database/models/medications.model.js";
 import { Frequency } from "../../utils/enums.utils.js";
 import database from "../../../database/databaseConnection.js";
-import { UserModel } from "../../../database/models/user.model.js";
 
-const userModel = new UserModel(database);
+
+
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
 
@@ -238,14 +238,13 @@ export const getDashboardReminders = async (req, res, next) => {
   const patientId = user.patientID?._id||user.patientID;
   
 
-  // Define date ranges for Yesterday, Today, and Tomorrow
+  //date ranges for Yesterday, Today, and Tomorrow
   const now = DateTime.now().setZone('UTC');
   const today = now.startOf('day');
   const yesterday = today.minus({ days: 1 });
   const tomorrow = today.plus({ days: 1 });
 
-  // Fetch medications for the patient
-  // Fetch all medications for the user
+  // get medications for the patient
   const medications = await medicationModel.find({ patientId });
   if (!medications) {
     return next(
