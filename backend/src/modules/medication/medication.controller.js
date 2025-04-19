@@ -157,23 +157,28 @@ export const updateMedicationRecord = async (req, res, next) => {
 
 export const listAllMedications = async (req, res, next) => {
   const user = req.authUser;
-
   const patientId = user.patientID?._id || user.patientID;
-  const medications = await medicationModel.find({ patientId });
+  const now = DateTime.now().setZone('UTC');
 
-  if (!medications) {
+  // Fetch medications and filter by endDateTime at runtime
+  const medications = await medicationModel.find({ patientId });
+  const activeMedications = medications.filter((medication) => {
+    const endDateTime = DateTime.fromJSDate(medication.endDateTime, { zone: 'UTC' });
+    return now <= endDateTime;
+  });
+
+  if (!activeMedications || activeMedications.length === 0) {
     return next(
       new ErrorHandlerClass(
-        "No medications found",
+        'No active medications found',
         404,
-        "Not Found",
-        "Error in fetching medications"
+        'Not Found',
+        'Error in fetching medications'
       )
     );
   }
 
-  // Transform medications to return specific fields
-  const formattedMedications = medications.map((medication) => ({
+  const formattedMedications = activeMedications.map((medication) => ({
     medicineName: medication.medicineName,
     medicineType: medication.medicineType,
     dose: medication.dose,
@@ -185,7 +190,7 @@ export const listAllMedications = async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: "Medications fetched successfully",
+    message: 'Active medications fetched successfully',
     data: formattedMedications,
   });
 };
