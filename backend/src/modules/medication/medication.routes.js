@@ -59,6 +59,13 @@ medicationRouter.get(
     errorHandling(medicationsController.listHistoricalMedications)
 )
 
+medicationRouter.delete(
+    "/delete-medication/:medicationId",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.deleteMedication)
+)
+
 
 
 export { medicationRouter };

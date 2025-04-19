@@ -269,6 +269,13 @@ export const getDashboardReminders = async (req, res, next) => {
     );
   }
 
+  // Organize reminders into Yesterday, Today, Tomorrow
+  const dashboardData = {
+    Yesterday: [],
+    Today: [],
+    Tomorrow: [],
+  };
+  
   medications.forEach((medication) => {
     const remindersByDay = {
       Yesterday: [],
@@ -595,3 +602,41 @@ export const listHistoricalMedications = async (req, res, next) => {
 }
 
 
+export const deleteMedication = async (req, res, next) => {
+  const { medicationId } = req.params;
+  const user = req.authUser;
+  const patientId = user.patientID?._id || user.patientID;
+
+  // Find the medication by ID
+  const medication = await medicationModel.findById(medicationId);
+  if (!medication) {
+    return next(
+      new ErrorHandlerClass(
+        "Medication not found",
+        404,
+        "Not Found",
+        "Error in deleting medication"
+      )
+    );
+  }
+
+  // Check if the medication belongs to the authenticated patient
+  if (medication.patientId.toString() !== patientId.toString()) {
+    return next(
+      new ErrorHandlerClass(
+        "Unauthorized access to medication",
+        403,
+        "Forbidden",
+        "Error in deleting medication"
+      )
+    );
+  }
+
+  // Delete the medication record
+  await medicationModel.deleteById(medicationId);
+
+  res.status(200).json({
+    success: true,
+    message: `Medication with id(${medication._id}) deleted successfully`,   
+  });
+};

@@ -183,8 +183,6 @@ class MongooseDatabase extends IDatabase {
       const result = await query.exec();
       console.log(result);
 
-      if (!result) throw new Error("Document not found");
-
       logger.debug(`Found one document in ${collection}`, { id });
 
       return result;
