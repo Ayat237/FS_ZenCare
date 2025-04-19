@@ -158,22 +158,24 @@ export const updateMedicationRecord = async (req, res, next) => {
 export const listAllMedications = async (req, res, next) => {
   const user = req.authUser;
   const patientId = user.patientID?._id || user.patientID;
-  const now = DateTime.now().setZone('UTC');
+  const now = DateTime.now().setZone("UTC");
 
   // Fetch medications and filter by endDateTime at runtime
   const medications = await medicationModel.find({ patientId });
   const activeMedications = medications.filter((medication) => {
-    const endDateTime = DateTime.fromJSDate(medication.endDateTime, { zone: 'UTC' });
+    const endDateTime = DateTime.fromJSDate(medication.endDateTime, {
+      zone: "UTC",
+    });
     return now <= endDateTime;
   });
 
   if (!activeMedications || activeMedications.length === 0) {
     return next(
       new ErrorHandlerClass(
-        'No active medications found',
+        "No active medications found",
         404,
-        'Not Found',
-        'Error in fetching medications'
+        "Not Found",
+        "Error in fetching medications"
       )
     );
   }
@@ -190,15 +192,15 @@ export const listAllMedications = async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Active medications fetched successfully',
+    message: "Active medications fetched successfully",
     data: formattedMedications,
   });
 };
 
 export const getMedicationById = async (req, res, next) => {
   const { id } = req.params;
+  const now = DateTime.now().setZone("UTC");
 
-  // Find the medication by ID
   const medication = await medicationModel.findById(id);
   if (!medication) {
     return next(
@@ -211,12 +213,23 @@ export const getMedicationById = async (req, res, next) => {
     );
   }
 
-  // Transform medications to return specific fields
+  const endDateTime = DateTime.fromJSDate(medication.endDateTime, {
+    zone: "UTC",
+  });
+  if (now > endDateTime) {
+    return next(
+      new ErrorHandlerClass(
+        "Medication is no longer active",
+        404,
+        "Not Found",
+        "Error in fetching medication"
+      )
+    );
+  }
 
-  // Respond with the medication details
   res.status(200).json({
     success: true,
-    message: "Medication fetched successfully",
+    message: "Active medication fetched successfully",
     data: {
       medicineName: medication.medicineName,
       medicineType: medication.medicineType,
@@ -243,8 +256,6 @@ export const getDashboardReminders = async (req, res, next) => {
   const yesterday = today.minus({ days: 1 });
   const tomorrow = today.plus({ days: 1 });
 
-  
-
   // get medications for the patient
   const medications = await medicationModel.find({ patientId });
   if (!medications) {
@@ -257,7 +268,6 @@ export const getDashboardReminders = async (req, res, next) => {
       )
     );
   }
-  
 
   medications.forEach((medication) => {
     const remindersByDay = {
@@ -375,8 +385,8 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
       new ErrorHandlerClass(
         `Reminder at index ${reminderIndex} not found`,
         404,
-        'Not Found',
-        'Error in markDoseTakenAndUpdateDashboard'
+        "Not Found",
+        "Error in markDoseTakenAndUpdateDashboard"
       )
     );
   }
@@ -387,36 +397,35 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
       new ErrorHandlerClass(
         `Dose at index ${reminderIndex} is already marked as taken`,
         400,
-        'Bad Request',
-        'Error in markDoseTakenAndUpdateDashboard'
+        "Bad Request",
+        "Error in markDoseTakenAndUpdateDashboard"
       )
     );
   }
 
-  if(reminder.status === ReminderStatus.MISSED) {
+  if (reminder.status === ReminderStatus.MISSED) {
     return next(
       new ErrorHandlerClass(
         `Dose at index ${reminderIndex} is already marked as missed`,
         400,
-        'Bad Request',
-        'Error in markDoseTakenAndUpdateDashboard'
+        "Bad Request",
+        "Error in markDoseTakenAndUpdateDashboard"
       )
     );
   }
 
   // Update the reminder status to TAKEN
-  reminder.isTaken = true; 
+  reminder.isTaken = true;
   reminder.status = ReminderStatus.TAKEN;
   reminder.takenAt = DateTime.now().toJSDate();
 
   medication.quantityLeft = medication.calculateQuantityLeft();
 
   // Save the updated medication before calculating the dashboard
-  medication.markModified('reminders'); // Ensure Mongoose detects the change
+  medication.markModified("reminders"); // Ensure Mongoose detects the change
 
   // Save the updated medication
   await medicationModel.save(medication);
-
 
   // Define date ranges for Yesterday, Today, and Tomorrow
   const now = DateTime.now().setZone("UTC");
@@ -515,13 +524,13 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
                   reminder.status.toUpperCase() ===
                   ReminderStatus.PENDING.toUpperCase()
               ).length; // Only count PENDING reminders
-        
-        if(reminderCount > 0) {
+
+        if (reminderCount > 0) {
           dashboardData[day].push({
             medicineName: medication.medicineName,
             medicineType: medication.medicineType,
             frequency: frequencyText,
-            intakeInstructions: medication.intakeInstructions ,
+            intakeInstructions: medication.intakeInstructions,
             reminderCount: reminderCount,
           });
         }
@@ -534,8 +543,8 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
     dashboardData[day] = dashboardData[day].filter(
       (entry) => entry.reminderCount > 0
     );
-  })
-  
+  });
+
   // Respond with the dashboard data
   res.status(200).json({
     success: true,
