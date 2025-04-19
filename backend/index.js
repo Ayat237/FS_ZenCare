@@ -2,7 +2,7 @@ import express from 'express';
 import { config } from 'dotenv';
 import  path from "path";
 import * as router from './src/modules/index.js';
-import { ErrorHandlerCalss, logger } from './src/utils/index.js';
+import { ErrorHandlerClass, logger } from './src/utils/index.js';
 import { globalResponse } from './src/middlewares/error-hanling.middleware.js';
 
 if(process.env.NODE_ENV === 'dev'){
@@ -45,12 +45,13 @@ await client.set('key', 'value');
 const value = await client.get('key');
 
 app.use('/*', (req, res,next) =>{
-    return next(new ErrorHandlerCalss(`Invalid URL : ${req.originalUrl}`,404,"Error in URL in index.js"))
+    return next(new ErrorHandlerClass(`Invalid URL : ${req.originalUrl}`,404,"Error in URL in index.js"))
 })
 
 app.use(globalResponse);
 
 startMissedDosesJob();
+
 
 app.get('/', (req, res) => res.send('server running!'))
 app.listen(port, () => 

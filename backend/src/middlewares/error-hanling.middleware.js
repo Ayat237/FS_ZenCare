@@ -1,4 +1,4 @@
-import { ErrorHandlerCalss, logger } from "../utils/index.js";
+import { ErrorHandlerClass, logger } from "../utils/index.js";
 
 export const errorHandling = (API) => {
   return async (req, res, next) => {
@@ -8,7 +8,7 @@ export const errorHandling = (API) => {
         error: "unhandled error",
       };
       next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Inernal server error. Please try again later.",
           500,
           err.stack,

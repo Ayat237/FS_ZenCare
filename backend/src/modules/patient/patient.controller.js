@@ -1,5 +1,5 @@
 import {
-  ErrorHandlerCalss,
+  ErrorHandlerClass,
   logger,
   possibleRoles,
   uploadFile,
@@ -55,7 +55,7 @@ export const registerPatient = async (req, res, next) => {
     if (!userData.role || !userData.role.includes(possibleRoles.PATIENT)) {
       logger.error("User must have patient role to register as a patient");
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User must have patient role to register as a patient",
           400,
           "Validation Error",
@@ -70,7 +70,7 @@ export const registerPatient = async (req, res, next) => {
     // );
     // if (existingUserByUsername) {
     //    return next(
-    //     new ErrorHandlerCalss(
+    //     new ErrorHandlerClass(
     //       "User with this userName already exists",
     //       409,
     //       "Duplicate Error",
@@ -81,7 +81,7 @@ export const registerPatient = async (req, res, next) => {
 
     // 3. Validate password match
     if (userData.password !== userData.confirmedPassword) {
-      throw new ErrorHandlerCalss(
+      throw new ErrorHandlerClass(
         "Passwords do not match",
         400,
         "Validation Error",
@@ -97,7 +97,7 @@ export const registerPatient = async (req, res, next) => {
 
     if (existingUserByEmail) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User with this email already exists",
           409,
           "Duplicate Error",
@@ -110,7 +110,7 @@ export const registerPatient = async (req, res, next) => {
     await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
 
     if (!req.file) {
-      throw new ErrorHandlerCalss(
+      throw new ErrorHandlerClass(
         "Image is required for profile picture",
         400,
         "Validation Error",
@@ -168,7 +168,7 @@ export const registerPatient = async (req, res, next) => {
     if (isEmailSent.rejected.length) {
       logger.error("Failed to send verification email", error);
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Failed to send verification email",
           500,
           "Server Error",
@@ -202,7 +202,7 @@ export const verifyEmailOTP = async (req, res, next) => {
     const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
     if (!decodedToken) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Invalid email token",
           400,
           "decoded error",
@@ -214,7 +214,7 @@ export const verifyEmailOTP = async (req, res, next) => {
     const user = await userModel.findByEmail(decodedToken.email);
     if (!user) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User not found",
           404,
           "validation error",
@@ -272,7 +272,7 @@ export const verifyEmailOTP = async (req, res, next) => {
   } catch (error) {
     logger.error("OTP verification failed", error);
     next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "'OTP has expired or is invalid. Please request a new one.",
         500,
         error.stack,
@@ -334,7 +334,7 @@ export const editProfileImage = async (req, res, next) => {
   const patient = await patientModel.findById(patientId);
   if (!patient) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Patient profile not found",
         404,
         "Not Found",
@@ -361,7 +361,7 @@ export const editProfileImage = async (req, res, next) => {
         const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
         if (urlParts.length < 2) {
           return next(
-            new ErrorHandlerCalss(
+            new ErrorHandlerClass(
               "Invalid Cloudinary URL format",
               500,
               "Server Error",
@@ -402,7 +402,7 @@ export const editProfileImage = async (req, res, next) => {
 
     if (!public_id || !secure_url) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Failed to upload image",
           500,
           "Server Error",
@@ -439,7 +439,7 @@ export const removeProfileImage = async (req, res, next) => {
   const patient = await patientModel.findById(patientId);
   if (!patient) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Patient profile not found",
         404,
         "Not Found",
@@ -464,7 +464,7 @@ export const removeProfileImage = async (req, res, next) => {
         const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
         if (urlParts.length < 2) {
           return next(
-            new ErrorHandlerCalss(
+            new ErrorHandlerClass(
               "Invalid Cloudinary URL format",
               500,
               "Server Error",

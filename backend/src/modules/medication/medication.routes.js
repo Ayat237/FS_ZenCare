@@ -43,4 +43,12 @@ medicationRouter.get(
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.getDashboardReminders)
 )
+
+medicationRouter.put(
+    "/update-medication-status/:medicationId",
+    validation(VSchema.updateMedicationStatusSchema),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.markDoseTakenAndUpdateDashboard)
+)
 export { medicationRouter };

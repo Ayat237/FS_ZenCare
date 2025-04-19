@@ -1,10 +1,10 @@
 import cloudinaryConfig from "../config/cloudinary.config.js";
-import { ErrorHandlerCalss } from "./index.js";
+import { ErrorHandlerClass } from "./index.js";
 
 export const uploadFile = async ({ file, folder = "general", publicId }) => {
   if (!file) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Image is required",
         400,
         "Cloudinary error",

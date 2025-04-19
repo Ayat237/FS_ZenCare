@@ -1,4 +1,4 @@
-import { ErrorHandlerCalss } from "../utils/index.js";
+import { ErrorHandlerClass } from "../utils/index.js";
 
 const reqKeys = ['body', 'headers', 'query', 'params','file','files']
 
@@ -12,7 +12,7 @@ export const validation = (shcema)=>{
             }   
         }
         if (validationErrors.length) {
-            return next(new ErrorHandlerCalss("Validation Error",400,validationErrors ));
+            return next(new ErrorHandlerClass("Validation Error",400,validationErrors ));
         }
         next();
     }

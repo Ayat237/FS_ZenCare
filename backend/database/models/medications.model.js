@@ -194,9 +194,9 @@ medicationSchema.methods.calculateTotalDoses = function () {
 //calculate doses taksn
 medicationSchema.methods.calculateDosesTaken = function () {
   const dosesTaken = this.reminders.filter((reminder) => {
-    reminder.status === ReminderStatus.TAKEN;
-  });
-  return dosesTaken.length;
+    return reminder.status.toUpperCase() === ReminderStatus.TAKEN.toUpperCase();
+  }).length;
+  return dosesTaken;
 };
 
 //calculate quantityLeft
@@ -206,7 +206,7 @@ medicationSchema.methods.calculateQuantityLeft = function () {
   const totalQuantity = totalDoses * this.dose;
   const dosesTaken = this.calculateDosesTaken();
   const quantityTaken = dosesTaken * this.dose;
-  const quantityLeft = Math.max(0, totalQuantity - quantityTaken);
+  const quantityLeft = Math.max(0, (totalQuantity - quantityTaken));
   return quantityLeft;
 };
 
@@ -258,7 +258,7 @@ medicationSchema.methods.getRemainingDosesForDay = function (
       .startOf("day")
       .equals(targetDay)
   );
-  console.log("dayReminders: ", dayReminders);
+
 
   // If no reminders exist for the day, return 0 (e.g., day outside schedule)
   if (dayReminders.length === 0) return 0;
@@ -308,6 +308,7 @@ medicationSchema.methods.checkMissedDoses = function () {
 
     if (remainingDoses > 0) {
       let dosesToMarkAsMissed = remainingDoses;
+      
       for (const { reminder, index } of dayReminders) {
         if (
           dosesToMarkAsMissed > 0 &&
@@ -324,7 +325,7 @@ medicationSchema.methods.checkMissedDoses = function () {
       }
     }
   });
-
+  
   this.quantityLeft = this.calculateQuantityLeft();
 };
 
@@ -333,19 +334,23 @@ medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
   const reminder = this.reminders[reminderIndex];
   if (reminder) {
     // Check if the dose is already taken or marked as missed
-    if (reminder.isTaken || reminder.status === ReminderStatus.TAKEN) {
+    if (reminder.status === ReminderStatus.TAKEN) {
       throw new Error(
         `Dose at index ${reminderIndex} is already marked as taken`
       );
+      return;
     }
     if (reminder.status === ReminderStatus.MISSED) {
       throw new Error(
         `Dose at index ${reminderIndex} is already marked as missed`
       );
+      return;
     }
 
     reminder.isTaken = true;
     reminder.takenAt = DateTime.now().toJSDate();
+    console.log("reminder.takenAt: ", reminder.takenAt);
+    
     reminder.status = ReminderStatus.TAKEN;
 
     this.quantityLeft = this.calculateQuantityLeft();
@@ -567,6 +572,10 @@ medicationSchema.pre("save", function (next) {
       // If scheduling fields are not modified, just update quantityLeft
       this.quantityLeft = this.calculateQuantityLeft();
     }
+  }
+  if(this.isModified("reminders")) {
+   // Save the updated medication
+   this.markModified('reminders'); 
   }
   this.checkMissedDoses();
   next();

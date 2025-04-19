@@ -223,11 +223,26 @@ export const updateMedicineSchema = {
       messages({
         'array.base': 'Reminders must be an array',
         'array.includes': 'Reminders must contain valid reminder objects',
-        'any.required': 'Reminders are required',
-        'any.unknown': 'Reminders are not allowed',
       })
   }).with(
     'startDateTime',
     'endDateTime',
   ),
+};
+
+
+//=============================================================================
+export const updateMedicationStatusSchema = {
+  params: Joi.object({
+    medicationId: generalRules.id,
+  }),
+  body: Joi.object({
+      reminderIndex: Joi.number()
+      .integer().required().messages({
+        'number.base': 'Reminder index must be a number',
+        'number.integer': 'Reminder index must be an integer',
+        'any.required': 'Reminder index is required',
+        'any.unknown': 'Reminder index is not allowed',
+      })
+  }),
 };

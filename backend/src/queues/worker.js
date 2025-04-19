@@ -3,7 +3,7 @@ import taskQueue from './taskQueue.queues.js';
 import { sendEmailService } from '../services/sendEmail.service.js';
 import { uploadFile } from '../utils/cloudinary.utils.js';
 import { logger } from '../utils/logger.utils.js';
-import { ErrorHandlerCalss } from '../utils/error-class.utils.js';
+import { ErrorHandlerClass } from '../utils/error-class.utils.js';
 
 // Worker to process the queue
 taskQueue.process(async (job) => {
@@ -15,7 +15,7 @@ taskQueue.process(async (job) => {
       if (isEmailSent.rejected.length) {
         logger.error("Failed to send verification email", error);
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "Failed to send verification email",
             500,
             "Server Error",
