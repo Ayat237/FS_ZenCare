@@ -31,7 +31,7 @@ app.use('/medication', router.medicationRouter);
 
 
 import { createClient } from 'redis';
-import { startMissedDosesJob } from './src/modules/medication/utils/cron.utils.js';
+import { startMissedDosesJob, updateMedicationStatus } from './src/modules/medication/utils/cron.utils.js';
 
 const client = createClient();
 
@@ -51,7 +51,7 @@ app.use('/*', (req, res,next) =>{
 app.use(globalResponse);
 
 startMissedDosesJob();
-
+updateMedicationStatus();
 
 app.get('/', (req, res) => res.send('server running!'))
 app.listen(port, () => 

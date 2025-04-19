@@ -33,3 +33,40 @@ export const startMissedDosesJob = () => {
     }
   });
 };
+
+
+
+export const updateMedicationStatus = () => {
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      logger.info('Starting cron job to update medication status');
+
+      const now = DateTime.now().setZone('UTC');
+
+      // Find active medications where endDateTime is in the past
+      const expiredMedications = await medicationModel.find({
+        isActive: true,
+        endDateTime: { $lt: now.toJSDate() },
+      });
+
+      if (!expiredMedications || expiredMedications.length === 0) {
+        logger.info('No expired medications found to update');
+        return;
+      }
+
+      // Update each expired medication
+      for (const medication of expiredMedications) {
+        medication.isActive = false;
+        await medicationModel.save(medication);
+        logger.info(`Updated medication ${medication.medicineName} (ID: ${medication._id}) to inactive`);
+      }
+
+      logger.info('Completed cron job to update medication status');
+    } catch (error) {
+      logger.error('Error in cron job updating medication status', {
+        error: error.message,
+        stack: error.stack,
+      });
+    }
+  });
+};
