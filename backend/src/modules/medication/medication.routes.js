@@ -51,4 +51,14 @@ medicationRouter.put(
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.markDoseTakenAndUpdateDashboard)
 )
+
+medicationRouter.get(
+    "/medication-history",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.listHistoricalMedications)
+)
+
+
+
 export { medicationRouter };

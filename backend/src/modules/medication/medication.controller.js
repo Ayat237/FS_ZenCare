@@ -552,3 +552,46 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
     data: dashboardData,
   });
 };
+
+
+
+export const listHistoricalMedications = async (req, res, next) => {
+  const user = req.authUser;
+  const patientId = user.patientID?._id || user.patientID;
+  const now = DateTime.now().setZone("UTC");
+
+  // Fetch medications and filter by endDateTime at runtime
+  const medications = await medicationModel.find({ patientId, isActive: false });
+  if (!medications || medications.length === 0) {
+    return next(
+      new ErrorHandlerClass(
+        "No historical medications found",
+        404,
+        "Not Found",
+        "Error in fetching medications"
+      )
+    );
+  }
+
+
+  const formattedMedications = medications.map((medication) => ({
+    medicineName: medication.medicineName,
+    medicineType: medication.medicineType,
+    dose: medication.dose,
+    frequency: medication.frequency,
+    timesPerDay: medication.timesPerDay,
+    daysOfWeek: medication.daysOfWeek,
+    intakeInstructions: medication.intakeInstructions,
+    startDateTime: medication.startDateTime,
+    endDateTime: medication.endDateTime, 
+    notes: medication.notes, 
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: "Historical medications fetched successfully",
+    data: formattedMedications,
+  });
+}
+
+
