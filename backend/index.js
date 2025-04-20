@@ -1,6 +1,7 @@
 import express from 'express';
 import { config } from 'dotenv';
 import  path from "path";
+import cors from "cors";
 import * as router from './src/modules/index.js';
 import { ErrorHandlerClass, logger } from './src/utils/index.js';
 import { globalResponse } from './src/middlewares/error-hanling.middleware.js';
@@ -21,6 +22,7 @@ const app = express()
 const port = process.env.PORT;
 
 
+app.use(cors());
 
 app.use(express.json());
 
