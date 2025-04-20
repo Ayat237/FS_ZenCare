@@ -188,14 +188,18 @@ export const updateMedicineSchema = {
         'number.min': 'Start hour must be at least 0',
         'number.max': 'Start hour must not exceed 23',
       }),
-    startDateTime: generalRules.startDate
+    startDateTime: generalRules.startDate.required()
       .messages({
-        'string.isoDate': 'Start date-time must be a valid ISO date string (e.g., 2025-04-15T08:00:00Z)',
+        'string.isoDate': 'Start date-time must be a valid ISO date string (e.g., 2025-04-15)',
+        'any.required': 'Start date-time is required',
+        'any.unknown': 'Start date-time is not allowed',
       }),
-    endDateTime: generalRules.endDate
+    endDateTime: generalRules.endDate.required()
       .messages({
         'string.isoDate': 'End date-time must be a valid ISO date string (e.g., 2025-04-15T20:00:00Z)',
         'date.greater': 'End date-time must be greater than start date-time',
+        'any.required': 'End date-time is required when start date-time is provided',
+        'any.unknown': 'End date-time is not allowed without start date-time',
       }),
     intakeInstructions: Joi.string()
       .valid(...Object.values(IntakeInstruction))

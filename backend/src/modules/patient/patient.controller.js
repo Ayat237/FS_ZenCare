@@ -449,7 +449,6 @@ export const removeProfileImage = async (req, res, next) => {
   }
 
   const patientCustomId = patient.profileImage?.customId;
-  console.log(patientCustomId);
 
   // Prepare update data
   const updateData = {};
@@ -502,7 +501,6 @@ export const removeProfileImage = async (req, res, next) => {
       URL: { secure_url: DEFAULT_PROFILE_IMAGE },
       customId: patientCustomId,
     };
-    console.log(updateData);
   }
   // 4. Update the patient profile with the new image URL
   const updatedPatient = await patientModel.updateById(

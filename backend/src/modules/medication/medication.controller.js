@@ -13,10 +13,9 @@ const medicationModel = new MedicationModel(database);
 
 export const addMedicine = async (req, res, next) => {
   const user = req.authUser;
-  console.log("user:  ", user);
 
   const patientId = user.patientID?._id || user.patientID;
-  console.log(patientId);
+
 
   const patient = await patientModel.findById(patientId);
   if (!patient) {
@@ -45,8 +44,15 @@ export const addMedicine = async (req, res, next) => {
     reminders,
   } = req.body;
 
-  const startDate = DateTime.fromISO(startDateTime).toJSDate();
-  const endDate = DateTime.fromISO(endDateTime).toJSDate();
+  const startDate = DateTime.fromISO(startDateTime,{zone:"UTC"});
+  const endDate = DateTime.fromISO(endDateTime,{zone:"UTC"});
+  console.log("startDate", startDate);
+  
+x
+  const startDateAtMidnight = startDate.toJSDate();
+  console.log("startDateAtMidnight", startDateAtMidnight);
+  
+  const endDateAtMidnight = endDate.toJSDate();
 
   const medicineRecord = new Medication({
     CreatedBy: user._id,
@@ -58,8 +64,8 @@ export const addMedicine = async (req, res, next) => {
     startHour,
     timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
     daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
-    startDateTime: startDate,
-    endDateTime: endDate,
+    startDateTime: startDateAtMidnight,
+    endDateTime: endDateAtMidnight,
     intakeInstructions,
     notes,
     reminders: reminders || [],
@@ -131,10 +137,14 @@ export const updateMedicationRecord = async (req, res, next) => {
     medication.startHour = startHour;
   }
   if (startDateTime) {
-    medication.startDateTime = DateTime.fromISO(startDateTime).toJSDate();
+    const startDate = DateTime.fromISO(startDateTime);
+    const startDateAtMidnight = startDate.toJSDate();
+    medication.startDateTime = startDateAtMidnight;
   }
   if (endDateTime) {
-    medication.endDateTime = DateTime.fromISO(endDateTime).toJSDate();
+    const endDate = DateTime.fromISO(endDateTime);
+    const endDateAtMidnight = endDate.toJSDate();
+    medication.endDateTime = endDateAtMidnight;
   }
   if (intakeInstructions) {
     medication.intakeInstructions = intakeInstructions;
@@ -346,7 +356,7 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   const patientId = user.patientID?._id || user.patientID;
   const { medicationId } = req.params;
   const { reminderIndex } = req.body;
-  console.log("reminderIndex: ", reminderIndex);
+
 
   // Validate input
   if (!patientId) {

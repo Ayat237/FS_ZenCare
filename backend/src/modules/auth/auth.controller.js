@@ -901,7 +901,6 @@ export const loginWithGoogle = async (req, res, next) => {
   if (picture) {
     if (user.role.includes(possibleRoles.PATIENT) && user.patientID) {
       const patient = await patientModel.findById(user.patientID);
-      console.log(patient);
 
       if (patient) {
         patient.profileImage.URL.secure_url = picture;

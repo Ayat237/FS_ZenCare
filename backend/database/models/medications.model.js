@@ -368,7 +368,7 @@ medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
 
 // Pre-save hook to calculate totalDoses, initialQuantity, and generate reminders
 medicationSchema.pre("save", function (next) {
-  const now = DateTime.now();
+  const now = DateTime.now().toJSDate();
   // check if this new document
   if (this.isNew) {
     const startDate = DateTime.fromJSDate(this.startDateTime, {
@@ -433,6 +433,7 @@ medicationSchema.pre("save", function (next) {
             }
           } else {
             // For all other days, include all reminders
+            console.log(" For all other days, include all reminders");
             reminders.push({
               date: reminderDate.toJSDate(),
               time,
@@ -445,6 +446,8 @@ medicationSchema.pre("save", function (next) {
         }
         // If no reminders were scheduled for the first day (all times passed), adjust totalDoses
         if (currentDate.equals(startDate) && reminders.length === 0) {
+          console.log(" No reminders were scheduled for the first day");
+          
           currentDate = currentDate.plus({ days: 1 });
           this.totalDoses = this.calculateTotalDoses(); // Recalculate based on new start
           this.initialQuantity = this.totalDoses * this.dose;

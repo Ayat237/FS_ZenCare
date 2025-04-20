@@ -19,7 +19,6 @@ export const startMissedDosesJob = () => {
         isActive: true,
         endDateTime: { $gte:DateTime.now().toJSDate() },
       });
-      console.log("Allmedications : ", medications);
       for (const medication of medications) {
         // This will also reset reminders for past days
         medication.checkMissedDoses(); 
