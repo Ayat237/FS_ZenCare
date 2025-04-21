@@ -5,6 +5,7 @@ import {
   uploadFile,
   capitalizeName,
   DEFAULT_PROFILE_IMAGE,
+  Provider,
 } from "../../utils/index.js";
 import database from "../../../database/databaseConnection.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
@@ -142,8 +143,7 @@ export const registerPatient = async (req, res, next) => {
     const userObject = new User({
       ...userData,
       isVerified: false,
-      provider: "google",
-      // otp: null,
+      provider: Provider.LOCAL,
       patientID: patientObject._id,
     });
 

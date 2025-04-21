@@ -12,18 +12,18 @@ authRouter.post(
   validation(validate.loginSchema),
   errorHandling(authController.login)
 );
-authRouter.get(
+authRouter.post(
   "/select-role/:userId",
   validation(validate.selectRoleSchema),
   errorHandling(authController.selectRole)
 );
 
-authRouter.get(
+authRouter.post(
   "/forget-password",
   errorHandling(authController.forgetPassword)
 );
 
-authRouter.patch(
+authRouter.post(
   "/verify-forgetPass-otp/:emailToken",
   authController.verifyPasswordOTP
 );

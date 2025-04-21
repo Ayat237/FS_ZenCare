@@ -425,7 +425,6 @@ export const resendOtp = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   const { _id, userName } = req.authUser;
-  logger.info("id", _id, "username", userName);
   if (_id) {
     await redisClient.SET(`blacklist:${_id}`, "true", 24 * 60 * 60); // Blacklist for 24 hours
   }

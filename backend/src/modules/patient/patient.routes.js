@@ -19,7 +19,7 @@ patientRouter.post(
   validation(VSchema.registerSchema),
   errorHandling(patientController.registerPatient)
 );
-patientRouter.patch(
+patientRouter.post(
   "/verify-email-otp/:emailToken",
   errorHandling(patientController.verifyEmailOTP)
 );
