@@ -94,13 +94,14 @@ export const editProfileImageSchema = {
       "string.base": "Token must be a string",
       "string.empty": "Token cannot be empty"
     })
-  }).unknown()
+  }).unknown(),
 };
 
 export const removeProfileImageSchema = {
   headers: Joi.object({
     token: Joi.string().required().messages({
-      "any.required": "Authorization token is required"
+      "any.required": "Authorization token is required",
+      "string.base": "Token must be a string",      
     })
   }).unknown(),
   body: Joi.object({

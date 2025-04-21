@@ -27,6 +27,7 @@ patientRouter.post(
 
 patientRouter.delete(
   "/deleteAccount",
+  validation(VSchema.deletePatientAccountSchema),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
   errorHandling(patientController.deletePatientAccount)
@@ -34,6 +35,7 @@ patientRouter.delete(
 
 patientRouter.patch(
   "/edit-profile-image",
+  validation(VSchema.editProfileImageSchema),
   multerHost({ allowedExtensions: extensions.Images }).single("profileImage"),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
@@ -42,6 +44,7 @@ patientRouter.patch(
 
 patientRouter.patch(
   "/remove-profile-image",
+  validation(VSchema.removeProfileImageSchema),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
   errorHandling(patientController.removeProfileImage)
