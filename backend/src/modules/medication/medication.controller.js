@@ -46,12 +46,8 @@ export const addMedicine = async (req, res, next) => {
 
   const startDate = DateTime.fromISO(startDateTime,{zone:"UTC"});
   const endDate = DateTime.fromISO(endDateTime,{zone:"UTC"});
-  console.log("startDate", startDate);
-  
-x
-  const startDateAtMidnight = startDate.toJSDate();
-  console.log("startDateAtMidnight", startDateAtMidnight);
-  
+
+  const startDateAtMidnight = startDate.toJSDate(); 
   const endDateAtMidnight = endDate.toJSDate();
 
   const medicineRecord = new Medication({
@@ -137,12 +133,12 @@ export const updateMedicationRecord = async (req, res, next) => {
     medication.startHour = startHour;
   }
   if (startDateTime) {
-    const startDate = DateTime.fromISO(startDateTime);
+    const startDate = DateTime.fromISO(startDateTime,{zone:"UTC"});
     const startDateAtMidnight = startDate.toJSDate();
     medication.startDateTime = startDateAtMidnight;
   }
   if (endDateTime) {
-    const endDate = DateTime.fromISO(endDateTime);
+    const endDate = DateTime.fromISO(endDateTime,{zone:"UTC"});
     const endDateAtMidnight = endDate.toJSDate();
     medication.endDateTime = endDateAtMidnight;
   }
@@ -329,18 +325,36 @@ export const getDashboardReminders = async (req, res, next) => {
         : medication.frequency === Frequency.MONTHLY
         ? "monthly"
         : "as needed";
-
-    ["Yesterday", "Today", "Tomorrow"].forEach((day) => {
-      if (remindersByDay[day].length > 0) {
-        dashboardData[day].push({
-          medicineName: medication.medicineName,
-          medicineType: medication.medicineType,
-          frequency: frequencyText,
-          instruction: medication.instruction,
-          reminderCount: remindersByDay[day].length,
+        ["Yesterday", "Today", "Tomorrow"].forEach((day) => {
+          if (remindersByDay[day].length > 0) {
+            let reminderCount =
+              day === "Yesterday"
+                ? remindersByDay[day].filter(
+                    (reminder) =>
+                      reminder.status.toUpperCase() ===
+                      ReminderStatus.MISSED.toUpperCase()
+                  ).length
+                : remindersByDay[day].filter(
+                    (reminder) =>
+                      reminder.status.toUpperCase() ===
+                      ReminderStatus.PENDING.toUpperCase()
+                  ).length; // Only count PENDING reminders
+    
+            if (reminderCount > 0) {
+              dashboardData[day].push({
+                medicineName: medication.medicineName,
+                medicineType: medication.medicineType,
+                frequency: frequencyText,
+                intakeInstructions: medication.intakeInstructions,
+                reminderCount: reminderCount,
+                id: medication._id,
+                reminderIndexes: remindersByDay[day].map((reminder) => {
+                  return medication.reminders.indexOf(reminder);
+                }),
+              });
+            }
+          }
         });
-      }
-    });
   });
 
   // Respond with the dashboard data
@@ -549,6 +563,7 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
             frequency: frequencyText,
             intakeInstructions: medication.intakeInstructions,
             reminderCount: reminderCount,
+            id: medication._id,
           });
         }
       }
@@ -565,8 +580,7 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   // Respond with the dashboard data
   res.status(200).json({
     success: true,
-    message: "Dashboard reminders retrieved successfully",
-    data: dashboardData,
+    message: "Dashboard reminders updated successfully",
   });
 };
 
@@ -575,7 +589,6 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
 export const listHistoricalMedications = async (req, res, next) => {
   const user = req.authUser;
   const patientId = user.patientID?._id || user.patientID;
-  const now = DateTime.now().setZone("UTC");
 
   // Fetch medications and filter by endDateTime at runtime
   const medications = await medicationModel.find({ patientId, isActive: false });

@@ -187,7 +187,8 @@ medicationSchema.methods.calculateTotalDoses = function () {
   } else if (this.frequency === Frequency.AS_NEEDED) {
     totalDoses = 0;
   }
-
+  console.log("totalDoses: ", totalDoses);
+  
   return totalDoses;
 };
 
@@ -203,9 +204,9 @@ medicationSchema.methods.calculateDosesTaken = function () {
 medicationSchema.methods.calculateQuantityLeft = function () {
   const totalDoses = this.calculateTotalDoses();
   //The total number of individual units of medication (capsules) prescribed for the entire duration.
-  const totalQuantity = totalDoses * this.dose;
+  const totalQuantity = totalDoses ;
   const dosesTaken = this.calculateDosesTaken();
-  const quantityTaken = dosesTaken * this.dose;
+  const quantityTaken = dosesTaken ;
   const quantityLeft = Math.max(0, (totalQuantity - quantityTaken));
   return quantityLeft;
 };
@@ -386,7 +387,7 @@ medicationSchema.pre("save", function (next) {
 
     //calculate total doses
     const totalDoses = this.calculateTotalDoses();
-    this.initialQuantity = totalDoses * this.dose;
+    this.initialQuantity = totalDoses ;
     this.quantityLeft = this.initialQuantity;
 
     // Generate reminders
@@ -450,7 +451,7 @@ medicationSchema.pre("save", function (next) {
           
           currentDate = currentDate.plus({ days: 1 });
           this.totalDoses = this.calculateTotalDoses(); // Recalculate based on new start
-          this.initialQuantity = this.totalDoses * this.dose;
+          this.initialQuantity = this.totalDoses;
           this.quantityLeft = this.initialQuantity;
           continue;
         }
@@ -569,7 +570,7 @@ medicationSchema.pre("save", function (next) {
       this.markModified("missedDoses");
       // Recalculate total doses and quantities
       const totalDoses = this.calculateTotalDoses();
-      this.initialQuantity = totalDoses * this.dose;   
+      this.initialQuantity = totalDoses;   
       this.quantityLeft = this.calculateQuantityLeft();
     } else {
       // If scheduling fields are not modified, just update quantityLeft

@@ -77,13 +77,13 @@ export const addMedicineSchema = {
       'any.required': 'Start hour is required',
       'any.unknown': 'Start hour is not allowed',
     }),
-  startDateTime: generalRules.startDate
+  startDateTime: generalRules.startDate.required()
     .messages({
       'string.isoDate': 'Start date-time must be a valid ISO date string (e.g., 2025-04-15T08:00:00Z)',
       'any.required': 'Start date-time is required',
       'any.unknown': 'Start date-time is not allowed',
     }).required(),
-  endDateTime: generalRules.endDate
+  endDateTime: generalRules.endDate.required()
     .messages({
       'string.isoDate': 'End date-time must be a valid ISO date string (e.g., 2025-04-15T20:00:00Z)',
       'any.required': 'End date-time is required when start date-time is provided',
@@ -128,7 +128,13 @@ export const addMedicineSchema = {
 //=============================================================================
 export const updateMedicineSchema = {
   params: Joi.object({
-    id: generalRules.id,
+    id: generalRules.id.messages({
+      'string.objectId': 'Medication ID must be a valid MongoDB ObjectId',
+      'string.base': 'Medication ID must be a string',
+      'string.empty': 'Medication ID cannot be empty',
+      'any.required': 'Medication ID is required',
+      'any.unknown': 'Medication ID is not allowed',
+    }),
   }),
   body: Joi.object({
     medicineName: Joi.string()
@@ -188,13 +194,13 @@ export const updateMedicineSchema = {
         'number.min': 'Start hour must be at least 0',
         'number.max': 'Start hour must not exceed 23',
       }),
-    startDateTime: generalRules.startDate.required()
+    startDateTime: generalRules.startDate
       .messages({
         'string.isoDate': 'Start date-time must be a valid ISO date string (e.g., 2025-04-15)',
         'any.required': 'Start date-time is required',
         'any.unknown': 'Start date-time is not allowed',
       }),
-    endDateTime: generalRules.endDate.required()
+    endDateTime: generalRules.endDate
       .messages({
         'string.isoDate': 'End date-time must be a valid ISO date string (e.g., 2025-04-15T20:00:00Z)',
         'date.greater': 'End date-time must be greater than start date-time',
@@ -234,11 +240,30 @@ export const updateMedicineSchema = {
   ),
 };
 
+//===========================================================================
+export const getMedicationByIdSchema = {
+  params: Joi.object({
+    id: generalRules.id.messages({
+      'string.objectId': 'Medication ID must be a valid MongoDB ObjectId',
+      'string.base': 'Medication ID must be a string',
+      'string.empty': 'Medication ID cannot be empty',
+      'any.required': 'Medication ID is required',
+      'any.unknown': 'Medication ID is not allowed',
+    }),
+  }),
+};
+
 
 //=============================================================================
 export const updateMedicationStatusSchema = {
   params: Joi.object({
-    medicationId: generalRules.id,
+    medicationId: generalRules.id.messages({
+      'string.objectId': 'medicationId must be a valid MongoDB ObjectId',
+      'string.base': 'medicationId must be a string',
+      'string.empty': 'Medication ID cannot be empty',
+      'any.required': 'Medication ID is required',
+      'any.unknown': 'Medication ID is not allowed',
+    }),
   }),
   body: Joi.object({
       reminderIndex: Joi.number()
@@ -248,5 +273,18 @@ export const updateMedicationStatusSchema = {
         'any.required': 'Reminder index is required',
         'any.unknown': 'Reminder index is not allowed',
       })
+  }),
+};
+
+//=============================================================================
+export const deleteMedicationSchema = {
+  params: Joi.object({
+    medicationId: generalRules.id.messages({
+      'string.objectId': 'medicationId must be a valid MongoDB ObjectId',
+      'string.base': 'Medication ID must be a string',
+      'string.empty': 'Medication ID cannot be empty',
+      'any.required': 'Medication ID is required',
+      'any.unknown': 'Medication ID is not allowed',
+    }),
   }),
 };

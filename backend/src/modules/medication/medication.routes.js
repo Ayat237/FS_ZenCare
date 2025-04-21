@@ -32,6 +32,7 @@ medicationRouter.get(
 
 medicationRouter.get(
     "/get-medication/:id",
+    validation(VSchema.getMedicationByIdSchema),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.getMedicationById)
@@ -61,6 +62,7 @@ medicationRouter.get(
 
 medicationRouter.delete(
     "/delete-medication/:medicationId",
+    validation(VSchema.deleteMedicationSchema),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
     errorHandling(medicationsController.deleteMedication)
