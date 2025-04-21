@@ -156,7 +156,7 @@ export const registerPatient = async (req, res, next) => {
         email: userData.email,
       },
       process.env.EMAIL_SECRET
-    );
+      );
 
     // Send verification email
     const isEmailSent = await sendEmailService({
@@ -195,9 +195,10 @@ export const registerPatient = async (req, res, next) => {
  */
 export const verifyEmailOTP = async (req, res, next) => {
   try {
-    const { emailToken } = req.params;
+    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
     const { otp } = req.body;
-
+    console.log("verify email token:",emailToken);
+    
     // Verify email token
     const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
     if (!decodedToken) {
@@ -235,12 +236,13 @@ export const verifyEmailOTP = async (req, res, next) => {
       {
         userId: user._id,
         userName: user.userName,
-        role: user.role,
+        role: user.activeRole,
         activeRole: user.activeRole,
       },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "24h" }
     );
+    
     console.log("verify email otp:", process.env.ACCESS_TOKEN_SECRET);
     // 6. Generate refresh token (long-lived)
     const refreshToken = crypto.randomBytes(32).toString("hex");
@@ -517,4 +519,5 @@ export const removeProfileImage = async (req, res, next) => {
     data: updatedPatient,
   });
 };
+
 

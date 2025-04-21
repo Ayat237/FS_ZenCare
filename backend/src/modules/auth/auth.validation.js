@@ -7,8 +7,9 @@ export const loginSchema = {
       "string.email": "Email must be a valid email address",
       "any.required": "Email is required",
     }),
-    password: generalRules.password.messages({
+    password: Joi.string().min(8).messages({
       "any.required": "Password is required",
+      "string.min": "Password must be at least 8 characters long",
     }),
   }).with("email", "password"),
 };

@@ -77,5 +77,6 @@ export const generalRules = {
     "postman-id": Joi.string(),
     connection: Joi.string(),
     token: Joi.string(),
+    emailToken:Joi.string()
   },
 };
