@@ -202,7 +202,7 @@ export const forgetPassword = async (req, res, next) => {
 };
 
 export const resetPassword = async (req, res, next) => {
-  const { emailToken } = req.params;
+  const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
   const { newPassword, confirmPassword } = req.body;
 
   if (newPassword !== confirmPassword) {
@@ -247,7 +247,7 @@ export const resetPassword = async (req, res, next) => {
     {
       userId: user._id,
       userName: user.userName,
-      role: user.role,
+      role: user.activeRole,
       activeRole: user.activeRole,
     },
     process.env.ACCESS_TOKEN_SECRET,
@@ -281,7 +281,7 @@ export const resetPassword = async (req, res, next) => {
 
 export const verifyPasswordOTP = async (req, res, next) => {
   try {
-    const { emailToken } = req.params;
+    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
     const { otp } = req.body;
 
     // Verify email token
@@ -346,7 +346,7 @@ export const verifyPasswordOTP = async (req, res, next) => {
 
 export const resendOtp = async (req, res, next) => {
   try {
-    const { emailToken } = req.params;
+    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
     logger.info(`Resending OTP to user`);
 
     const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);

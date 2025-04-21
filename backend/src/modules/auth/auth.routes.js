@@ -24,14 +24,14 @@ authRouter.post(
 );
 
 authRouter.post(
-  "/verify-forgetPass-otp/:emailToken",
+  "/verify-forgetPass-otp",
   authController.verifyPasswordOTP
 );
 
-authRouter.get("/resend-otp/:emailToken", authController.resendOtp);
+authRouter.get("/resend-otp", authController.resendOtp);
 
 authRouter.patch(
-  "/reset-password/:emailToken",
+  "/reset-password",
   errorHandling(authController.resetPassword)
 );
 
