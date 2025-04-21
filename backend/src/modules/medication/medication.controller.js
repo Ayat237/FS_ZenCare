@@ -351,6 +351,7 @@ export const getDashboardReminders = async (req, res, next) => {
                 reminderIndexes: remindersByDay[day].map((reminder) => {
                   return medication.reminders.indexOf(reminder);
                 }),
+                canMark: day === "Today" ? true : false,
               });
             }
           }
@@ -409,8 +410,49 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
     );
   }
 
+    // Define date ranges for Yesterday, Today, and Tomorrow
+    const now = DateTime.now().setZone("UTC");
+    const today = now.startOf("day");
+    const yesterday = today.minus({ days: 1 });
+    const tomorrow = today.plus({ days: 1 });
+  
+
+  // Find the next PENDING reminder for Today
+  let nextReminderIndex = -1;
+  let todayReminderCount = 0;
+  for (let i = 0; i < medication.reminders.length; i++) {
+    const reminder = medication.reminders[i];
+    const reminderDate = DateTime.fromJSDate(reminder.date)
+      .setZone('UTC')
+      .startOf('day');
+
+
+    if (
+      reminderDate.equals(today) &&
+      reminder.status.toUpperCase() === ReminderStatus.PENDING.toUpperCase()
+    ) {
+      todayReminderCount++;
+      if (nextReminderIndex === -1) {
+        nextReminderIndex = i; // Set the first PENDING reminder for Today
+      }
+    }
+  }
+
+  // If no PENDING reminders for Today, return an error
+  if (nextReminderIndex === -1) {
+    return next(
+      new ErrorHandlerClass(
+        'No pending reminders for today to mark as taken',
+        400,
+        'Bad Request',
+        'Error in markDoseTakenAndUpdateDashboard'
+      )
+    );
+  }
+
+
   // Mark the dose as taken (embedded logic from markDoseTaken)
-  const reminder = medication.reminders[reminderIndex];
+  const reminder = medication.reminders[nextReminderIndex];
   if (!reminder) {
     return next(
       new ErrorHandlerClass(
@@ -458,11 +500,27 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   // Save the updated medication
   await medicationModel.save(medication);
 
-  // Define date ranges for Yesterday, Today, and Tomorrow
-  const now = DateTime.now().setZone("UTC");
-  const today = now.startOf("day");
-  const yesterday = today.minus({ days: 1 });
-  const tomorrow = today.plus({ days: 1 });
+  // Update the todayReminderCount after marking the reminder as taken
+  todayReminderCount--;
+
+
+  // Find the next PENDING reminder index for Today (if any)
+  let updatedNextReminderIndex = -1;
+  for (let i = 0; i < medication.reminders.length; i++) {
+    const reminder = medication.reminders[i];
+    const reminderDate = DateTime.fromJSDate(reminder.date)
+      .setZone('UTC')
+      .startOf('day');
+
+    if (
+      reminderDate.equals(today) &&
+      reminder.status.toUpperCase() === ReminderStatus.PENDING.toUpperCase()
+    ) {
+      updatedNextReminderIndex = i;
+      break;
+    }
+  }
+
 
   // Organize reminders into Yesterday, Today, Tomorrow
   const dashboardData = {
@@ -581,6 +639,12 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Dashboard reminders updated successfully",
+    medication: {
+      medicineName: medication.medicineName,
+      id: medicationId,
+      nextReminderIndex: updatedNextReminderIndex,
+      todayReminderCount: todayReminderCount,
+    },
   });
 };
 

@@ -8,7 +8,6 @@ import {
   ReminderStatus,
 } from "../../src/utils/enums.utils.js";
 import { DateTime } from "luxon";
-import { log } from "console";
 import { logger } from "../../src/utils/logger.utils.js";
 
 const medicationSchema = new Schema(

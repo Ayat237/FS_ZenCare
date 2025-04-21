@@ -265,15 +265,7 @@ export const updateMedicationStatusSchema = {
       'any.unknown': 'Medication ID is not allowed',
     }),
   }),
-  body: Joi.object({
-      reminderIndex: Joi.number()
-      .integer().required().messages({
-        'number.base': 'Reminder index must be a number',
-        'number.integer': 'Reminder index must be an integer',
-        'any.required': 'Reminder index is required',
-        'any.unknown': 'Reminder index is not allowed',
-      })
-  }),
+
 };
 
 //=============================================================================
