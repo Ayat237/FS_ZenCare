@@ -28,14 +28,14 @@ authRouter.post(
   authController.verifyPasswordOTP
 );
 
-authRouter.get("/resend-otp", authController.resendOtp);
+authRouter.post("/resend-otp", authController.resendOtp);
 
 authRouter.patch(
   "/reset-password",
   errorHandling(authController.resetPassword)
 );
 
-authRouter.get(
+authRouter.post(
   "/logout",
   authenticattion(),
   errorHandling(authController.logout)
