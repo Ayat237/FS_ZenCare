@@ -22,171 +22,165 @@ import { nanoid } from "nanoid";
 import redisClient from "../../utils/redis.utils.js";
 import cloudinaryConfig from "../../config/cloudinary.config.js";
 
-
 const userModel = new UserModel(database);
 const patientModel = new PatientModel(database);
 
 export const registerPatient = async (req, res, next) => {
-  try {
-    const {
-      firstName,
-      lastName,
-      userName,
-      email,
-      password,
-      confirmedPassword,
-      mobilePhone,
-      role,
-      gender,
-      birthDate,
-    } = req.body;
-    const userData = {
-      firstName,
-      lastName,
-      userName,
-      email,
-      password,
-      confirmedPassword,
-      mobilePhone,
-      role,
-    };
-    const patientData = { gender, birthDate };
+  const {
+    firstName,
+    lastName,
+    userName,
+    email,
+    password,
+    confirmedPassword,
+    mobilePhone,
+    role,
+    gender,
+    birthDate,
+  } = req.body;
+  const userData = {
+    firstName,
+    lastName,
+    userName,
+    email,
+    password,
+    confirmedPassword,
+    mobilePhone,
+    role,
+  };
+  const patientData = { gender, birthDate };
 
-    // Validate user role
-    if (!userData.role || !userData.role.includes(possibleRoles.PATIENT)) {
-      logger.error("User must have patient role to register as a patient");
-      return next(
-        new ErrorHandlerClass(
-          "User must have patient role to register as a patient",
-          400,
-          "Validation Error",
-          "Invalid role"
-        )
-      );
-    }
-
-    // 2. Check for existing user
-    // const existingUserByUsername = await userRepository.findByUsername(
-    //   userData.userName
-    // );
-    // if (existingUserByUsername) {
-    //    return next(
-    //     new ErrorHandlerClass(
-    //       "User with this userName already exists",
-    //       409,
-    //       "Duplicate Error",
-    //       "Username already taken"
-    //     )
-    //    );
-    // }
-
-    // 3. Validate password match
-    if (userData.password !== userData.confirmedPassword) {
-      throw new ErrorHandlerClass(
-        "Passwords do not match",
+  // Validate user role
+  if (!userData.role || !userData.role.includes(possibleRoles.PATIENT)) {
+    logger.error("User must have patient role to register as a patient");
+    return next(
+      new ErrorHandlerClass(
+        "User must have patient role to register as a patient",
         400,
         "Validation Error",
-        "Password mismatch"
-      );
-    }
-
-    // Parallelize independent operations
-    const [existingUserByEmail, otp] = await Promise.all([
-      userModel.findByEmail(userData.email),
-      crypto.randomInt(100000, 999999).toString(),
-    ]);
-
-    if (existingUserByEmail) {
-      return next(
-        new ErrorHandlerClass(
-          "User with this email already exists",
-          409,
-          "Duplicate Error",
-          "Email already registered"
-        )
-      );
-    }
-
-    // store otp to redis
-    await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
-
-    if (!req.file) {
-      throw new ErrorHandlerClass(
-        "Image is required for profile picture",
-        400,
-        "Validation Error",
-        "Image is required"
-      );
-    }
-
-    // upload image to cloudinary
-    const customId = userData.firstName + nanoid(4);
-    const { secure_url, public_id } = await uploadFile({
-      file: req.file.path,
-      folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
-    });
-
-    //capitalize each first name
-    userData.firstName = capitalizeName(userData.firstName);
-    userData.lastName = capitalizeName(userData.lastName);
-
-    // Create patient first
-    const patientObject = new Patient({
-      ...patientData,
-      profileImage: {
-        URL: { secure_url, public_id },
-        customId,
-      },
-    });
-
-    // Create user with patient reference
-    const userObject = new User({
-      ...userData,
-      isVerified: false,
-      provider: Provider.LOCAL,
-      patientID: patientObject._id,
-    });
-
-    // Save both documents
-    await userModel.save(userObject);
-    await patientModel.save(patientObject);
-
-    const emailToken = jwt.sign(
-      {
-        email: userData.email,
-      },
-      process.env.EMAIL_SECRET
-      );
-
-    // Send verification email
-    const isEmailSent = await sendEmailService({
-      to: userData.email,
-      subject: "Verify Your Account with OTP",
-      htmlMessage: `<h3>Your OTP for patient registration is: <strong>${otp}</strong></h3>
-       <p>It expires in 10 minutes.</p>`,
-    });
-    if (isEmailSent.rejected.length) {
-      logger.error("Failed to send verification email", error);
-      return next(
-        new ErrorHandlerClass(
-          "Failed to send verification email",
-          500,
-          "Server Error",
-          "Error in sending email"
-        )
-      );
-    }
-
-    res.status(201).json({
-      success: true,
-      message:
-        "Patient registered successfully. Please verify with the OTP sent to your email.",
-      emailToken,
-    });
-  } catch (error) {
-    logger.error("Error in registering patient", error.message);
-    next(error);
+        "Invalid role"
+      )
+    );
   }
+
+  // 2. Check for existing user
+  // const existingUserByUsername = await userRepository.findByUsername(
+  //   userData.userName
+  // );
+  // if (existingUserByUsername) {
+  //    return next(
+  //     new ErrorHandlerClass(
+  //       "User with this userName already exists",
+  //       409,
+  //       "Duplicate Error",
+  //       "Username already taken"
+  //     )
+  //    );
+  // }
+
+  // 3. Validate password match
+  if (userData.password !== userData.confirmedPassword) {
+    throw new ErrorHandlerClass(
+      "Passwords do not match",
+      400,
+      "Validation Error",
+      "Password mismatch"
+    );
+  }
+
+  // Parallelize independent operations
+  const [existingUserByEmail, otp] = await Promise.all([
+    userModel.findByEmail(userData.email),
+    crypto.randomInt(100000, 999999).toString(),
+  ]);
+
+  if (existingUserByEmail) {
+    return next(
+      new ErrorHandlerClass(
+        "User with this email already exists",
+        409,
+        "Duplicate Error",
+        "Email already registered"
+      )
+    );
+  }
+
+  // store otp to redis
+  await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
+
+  if (!req.file) {
+    throw new ErrorHandlerClass(
+      "Image is required for profile picture",
+      400,
+      "Validation Error",
+      "Image is required"
+    );
+  }
+
+  // upload image to cloudinary
+  const customId = userData.firstName + nanoid(4);
+  const { secure_url, public_id } = await uploadFile({
+    file: req.file.path,
+    folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
+  });
+
+  //capitalize each first name
+  userData.firstName = capitalizeName(userData.firstName);
+  userData.lastName = capitalizeName(userData.lastName);
+
+  // Create patient first
+  const patientObject = new Patient({
+    ...patientData,
+    profileImage: {
+      URL: { secure_url, public_id },
+      customId,
+    },
+  });
+
+  // Create user with patient reference
+  const userObject = new User({
+    ...userData,
+    isVerified: false,
+    provider: Provider.LOCAL,
+    patientID: patientObject._id,
+  });
+
+  // Save both documents
+  await userModel.save(userObject);
+  await patientModel.save(patientObject);
+
+  const emailToken = jwt.sign(
+    {
+      email: userData.email,
+    },
+    process.env.EMAIL_SECRET
+  );
+
+  // Send verification email
+  const isEmailSent = await sendEmailService({
+    to: userData.email,
+    subject: "Verify Your Account with OTP",
+    htmlMessage: `<h3>Your OTP for patient registration is: <strong>${otp}</strong></h3>
+       <p>It expires in 10 minutes.</p>`,
+  });
+  if (isEmailSent.rejected.length) {
+    logger.error("Failed to send verification email", error);
+    return next(
+      new ErrorHandlerClass(
+        "Failed to send verification email",
+        500,
+        "Server Error",
+        "Error in sending email"
+      )
+    );
+  }
+
+  res.status(201).json({
+    success: true,
+    message:
+      "Patient registered successfully. Please verify with the OTP sent to your email.",
+    emailToken,
+  });
 };
 
 /**
@@ -194,94 +188,80 @@ export const registerPatient = async (req, res, next) => {
  * @route POST /patient/verify-otp
  */
 export const verifyEmailOTP = async (req, res, next) => {
-  try {
-    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
-    const { otp } = req.body;
-    console.log("verify email token:",emailToken);
-    
-    // Verify email token
-    const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
-    if (!decodedToken) {
-      return next(
-        new ErrorHandlerClass(
-          "Invalid email token",
-          400,
-          "decoded error",
-          "Error decoding email token"
-        )
-      );
-    }
-    // Find user
-    const user = await userModel.findByEmail(decodedToken.email);
-    if (!user) {
-      return next(
-        new ErrorHandlerClass(
-          "User not found",
-          404,
-          "validation error",
-          " Error in findByEmail"
-        )
-      );
-    }
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
+  const { otp } = req.body;
+  console.log("verify email token:", emailToken);
 
-    const storedOtp = await redisClient.GET(`otp:${user.userName}`);
-    if (!storedOtp || storedOtp !== otp) {
-      throw new Error(
-        "Invalid OTP. Please request a new one if it has expired."
-      );
-    }
-
-    // Generate JWT access token
-    const accessToken = jwt.sign(
-      {
-        userId: user._id,
-        userName: user.userName,
-        role: user.activeRole,
-        activeRole: user.activeRole,
-      },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "24h" }
-    );
-    
-    console.log("verify email otp:", process.env.ACCESS_TOKEN_SECRET);
-    // 6. Generate refresh token (long-lived)
-    const refreshToken = crypto.randomBytes(32).toString("hex");
-
-    await userModel.updateById(
-      {
-        _id: user._id,
-        isVerified: false,
-      },
-      {
-        isVerified: true,
-      }
-    );
-
-    await redisClient.SET(
-      `refreshToken:${user.userName}`,
-      refreshToken,
-      7 * 24 * 60 * 60
-    );
-    await redisClient.DEL(`otp:${user.userName}`);
-    res.status(200).json({
-      success: true,
-      message: `Email : ${user.email} verified successfully.`,
-      data: {
-        token: accessToken,
-        refreshToken,
-      },
-    });
-  } catch (error) {
-    logger.error("OTP verification failed", error);
-    next(
+  // Verify email token
+  const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
+  if (!decodedToken) {
+    return next(
       new ErrorHandlerClass(
-        "'OTP has expired or is invalid. Please request a new one.",
-        500,
-        error.stack,
-        "Error in OTP catch verification"
+        "Invalid email token",
+        400,
+        "decoded error",
+        "Error decoding email token"
       )
     );
   }
+  // Find user
+  const user = await userModel.findByEmail(decodedToken.email);
+  if (!user) {
+    return next(
+      new ErrorHandlerClass(
+        "User not found",
+        404,
+        "validation error",
+        " Error in findByEmail"
+      )
+    );
+  }
+
+  const storedOtp = await redisClient.GET(`otp:${user.userName}`);
+  if (!storedOtp || storedOtp !== otp) {
+    throw new Error("Invalid OTP. Please request a new one if it has expired.");
+  }
+
+  // Generate JWT access token
+  const accessToken = jwt.sign(
+    {
+      userId: user._id,
+      userName: user.userName,
+      role: user.activeRole,
+      activeRole: user.activeRole,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "24h" }
+  );
+
+  console.log("verify email otp:", process.env.ACCESS_TOKEN_SECRET);
+  // 6. Generate refresh token (long-lived)
+  const refreshToken = crypto.randomBytes(32).toString("hex");
+
+  await userModel.updateById(
+    {
+      _id: user._id,
+      isVerified: false,
+    },
+    {
+      isVerified: true,
+    }
+  );
+
+  await redisClient.SET(
+    `refreshToken:${user.userName}`,
+    refreshToken,
+    7 * 24 * 60 * 60
+  );
+  await redisClient.DEL(`otp:${user.userName}`);
+  res.status(200).json({
+    success: true,
+    message: `Email : ${user.email} verified successfully.`,
+    data: {
+      token: accessToken,
+      refreshToken,
+    },
+  });
 };
 
 export const deletePatientAccount = async (req, res, next) => {
@@ -519,5 +499,3 @@ export const removeProfileImage = async (req, res, next) => {
     data: updatedPatient,
   });
 };
-
-

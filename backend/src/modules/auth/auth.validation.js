@@ -109,7 +109,7 @@ export const getLoggedInProfileSchema = {
       "string.empty": "Token cannot be empty",
       "any.required": "Authorization token is required"
     })
-  }).unknown()
+  }).unknown(),
 };
 
 export const updateAccountSchema = {

@@ -9,71 +9,83 @@ const authRouter = Router();
 
 authRouter.post(
   "/login",
-  validation(validate.loginSchema),
+  errorHandling(validation(validate.loginSchema)),
   errorHandling(authController.login)
 );
 authRouter.post(
   "/select-role/:userId",
-  validation(validate.selectRoleSchema),
+  errorHandling(validation(validate.selectRoleSchema)),
   errorHandling(authController.selectRole)
 );
 
 authRouter.post(
   "/forget-password",
+  errorHandling(validation(validate.forgetPasswordSchema)),
   errorHandling(authController.forgetPassword)
 );
 
 authRouter.post(
   "/verify-forgetPass-otp",
-  authController.verifyPasswordOTP
+  errorHandling(validation(validate.verifyPasswordOTPSchema)),
+  errorHandling(authController.verifyPasswordOTP)
 );
 
-authRouter.post("/resend-otp", authController.resendOtp);
+authRouter.post(
+  "/resend-otp",
+  errorHandling(validation(validate.resendOtpSchema)),
+  errorHandling(authController.resendOtp)
+);
 
 authRouter.patch(
   "/reset-password",
+  errorHandling(validation(validate.resetPasswordSchema)),
   errorHandling(authController.resetPassword)
 );
 
 authRouter.post(
   "/logout",
   authenticattion(),
+  errorHandling(validation(validate.logoutSchema)),
   errorHandling(authController.logout)
 );
 
 authRouter.get(
   "/user-profile",
   authenticattion(),
+  errorHandling(validation(validate.getLoggedInProfileSchema)),
   errorHandling(authController.getLoggedInProfile)
 );
 
 authRouter.put(
   "/update",
   authenticattion(),
+  errorHandling(validation(validate.updateAccountSchema)),
   errorHandling(authController.updateAccount)
 );
 
 authRouter.patch(
   "/verify-newEmail",
   authenticattion(),
+  errorHandling(validation(validate.verifyNewEmailSchema)),
   errorHandling(authController.verifyNewEmail)
 );
 
 authRouter.post(
   "/signUp-withGoogle",
+  errorHandling(validation(validate.googleSignUpSchema)),
   errorHandling(authController.signupWithGoogle)
-)
+);
 
 authRouter.post(
   "/login-withGoogle",
+  errorHandling(validation(validate.googleLoginSchema)),
   errorHandling(authController.loginWithGoogle)
-)
+);
 
 authRouter.post(
   "/refresh-token",
+  errorHandling(validation(validate.refreshTokenSchema)),
   errorHandling(authController.refreshToken)
-)
-
-
+);
 
 export { authRouter };

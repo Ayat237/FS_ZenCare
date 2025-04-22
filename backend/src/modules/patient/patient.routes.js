@@ -16,37 +16,37 @@ const patientRouter = express.Router();
 patientRouter.post(
   "/register",
   multerHost({ allowedExtensions: extensions.Images }).single("profileImage"),
-  validation(VSchema.registerSchema),
+  errorHandling(validation(VSchema.registerSchema)),
   errorHandling(patientController.registerPatient)
 );
 patientRouter.post(
   "/verify-email-otp",
-  validation(VSchema.verifyEmailOTPSchema),
+  errorHandling(validation(VSchema.verifyEmailOTPSchema)),
   errorHandling(patientController.verifyEmailOTP)
 );
 
 patientRouter.delete(
   "/deleteAccount",
-  validation(VSchema.deletePatientAccountSchema),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
+  errorHandling(validation(VSchema.deleteAccountSchema)),
   errorHandling(patientController.deletePatientAccount)
 );
 
 patientRouter.patch(
   "/edit-profile-image",
-  validation(VSchema.editProfileImageSchema),
   multerHost({ allowedExtensions: extensions.Images }).single("profileImage"),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
+  errorHandling(validation(VSchema.editProfileImageSchema)),
   errorHandling(patientController.editProfileImage)
 );
 
 patientRouter.patch(
   "/remove-profile-image",
-  validation(VSchema.removeProfileImageSchema),
   authenticattion(),
   authorization(possibleRoles.PATIENT),
+  errorHandling(validation(VSchema.removeProfileImageSchema)),
   errorHandling(patientController.removeProfileImage)
 );
 

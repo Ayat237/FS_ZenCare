@@ -202,7 +202,7 @@ export const forgetPassword = async (req, res, next) => {
 };
 
 export const resetPassword = async (req, res, next) => {
-  const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
   const { newPassword, confirmPassword } = req.body;
 
   if (newPassword !== confirmPassword) {
@@ -280,147 +280,127 @@ export const resetPassword = async (req, res, next) => {
 };
 
 export const verifyPasswordOTP = async (req, res, next) => {
-  try {
-    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
-    const { otp } = req.body;
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
+  const { otp } = req.body;
 
-    // Verify email token
-    const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
-    if (!decodedToken) {
-      return next(
-        new ErrorHandlerClass(
-          "Invalid email token",
-          400,
-          "decoded error",
-          "Error decoding email token"
-        )
-      );
-    }
-    // Find user
-    const user = await userModel.findByEmail(decodedToken.email);
-    if (!user) {
-      return next(
-        new ErrorHandlerClass(
-          "User not found",
-          404,
-          "validation error",
-          " Error in findByEmail"
-        )
-      );
-    }
-
-    const storedOtp = await redisClient.GET(`otp:${user.userName}`);
-    if (!storedOtp || storedOtp !== otp) {
-      throw new Error(
-        "Invalid OTP. Please request a new one if it has expired."
-      );
-    }
-
-    await userModel.updateById(
-      {
-        _id: user._id,
-        isVerified: false,
-      },
-      {
-        isVerified: true,
-      }
-    );
-
-    await redisClient.DEL(`otp:${user.userName}`);
-    res.status(200).json({
-      success: true,
-      message: `Otp password verified successfully.`,
-    });
-  } catch (error) {
-    logger.error("OTP verification failed", error);
-    next(
+  // Verify email token
+  const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
+  if (!decodedToken) {
+    return next(
       new ErrorHandlerClass(
-        "'OTP has expired or is invalid. Please request a new one.",
-        500,
-        error.stack,
-        "Error in OTP catch verification"
+        "Invalid email token",
+        400,
+        "decoded error",
+        "Error decoding email token"
       )
     );
   }
+  // Find user
+  const user = await userModel.findByEmail(decodedToken.email);
+  if (!user) {
+    return next(
+      new ErrorHandlerClass(
+        "User not found",
+        404,
+        "validation error",
+        " Error in findByEmail"
+      )
+    );
+  }
+
+  const storedOtp = await redisClient.GET(`otp:${user.userName}`);
+  if (!storedOtp || storedOtp !== otp) {
+    throw new Error("Invalid OTP. Please request a new one if it has expired.");
+  }
+
+  await userModel.updateById(
+    {
+      _id: user._id,
+      isVerified: false,
+    },
+    {
+      isVerified: true,
+    }
+  );
+
+  await redisClient.DEL(`otp:${user.userName}`);
+  res.status(200).json({
+    success: true,
+    message: `Otp password verified successfully.`,
+  });
 };
 
 export const resendOtp = async (req, res, next) => {
-  try {
-    const emailToken = req.headers['emailtoken'] || req.headers['emailToken'];
-    logger.info(`Resending OTP to user`);
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
+  logger.info(`Resending OTP to user`);
 
-    const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
-    if (!decodedToken) {
-      return next(
-        new ErrorHandlerClass(
-          "Invalid email token",
-          400,
-          "decoded error",
-          "Error decoding email token"
-        )
-      );
-    }
-    // Find user
-    const user = await userModel.findByEmail(decodedToken.email);
-    if (!user) {
-      return next(
-        new ErrorHandlerClass(
-          "User not found",
-          404,
-          "validation error",
-          " Error in findByEmail"
-        )
-      );
-    }
-
-    // 2. Check if user is already verified
-    if (user.isVerified) {
-      return next(
-        new ErrorHandlerClass(
-          "User is already verified. No OTP needed.",
-          400,
-          "OTP Error",
-          "Error in Otp verfication"
-        )
-      );
-    }
-
-    // 3. Generate new OTP (6-digit random number)
-    const newOtp = crypto.randomInt(100000, 999999).toString();
-    await redisClient.SET(`otp:${user.userName}`, newOtp, 10 * 60);
-
-    // Send verification email
-    const isEmailSent = await sendEmailService({
-      to: user.email,
-      subject: "Verify Your Account with OTP",
-      htmlMessage: `<h3>Your OTP for patient registration is: <strong>${newOtp}</strong></h3>
-       <p>It expires in 5 minutes.</p>`,
-    });
-    if (isEmailSent.rejected.length) {
-      logger.error("Failed to send verification email", error);
-      return next(
-        new ErrorHandlerClass(
-          "Failed to send verification email",
-          500,
-          "Server Error",
-          "Error in sending email"
-        )
-      );
-    }
-    // 5. Return success response
-    res.status(200).json({
-      success: true,
-      message:
-        "A new OTP has been sent to your email. It expires in 10 minutes.",
-      data: {
-        userId: user._id,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    logger.error("OTP resend failed", error);
-    throw error;
+  const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
+  if (!decodedToken) {
+    return next(
+      new ErrorHandlerClass(
+        "Invalid email token",
+        400,
+        "decoded error",
+        "Error decoding email token"
+      )
+    );
   }
+  // Find user
+  const user = await userModel.findByEmail(decodedToken.email);
+  if (!user) {
+    return next(
+      new ErrorHandlerClass(
+        "User not found",
+        404,
+        "validation error",
+        " Error in findByEmail"
+      )
+    );
+  }
+
+  // 2. Check if user is already verified
+  if (user.isVerified) {
+    return next(
+      new ErrorHandlerClass(
+        "User is already verified. No OTP needed.",
+        400,
+        "OTP Error",
+        "Error in Otp verfication"
+      )
+    );
+  }
+
+  // 3. Generate new OTP (6-digit random number)
+  const newOtp = crypto.randomInt(100000, 999999).toString();
+  await redisClient.SET(`otp:${user.userName}`, newOtp, 10 * 60);
+
+  // Send verification email
+  const isEmailSent = await sendEmailService({
+    to: user.email,
+    subject: "Verify Your Account with OTP",
+    htmlMessage: `<h3>Your OTP for patient registration is: <strong>${newOtp}</strong></h3>
+       <p>It expires in 5 minutes.</p>`,
+  });
+  if (isEmailSent.rejected.length) {
+    logger.error("Failed to send verification email", error);
+    return next(
+      new ErrorHandlerClass(
+        "Failed to send verification email",
+        500,
+        "Server Error",
+        "Error in sending email"
+      )
+    );
+  }
+  // 5. Return success response
+  res.status(200).json({
+    success: true,
+    message: "A new OTP has been sent to your email. It expires in 10 minutes.",
+    data: {
+      userId: user._id,
+      email: user.email,
+    },
+  });
 };
 
 export const logout = async (req, res, next) => {
@@ -609,7 +589,7 @@ export const verifyNewEmail = async (req, res, next) => {
     );
   }
 
-  if (OTP !== verificationOTP) {
+  if (OTP !== verificationOTP.toString()) {
     return next(
       new ErrorHandlerClass(
         "Invalid verification otp",
@@ -917,15 +897,16 @@ export const loginWithGoogle = async (req, res, next) => {
 
   // 5. Check for multiple roles
   const hasPatientRole =
-  (user.patientID == RANDOM_OBJECT_ID)
-  ? false: user.role.includes(possibleRoles.PATIENT) && user.patientID;
+    user.patientID == RANDOM_OBJECT_ID
+      ? false
+      : user.role.includes(possibleRoles.PATIENT) && user.patientID;
 
   const hasDoctorRole =
-    (user.doctorID == RANDOM_OBJECT_ID)
+    user.doctorID == RANDOM_OBJECT_ID
       ? false
       : user.role.includes(possibleRoles.DOCTOR) && user.doctorID;
-    console.log("hasDoctorRole: ",hasDoctorRole);
-    
+  console.log("hasDoctorRole: ", hasDoctorRole);
+
   if (!hasPatientRole && !hasDoctorRole) {
     return next(
       new ErrorHandlerClass(
