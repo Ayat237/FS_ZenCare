@@ -108,21 +108,33 @@ export const registerPatient = async (req, res, next) => {
   // store otp to redis
   await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
 
+  let profileImageObject = {
+    secure_url:null,
+    public_id:null,
+  };
   if (!req.file) {
-    throw new ErrorHandlerClass(
-      "Image is required for profile picture",
-      400,
-      "Validation Error",
-      "Image is required"
-    );
+    // If no file is uploaded, set a default image
+    profileImageObject = {
+      URL: { secure_url: DEFAULT_PROFILE_IMAGE,
+        public_id: "default_r5hh3m"
+       },
+      customId:userData.firstName + nanoid(4) ,
+    };
   }
 
   // upload image to cloudinary
-  const customId = userData.firstName + nanoid(4);
-  const { secure_url, public_id } = await uploadFile({
-    file: req.file.path,
-    folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
-  });
+  if (req.file) {
+    const customId = userData.firstName + nanoid(4);
+    let { secure_url, public_id } = await uploadFile({
+      file: req.file.path,
+      folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
+    });
+    
+    profileImageObject = {
+      secure_url,
+      public_id,
+    };
+  }
 
   //capitalize each first name
   userData.firstName = capitalizeName(userData.firstName);
@@ -131,10 +143,7 @@ export const registerPatient = async (req, res, next) => {
   // Create patient first
   const patientObject = new Patient({
     ...patientData,
-    profileImage: {
-      URL: { secure_url, public_id },
-      customId,
-    },
+    profileImage: profileImageObject,
   });
 
   // Create user with patient reference
