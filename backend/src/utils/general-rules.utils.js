@@ -68,9 +68,10 @@ export const generalRules = {
     .pattern(/^01[0-2,5]\d{1,8}$/)
     .required().messages({
       "string.pattern.base":
-        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
-      "any.required": "Password is required",
-      "string.min": "Password must be at least 8 characters long",
+        "Phone number must be in the format 01[0-2,5]xxxxxxxx",
+      "any.required": "Phone number is required",
+      "string.empty": "Phone number cannot be empty",
+      "string.base": "Phone number must be a string",
     }),
   endDate:Joi.string().isoDate().custom(validateEndDateTime),
   startDate:Joi.string().isoDate().custom(validateStartDateTime),

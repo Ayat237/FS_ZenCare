@@ -18,13 +18,7 @@ export const registerSchema = {
       "string.max": "Username cannot exceed 10 characters",
       "any.required": "Username is required",
     }),
-    mobilePhone: generalRules.phoneNumber.messages({
-      "string.pattern.base":
-        "Phone number must be in the format 01[0-2,5]xxxxxxxx",
-      "any.required": "Phone number is required",
-      "string.empty": "Phone number cannot be empty",
-      "string.base": "Phone number must be a string",
-    }),
+    mobilePhone: generalRules.phoneNumber,
     email: generalRules.email,
     password: generalRules.password,
     confirmedPassword: Joi.string()
