@@ -51,4 +51,11 @@ export const ReminderStatus = {
   MISSED: 'Missed',
   SKIPPED: 'Skipped',
 };
-    
+
+export const Images = {
+  PATIENT_FEMALE: "default_patient_female",
+  PATIENT_MALE : "default_patient_male",
+  OTHER : "default_patient_other",
+  DOCTOR_FEMALE : "default_doctor_female",
+  DOCTOR_MALE:"default_doctor_male"
+}

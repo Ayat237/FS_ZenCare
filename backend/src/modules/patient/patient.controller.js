@@ -6,6 +6,8 @@ import {
   capitalizeName,
   DEFAULT_PROFILE_IMAGE,
   Provider,
+  getDefaultImageByGender,
+  Images,
 } from "../../utils/index.js";
 import database from "../../../database/databaseConnection.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
@@ -120,13 +122,12 @@ export const registerPatient = async (req, res, next) => {
   const customId = userData.firstName + nanoid(4); // Generate customId once for consistency
 
   if (!req.file) {
-    // If no file is uploaded, set a default image
+    // If no file is uploaded, set a default image based on gender
+    const defaultImage = getDefaultImageByGender(patientData.gender);
     profileImageObject = {
       URL: {
-        secure_url:
-          process.env.DEFAULT_PROFILE_IMAGE ||
-          "https://res.cloudinary.com/dcvfc0cje/image/upload/v1741650768/default_r5hh3m.png",
-        public_id: "default_r5hh3m", // Shared default public_id
+        secure_url: defaultImage.secure_url,
+        public_id: defaultImage.public_id,
       },
       customId: customId,
     };
@@ -363,7 +364,7 @@ export const editProfileImage = async (req, res, next) => {
     // 2. Delete the old profile image from Cloudinary if it exists
     if (
       patient.profileImage?.URL?.secure_url &&
-      patient.profileImage.URL.public_id !== "default_r5hh3m"
+      ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(patient.profileImage.URL.public_id)
     ) {
       try {
         // const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
@@ -425,6 +426,13 @@ export const editProfileImage = async (req, res, next) => {
       URL: { public_id, secure_url },
       customId: patientCustomId,
     };
+  }else {
+    // Case 2: No file uploaded, no update to profileImage
+    return res.status(200).json({
+      success: true,
+      message: "No new image provided, profile image unchanged",
+      data: patient,
+    });
   }
 
   // 4. Update the patient profile with the new image URL
@@ -466,7 +474,7 @@ export const removeProfileImage = async (req, res, next) => {
   // If removeImage is true, set the default image
   if (
     patient.profileImage?.URL?.secure_url &&
-    patient.profileImage.URL.public_id !== "default_r5hh3m"
+    ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(patient.profileImage.URL.public_id)
   ) {
     try {
       await cloudinaryConfig().uploader.destroy(
@@ -492,12 +500,13 @@ export const removeProfileImage = async (req, res, next) => {
       });
     }
   }
+
+  // Set the default image based on gender
+  const defaultImage = getDefaultImageByGender(patient.gender);
   updateData.profileImage = {
     URL: {
-      secure_url:
-        process.env.DEFAULT_PROFILE_IMAGE ||
-        "https://res.cloudinary.com/dcvfc0cje/image/upload/v1741650768/default_r5hh3m.png",
-      public_id: "default_r5hh3m", // Shared default public_id
+      secure_url: defaultImage.secure_url, // Shared default secure_url
+      public_id: defaultImage.public_id, // Shared default public_id
     },
     customId: patientCustomId,
   };
