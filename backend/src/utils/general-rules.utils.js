@@ -7,7 +7,7 @@ export const objectIdValidation = (value, helper) => {
   return isValid ? value : helper.message("Invalid ObjectId");
 };
 
-export function validateEndDateTime(value, helpers) {
+export const validateEndDateTime = (value, helpers)=> {
 const { startDateTime } = helpers.state.ancestors[0];
 
         const start = DateTime.fromISO(startDateTime);
@@ -25,6 +25,22 @@ const { startDateTime } = helpers.state.ancestors[0];
   
 }
 
+export const validateStartDateTime=(value,helper)=>{
+    const now = DateTime.now().startOf("day").toUTC();
+    console.log(now);
+    
+    const start = DateTime.fromISO(value,{ zone: 'UTC' }).startOf("day");
+    console.log(start);
+    
+    if (!start.isValid) {
+      return helper.message('Invalid date format');
+    }
+    if (start < now) {
+      return helper.message('"startDateTime" must be after or on the current date');
+    }
+    return value;
+
+}
 export const generalRules = {
   id: Joi.custom(objectIdValidation).required(),
   email: Joi.string()
@@ -33,20 +49,32 @@ export const generalRules = {
       minDomainSegments: 2,
       maxDomainSegments: 4,
     })
-    .required(),
+    .required().messages({
+      "string.email": "Email must be a valid email address",
+      "any.required": "Email is required",
+      "string.min": "Email must be at least 5 characters long",
+    }),
   password: Joi.string()
     .pattern(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$!%*?&])[A-Za-z\d$!%*?&]{8,}$/
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$!%*?&])[A-Za-z\d$!%*?&@]{8,}$/
     )
-    .required(),
-  phoneNumber: Joi.array()
-    .items(
-      Joi.string()
-        .pattern(/^01[0-2,5]\d{1,8}$/)
-        .required()
-    )
-    .required(),
-  endDate:Joi.string().isoDate().custom(validateEndDateTime).required(),
+    .required().messages({
+      "string.pattern.base":
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      "any.required": "Password is required",
+      "string.min": "Password must be at least 8 characters long",
+    }),
+  phoneNumber: Joi.string()
+    .pattern(/^01[0-2,5]\d{1,8}$/)
+    .required().messages({
+      "string.pattern.base":
+        "Phone number must be in the format 01[0-2,5]xxxxxxxx",
+      "any.required": "Phone number is required",
+      "string.empty": "Phone number cannot be empty",
+      "string.base": "Phone number must be a string",
+    }),
+  endDate:Joi.string().isoDate().custom(validateEndDateTime),
+  startDate:Joi.string().isoDate().custom(validateStartDateTime),
   headers: {
     "content-type": Joi.string(),
     accept: Joi.string(),
@@ -59,6 +87,7 @@ export const generalRules = {
     "postman-token": Joi.string(),
     "postman-id": Joi.string(),
     connection: Joi.string(),
-    token: Joi.string(),
+    //token: Joi.string(),
+    //emailToken:Joi.string()
   },
 };

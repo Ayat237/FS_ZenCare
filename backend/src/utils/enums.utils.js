@@ -37,7 +37,7 @@ export const DayOfWeek = {
   FRI: "Fri",
 };
 
-export const IntakeInstructionEnum = {
+export const IntakeInstruction = {
   AFTER_EAT: "After eat",
   WHILE_EATING: "While eating",
   BEFORE_EAT: "Before eat",
@@ -51,4 +51,11 @@ export const ReminderStatus = {
   MISSED: 'Missed',
   SKIPPED: 'Skipped',
 };
-    
+
+export const Images = {
+  PATIENT_FEMALE: "default_patient_female",
+  PATIENT_MALE : "default_patient_male",
+  OTHER : "default_patient_other",
+  DOCTOR_FEMALE : "default_doctor_female",
+  DOCTOR_MALE:"default_doctor_male"
+}

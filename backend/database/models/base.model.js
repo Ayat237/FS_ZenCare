@@ -28,8 +28,8 @@ class BaseModel {
     return await this.database.findById(this.collection, id,options);
   }
 
-  async findOne(query = {}) {
-    return await this.database.findOne(this.collection,query);
+  async findOne(query = {},options = {}) {
+    return await this.database.findOne(this.collection,query,options);
   }
 
   async save(document) {

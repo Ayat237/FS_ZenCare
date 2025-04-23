@@ -1,14 +1,14 @@
-import { ErrorHandlerCalss, logger } from "../utils/index.js";
+import { ErrorHandlerClass, logger } from "../utils/index.js";
 
 export const errorHandling = (API) => {
   return async (req, res, next) => {
-    API(req, res, next).catch((err) => {
+    API(req, res, next)?.catch((err) => {
       logger.error("Error in error-handling middleware is",err.message) ;
       const insights = {
         error: "unhandled error",
       };
       next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Inernal server error. Please try again later.",
           500,
           err.stack,

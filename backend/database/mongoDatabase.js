@@ -95,18 +95,20 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findOne(collection, query = {}) {
+  async findDocument(collection, query = {}) {
     try {
       const model = this.model[collection];
       if (!model) {
         throw new Error(`Model for collection ${collection} not found`);
       }
-      const result = await model.findOne(query);
-     // if (!result) throw new Error("Document not found");
-      logger.debug(`Found one document in ${collection}`, { query });
+      const result = await model.find(query);
+      logger.debug(`Found documents in ${collection}`, {
+        query,
+        count: result.length,
+      });
       return result;
     } catch (error) {
-      logger.error(`Failed to find one document in ${this.model.modelName}`, {
+      logger.error(`Failed to find documents in ${this.model.modelName}`, {
         error: error.message,
         stack: error.stack,
         query,
@@ -114,7 +116,77 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findById(collection, id,options={}) {
+  async findOne(collection, query = {}, options = {}) {
+    try {
+      const model = this.model[collection];
+      if (!model) {
+        throw new Error(`Model for collection ${collection} not found`);
+      }
+  
+      // Build the query starting with findOne
+      let queryBuilder = model.findOne(query);
+
+      
+  
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+  
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+  
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+  
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+  
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+  
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+  
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+  
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+  
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+  
+      const result = await queryBuilder.exec();
+  
+      logger.debug(`Found one document in ${collection}`, { query, options });
+  
+      return result;
+    } catch (error) {
+      logger.error(`Failed to find one document in ${this.model.modelName}`, {
+        error: error.message,
+        stack: error.stack,
+        query,
+        options,
+      });
+      throw error;
+    }
+  }
+  async findById(collection, id, options = {}) {
     try {
       const model = this.model[collection];
       let query = model.findById(id);
@@ -160,12 +232,10 @@ class MongooseDatabase extends IDatabase {
       }
 
       const result = await query.exec();
-      console.log(result);
-      
-      if (!result) throw new Error("Document not found");
+ 
 
       logger.debug(`Found one document in ${collection}`, { id });
-      
+
       return result;
     } catch (error) {
       logger.error(`Failed to find one document in ${this.model.modelName}`, {
@@ -192,13 +262,12 @@ class MongooseDatabase extends IDatabase {
 
   async saveDocument(collection, document) {
     try {
-
       const model = this.model[collection];
       const modelInstance =
-      document instanceof model ? document : new model(document); 
-      
-       // Save the document
-       return  await modelInstance.save();;
+        document instanceof model ? document : new model(document);
+
+      // Save the document
+      return await modelInstance.save();
     } catch (error) {
       throw error;
     }

@@ -30,7 +30,7 @@ class IDatabase {
     throw new Error("Method 'findById' must be implemented");
   }
 
-  async findOne(model,query = {}) {
+  async findOne(model,query = {},options = {}) {
     throw new Error("Method 'findOne' must be implemented");
   }
   async save(model, data) {
