@@ -64,19 +64,19 @@ export const registerPatient = async (req, res, next) => {
   }
 
   // 2. Check for existing user
-  // const existingUserByUsername = await userRepository.findByUsername(
-  //   userData.userName
-  // );
-  // if (existingUserByUsername) {
-  //    return next(
-  //     new ErrorHandlerClass(
-  //       "User with this userName already exists",
-  //       409,
-  //       "Duplicate Error",
-  //       "Username already taken"
-  //     )
-  //    );
-  // }
+  const existingUserByUsername = await userModel.findOne({
+    userName: userData.userName,
+  });
+  if (existingUserByUsername) {
+    return next(
+      new ErrorHandlerClass(
+        "User with this userName already exists",
+        409,
+        "Duplicate Error",
+        "Username already taken"
+      )
+    );
+  }
 
   // 3. Validate password match
   if (userData.password !== userData.confirmedPassword) {
@@ -108,31 +108,41 @@ export const registerPatient = async (req, res, next) => {
   // store otp to redis
   await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
 
+  // Handle profile image (default or uploaded)
   let profileImageObject = {
-    secure_url:null,
-    public_id:null,
+    URL: {
+      secure_url: null,
+      public_id: null,
+    },
+    customId: null,
   };
+
+  const customId = userData.firstName + nanoid(4); // Generate customId once for consistency
+
   if (!req.file) {
     // If no file is uploaded, set a default image
     profileImageObject = {
-      URL: { secure_url: DEFAULT_PROFILE_IMAGE,
-        public_id: "default_r5hh3m"
-       },
-      customId:userData.firstName + nanoid(4) ,
+      URL: {
+        secure_url:
+          process.env.DEFAULT_PROFILE_IMAGE ||
+          "https://res.cloudinary.com/dcvfc0cje/image/upload/v1741650768/default_r5hh3m.png",
+        public_id: "default_r5hh3m", // Shared default public_id
+      },
+      customId: customId,
     };
-  }
-
-  // upload image to cloudinary
-  if (req.file) {
-    const customId = userData.firstName + nanoid(4);
-    let { secure_url, public_id } = await uploadFile({
+  } else {
+    // Upload image to Cloudinary
+    const { secure_url, public_id } = await uploadFile({
       file: req.file.path,
       folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
     });
-    
+
     profileImageObject = {
-      secure_url,
-      public_id,
+      URL: {
+        secure_url,
+        public_id,
+      },
+      customId: customId,
     };
   }
 
@@ -228,7 +238,14 @@ export const verifyEmailOTP = async (req, res, next) => {
 
   const storedOtp = await redisClient.GET(`otp:${user.userName}`);
   if (!storedOtp || storedOtp !== otp) {
-    throw new Error("Invalid OTP. Please request a new one if it has expired.");
+    return next(
+      new ErrorHandlerClass(
+        "Invalid OTP",
+        400,
+        "validation error",
+        "Error in redis OTP"
+      )
+    );
   }
 
   // Generate JWT access token
@@ -346,38 +363,41 @@ export const editProfileImage = async (req, res, next) => {
     // 2. Delete the old profile image from Cloudinary if it exists
     if (
       patient.profileImage?.URL?.secure_url &&
-      patient.profileImage.URL.secure_url !== DEFAULT_PROFILE_IMAGE
+      patient.profileImage.URL.public_id !== "default_r5hh3m"
     ) {
       try {
-        const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
-        if (urlParts.length < 2) {
-          return next(
-            new ErrorHandlerClass(
-              "Invalid Cloudinary URL format",
-              500,
-              "Server Error",
-              "Invalid Cloudinary URL format"
-            )
-          );
-        }
-        const pathWithVersion = urlParts[1].trim();
-        const pathParts = pathWithVersion.split("/");
-        const versionIndex = pathParts[0].match(/^v\d+$/) ? 1 : 0;
-        const publicIdWithExtension = pathParts.slice(versionIndex).join("/");
-        const publicId = publicIdWithExtension.split(".")[0];
-        await cloudinaryConfig().uploader.destroy(publicId, (error, result) => {
-          if (error) {
-            logger.warn("Failed to delete old image from Cloudinary", {
-              error,
-              publicId,
-            });
-          } else {
-            logger.info("Old image deleted from Cloudinary", {
-              result,
-              publicId,
-            });
+        // const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
+        // if (urlParts.length < 2) {
+        //   return next(
+        //     new ErrorHandlerClass(
+        //       "Invalid Cloudinary URL format",
+        //       500,
+        //       "Server Error",
+        //       "Invalid Cloudinary URL format"
+        //     )
+        //   );
+        // }
+        // const pathWithVersion = urlParts[1].trim();
+        // const pathParts = pathWithVersion.split("/");
+        // const versionIndex = pathParts[0].match(/^v\d+$/) ? 1 : 0;
+        // const publicIdWithExtension = pathParts.slice(versionIndex).join("/");
+        // const publicId = publicIdWithExtension.split(".")[0];
+        await cloudinaryConfig().uploader.destroy(
+          patient.profileImage.URL.public_id,
+          (error, result) => {
+            if (error) {
+              logger.warn("Failed to delete old image from Cloudinary", {
+                error,
+                publicId: patient.profileImage.URL.public_id,
+              });
+            } else {
+              logger.info("Old image deleted from Cloudinary", {
+                result,
+                publicId: patient.profileImage.URL.public_id,
+              });
+            }
           }
-        });
+        );
       } catch (error) {
         logger.warn("Error extracting publicId for Cloudinary deletion", {
           error,
@@ -423,7 +443,6 @@ export const editProfileImage = async (req, res, next) => {
 
 export const removeProfileImage = async (req, res, next) => {
   const user = req.authUser;
-  const { removeImage } = req.body; //removeImage: boolean ("true" or "false")
 
   // 1. Fetch the patient document using patientID
   const patientId = user.patientID?._id || user.patientID;
@@ -445,54 +464,44 @@ export const removeProfileImage = async (req, res, next) => {
   const updateData = {};
 
   // If removeImage is true, set the default image
-  if (removeImage === "true" || removeImage === true) {
-    if (
-      patient.profileImage?.URL?.secure_url &&
-      patient.profileImage.URL.secure_url !== DEFAULT_PROFILE_IMAGE
-    ) {
-      try {
-        const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
-        if (urlParts.length < 2) {
-          return next(
-            new ErrorHandlerClass(
-              "Invalid Cloudinary URL format",
-              500,
-              "Server Error",
-              "Invalid Cloudinary URL format"
-            )
-          );
-        }
-        const pathWithVersion = urlParts[1].trim();
-        const pathParts = pathWithVersion.split("/");
-        const versionIndex = pathParts[0].match(/^v\d+$/) ? 1 : 0;
-        const publicIdWithExtension = pathParts.slice(versionIndex).join("/");
-        const publicId = publicIdWithExtension.split(".")[0]; // Remove extension
-
-        await cloudinaryConfig().uploader.destroy(publicId, (error, result) => {
+  if (
+    patient.profileImage?.URL?.secure_url &&
+    patient.profileImage.URL.public_id !== "default_r5hh3m"
+  ) {
+    try {
+      await cloudinaryConfig().uploader.destroy(
+        patient.profileImage.URL.public_id,
+        (error, result) => {
           if (error) {
             logger.warn("Failed to delete old image from Cloudinary", {
               error,
-              publicId,
+              publicId: patient.profileImage.URL.public_id,
             });
           } else {
             logger.info("Old image deleted from Cloudinary", {
               result,
-              publicId,
+              publicId: patient.profileImage.URL.public_id,
             });
           }
-        });
-      } catch (error) {
-        logger.warn("Error extracting publicId for Cloudinary deletion", {
-          error,
-          secure_url: patient.profileImage.URL.secure_url,
-        });
-      }
+        }
+      );
+    } catch (error) {
+      logger.warn("Error extracting publicId for Cloudinary deletion", {
+        error,
+        secure_url: patient.profileImage.URL.secure_url,
+      });
     }
-    updateData.profileImage = {
-      URL: { secure_url: DEFAULT_PROFILE_IMAGE },
-      customId: patientCustomId,
-    };
   }
+  updateData.profileImage = {
+    URL: {
+      secure_url:
+        process.env.DEFAULT_PROFILE_IMAGE ||
+        "https://res.cloudinary.com/dcvfc0cje/image/upload/v1741650768/default_r5hh3m.png",
+      public_id: "default_r5hh3m", // Shared default public_id
+    },
+    customId: patientCustomId,
+  };
+
   // 4. Update the patient profile with the new image URL
   const updatedPatient = await patientModel.updateById(
     { _id: patientId },
@@ -501,10 +510,7 @@ export const removeProfileImage = async (req, res, next) => {
   );
   res.status(200).json({
     success: true,
-    message:
-      removeImage == "true"
-        ? "Patient profile image removed successfully"
-        : "Patient profile image updated successfully",
+    message:"Patient profile image removed successfully",
     data: updatedPatient,
   });
 };

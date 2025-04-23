@@ -104,10 +104,4 @@ export const removeProfileImageSchema = {
       "string.base": "Token must be a string",      
     })
   }).unknown(),
-  body: Joi.object({
-    removeImage: Joi.boolean().required().messages({
-      "boolean.base": "removeImage must be a boolean value",
-      "any.required": "removeImage is required"
-    })
-  })
 };

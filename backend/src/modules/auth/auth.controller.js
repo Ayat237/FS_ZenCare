@@ -310,7 +310,14 @@ export const verifyPasswordOTP = async (req, res, next) => {
 
   const storedOtp = await redisClient.GET(`otp:${user.userName}`);
   if (!storedOtp || storedOtp !== otp) {
-    throw new Error("Invalid OTP. Please request a new one if it has expired.");
+    return next(
+      new ErrorHandlerClass(
+        "Invalid OTP",
+        400,
+        "Validation Error",
+        "Error in Otp verification"
+      )
+    );
   }
 
   await userModel.updateById(
