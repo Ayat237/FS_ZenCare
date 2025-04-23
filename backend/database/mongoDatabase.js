@@ -116,21 +116,72 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findOne(collection, query = {}) {
+  async findOne(collection, query = {}, options = {}) {
     try {
       const model = this.model[collection];
       if (!model) {
         throw new Error(`Model for collection ${collection} not found`);
       }
-      const result = await model.findOne(query);
-      // if (!result) throw new Error("Document not found");
-      logger.debug(`Found one document in ${collection}`, { query });
+  
+      // Build the query starting with findOne
+      let queryBuilder = model.findOne(query);
+
+      
+  
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+  
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+  
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+  
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+  
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+  
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+  
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+  
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+  
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+  
+      const result = await queryBuilder.exec();
+  
+      logger.debug(`Found one document in ${collection}`, { query, options });
+  
       return result;
     } catch (error) {
       logger.error(`Failed to find one document in ${this.model.modelName}`, {
         error: error.message,
         stack: error.stack,
         query,
+        options,
       });
       throw error;
     }

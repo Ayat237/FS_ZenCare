@@ -168,7 +168,14 @@ export const verifyEmailOTP = async (req, res, next) => {
     );
   }
   // Find user
-  const user = await userModel.findByEmail(decodedToken.email);
+  const user = await userModel.findOne(
+    { email: decodedToken.email },
+    { 
+      populate: "patientID",
+    }
+  );
+  console.log("user", user);
+  
   if (!user) {
     return next(
       new ErrorHandlerClass(
@@ -215,7 +222,8 @@ export const verifyEmailOTP = async (req, res, next) => {
     },
     {
       isVerified: true,
-    }
+    },
+    { new: true }
   );
 
   await redisClient.SET(
@@ -230,6 +238,16 @@ export const verifyEmailOTP = async (req, res, next) => {
     data: {
       token: accessToken,
       refreshToken,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userName: user.userName,
+        email: user.email,
+        role: user.role,
+        activeRole: user.activeRole,
+        profileImage: user?.patientID?.profileImage?.URL?.secure_url,
+      },
     },
   });
 };
@@ -551,7 +569,7 @@ export const resendOtpPassword = async (req, res, next) => {
   //check if password is verified
   const isVerified = await redisClient.GET(`otp:${user.userName}`);
   //console.log("isVerified", isVerified);
-  
+
   if (!isVerified) {
     return next(
       new ErrorHandlerClass(
@@ -562,7 +580,6 @@ export const resendOtpPassword = async (req, res, next) => {
       )
     );
   }
-    
 
   // 5. Return success response
   res.status(200).json({
