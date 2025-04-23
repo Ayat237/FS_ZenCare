@@ -19,11 +19,7 @@ patientRouter.post(
   errorHandling(validation(VSchema.registerSchema)),
   errorHandling(patientController.registerPatient)
 );
-patientRouter.post(
-  "/verify-email-otp",
-  errorHandling(validation(VSchema.verifyEmailOTPSchema)),
-  errorHandling(patientController.verifyEmailOTP)
-);
+
 
 patientRouter.delete(
   "/deleteAccount",

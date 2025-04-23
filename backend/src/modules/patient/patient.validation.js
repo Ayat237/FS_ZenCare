@@ -59,23 +59,6 @@ export const registerSchema = {
   }).with("password", "confirmedPassword"),
 };
 
-export const verifyEmailOTPSchema = {
-  headers: Joi.object({
-    emailtoken: Joi.string().required().messages({
-      "string.base": "Email token must be a string",
-      "string.empty": "Email token cannot be empty",
-      "any.required": "Email token is required",
-    }),
-  }).unknown(),
-  body: Joi.object({
-    otp: Joi.string().length(6).pattern(/^\d+$/).required().messages({
-      "string.length": "OTP must be exactly 6 digits",
-      "string.pattern.base": "OTP must contain only numbers",
-      "any.required": "OTP is required",
-    }),
-  }),
-};
-
 export const deletePatientAccountSchema = {
   headers: Joi.object({
     token: Joi.string().required().messages({

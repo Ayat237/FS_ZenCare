@@ -146,6 +146,166 @@ export const selectRole = async (req, res, next) => {
   await completeLogin(user, selectedRole, selectedId, res);
 };
 
+/**
+ * Verify OTP for email verification
+ * @route POST /patient/verify-otp
+ */
+export const verifyEmailOTP = async (req, res, next) => {
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
+  const { otp } = req.body;
+  console.log("verify email token:", emailToken);
+
+  // Verify email token
+  const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
+  if (!decodedToken) {
+    return next(
+      new ErrorHandlerClass(
+        "Invalid email token",
+        400,
+        "decoded error",
+        "Error decoding email token"
+      )
+    );
+  }
+  // Find user
+  const user = await userModel.findByEmail(decodedToken.email);
+  if (!user) {
+    return next(
+      new ErrorHandlerClass(
+        "User not found",
+        404,
+        "validation error",
+        " Error in findByEmail"
+      )
+    );
+  }
+
+  const storedOtp = await redisClient.GET(`otp:${user.userName}`);
+  if (!storedOtp || storedOtp !== otp) {
+    return next(
+      new ErrorHandlerClass(
+        "Invalid OTP",
+        400,
+        "validation error",
+        "Error in redis OTP"
+      )
+    );
+  }
+
+  // Generate JWT access token
+  const accessToken = jwt.sign(
+    {
+      userId: user._id,
+      userName: user.userName,
+      role: user.activeRole,
+      activeRole: user.activeRole,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "24h" }
+  );
+
+  console.log("verify email otp:", process.env.ACCESS_TOKEN_SECRET);
+  // 6. Generate refresh token (long-lived)
+  const refreshToken = crypto.randomBytes(32).toString("hex");
+
+  await userModel.updateById(
+    {
+      _id: user._id,
+      isVerified: false,
+    },
+    {
+      isVerified: true,
+    }
+  );
+
+  await redisClient.SET(
+    `refreshToken:${user.userName}`,
+    refreshToken,
+    7 * 24 * 60 * 60
+  );
+  await redisClient.DEL(`otp:${user.userName}`);
+  res.status(200).json({
+    success: true,
+    message: `Email : ${user.email} verified successfully.`,
+    data: {
+      token: accessToken,
+      refreshToken,
+    },
+  });
+};
+export const resendOtp = async (req, res, next) => {
+  const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
+  logger.info(`Resending OTP to user`);
+
+  const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
+  if (!decodedToken) {
+    return next(
+      new ErrorHandlerClass(
+        "Invalid email token",
+        400,
+        "decoded error",
+        "Error decoding email token"
+      )
+    );
+  }
+  // Find user
+  const user = await userModel.findByEmail(decodedToken.email);
+  if (!user) {
+    return next(
+      new ErrorHandlerClass(
+        "User not found",
+        404,
+        "validation error",
+        " Error in findByEmail"
+      )
+    );
+  }
+
+  // 2. Check if user is already verified
+  if (user.isVerified) {
+    return next(
+      new ErrorHandlerClass(
+        "User is already verified. No OTP needed.",
+        400,
+        "OTP Error",
+        "Error in Otp verfication"
+      )
+    );
+  }
+
+  // 3. Generate new OTP (6-digit random number)
+  const newOtp = crypto.randomInt(100000, 999999).toString();
+  await redisClient.SET(`otp:${user.userName}`, newOtp, 10 * 60);
+
+  // Send verification email
+  const isEmailSent = await sendEmailService({
+    to: user.email,
+    subject: "Verify Your Account with OTP",
+    htmlMessage: `<h3>Your OTP for patient registration is: <strong>${newOtp}</strong></h3>
+       <p>It expires in 5 minutes.</p>`,
+  });
+  if (isEmailSent.rejected.length) {
+    logger.error("Failed to send verification email", error);
+    return next(
+      new ErrorHandlerClass(
+        "Failed to send verification email",
+        500,
+        "Server Error",
+        "Error in sending email"
+      )
+    );
+  }
+  // 5. Return success response
+  res.status(200).json({
+    success: true,
+    message: "A new OTP has been sent to your email. It expires in 10 minutes.",
+    data: {
+      userId: user._id,
+      email: user.email,
+    },
+  });
+};
+
 export const forgetPassword = async (req, res, next) => {
   const { email } = req.body;
   const user = await userModel.findByEmail(email);
@@ -337,7 +497,7 @@ export const verifyPasswordOTP = async (req, res, next) => {
   });
 };
 
-export const resendOtp = async (req, res, next) => {
+export const resendOtpPassword = async (req, res, next) => {
   const emailToken = req.headers["emailtoken"] || req.headers["emailToken"];
   logger.info(`Resending OTP to user`);
 
@@ -365,18 +525,6 @@ export const resendOtp = async (req, res, next) => {
     );
   }
 
-  // 2. Check if user is already verified
-  if (user.isVerified) {
-    return next(
-      new ErrorHandlerClass(
-        "User is already verified. No OTP needed.",
-        400,
-        "OTP Error",
-        "Error in Otp verfication"
-      )
-    );
-  }
-
   // 3. Generate new OTP (6-digit random number)
   const newOtp = crypto.randomInt(100000, 999999).toString();
   await redisClient.SET(`otp:${user.userName}`, newOtp, 10 * 60);
@@ -399,6 +547,23 @@ export const resendOtp = async (req, res, next) => {
       )
     );
   }
+
+  //check if password is verified
+  const isVerified = await redisClient.GET(`otp:${user.userName}`);
+  //console.log("isVerified", isVerified);
+  
+  if (!isVerified) {
+    return next(
+      new ErrorHandlerClass(
+        "OTP forget password already verified",
+        400,
+        "Validation Error",
+        "OTP forget password already verified"
+      )
+    );
+  }
+    
+
   // 5. Return success response
   res.status(200).json({
     success: true,

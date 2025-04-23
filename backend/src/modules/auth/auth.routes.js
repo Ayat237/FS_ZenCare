@@ -19,6 +19,20 @@ authRouter.post(
 );
 
 authRouter.post(
+  "/verify-email-otp",
+  errorHandling(validation(validate.verifyEmailOTPSchema)),
+  errorHandling(authController.verifyEmailOTP)
+);
+
+authRouter.post(
+  "/resend-otp",
+  errorHandling(validation(validate.resendOtpSchema)),
+  errorHandling(authController.resendOtp)
+);
+
+
+
+authRouter.post(
   "/forget-password",
   errorHandling(validation(validate.forgetPasswordSchema)),
   errorHandling(authController.forgetPassword)
@@ -31,9 +45,9 @@ authRouter.post(
 );
 
 authRouter.post(
-  "/resend-otp",
-  errorHandling(validation(validate.resendOtpSchema)),
-  errorHandling(authController.resendOtp)
+  "/resend-otp-password",
+  errorHandling(validation(validate.resendOtpPasswordSchema)),
+  errorHandling(authController.resendOtpPassword)
 );
 
 authRouter.patch(
