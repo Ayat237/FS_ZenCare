@@ -3,10 +3,7 @@ import { generalRules, possibleRoles, systemRoles } from "../../utils/index.js";
 
 export const loginSchema = {
   body: Joi.object({
-    email: generalRules.email.messages({
-      "string.email": "Email must be a valid email address",
-      "any.required": "Email is required",
-    }),
+    email: generalRules.email,
     password: Joi.string().min(8).messages({
       "any.required": "Password is required",
       "string.min": "Password must be at least 8 characters long",
@@ -36,11 +33,7 @@ export const selectRoleSchema = {
 
 export const forgetPasswordSchema = {
   body: Joi.object({
-    email: generalRules.email.messages({
-      "string.email": "Email must be a valid email address",
-      "any.required": "Email is required",
-      "string.empty": "Email cannot be empty",
-    }),
+    email: generalRules.email
   }),
 };
 
@@ -133,22 +126,8 @@ export const updateAccountSchema = {
       "string.min": "Username must be at least 3 characters long",
       "string.max": "Username cannot exceed 10 characters"
     }),
-    email:  Joi.string()
-    .email({
-      tlds: { allow: ["com"] },
-      minDomainSegments: 2,
-      maxDomainSegments: 4,
-    }).optional().messages({
-      "string.email": "Email must be a valid email address",
-    }),
-    phoneNumber: Joi.array()
-    .items(
-      Joi.string()
-        .pattern(/^01[0-2,5]\d{1,8}$/)
-        .optional()
-    ).messages({
-      "string.pattern.base": "Phone number must be a valid Egyptian mobile number",
-    })
+    email:  generalRules.email,
+    phoneNumber: generalRules.phoneNumber,
   })
 };
 

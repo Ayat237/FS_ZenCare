@@ -49,19 +49,29 @@ export const generalRules = {
       minDomainSegments: 2,
       maxDomainSegments: 4,
     })
-    .required(),
+    .required().messages({
+      "string.email": "Email must be a valid email address",
+      "any.required": "Email is required",
+      "string.min": "Email must be at least 5 characters long",
+    }),
   password: Joi.string()
     .pattern(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$!%*?&])[A-Za-z\d$!%*?&@]{8,}$/
     )
-    .required(),
-  phoneNumber: Joi.array()
-    .items(
-      Joi.string()
-        .pattern(/^01[0-2,5]\d{1,8}$/)
-        .required()
-    )
-    .required(),
+    .required().messages({
+      "string.pattern.base":
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      "any.required": "Password is required",
+      "string.min": "Password must be at least 8 characters long",
+    }),
+  phoneNumber: Joi.string()
+    .pattern(/^01[0-2,5]\d{1,8}$/)
+    .required().messages({
+      "string.pattern.base":
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      "any.required": "Password is required",
+      "string.min": "Password must be at least 8 characters long",
+    }),
   endDate:Joi.string().isoDate().custom(validateEndDateTime),
   startDate:Joi.string().isoDate().custom(validateStartDateTime),
   headers: {

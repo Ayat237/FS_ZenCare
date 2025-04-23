@@ -19,8 +19,8 @@ const patientSchema = new Schema(
         public_id: {
           type: String,
           required: false,
-          unique: false,
-
+          default: null,
+          unique: false
         },
         secure_url: {
           type: String,
