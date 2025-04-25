@@ -15,6 +15,13 @@ medicationRouter.post(
     errorHandling(medicationsController.addMedicine)
 )
 
+medicationRouter.post(
+    "/confirm-add-medicine",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(medicationsController.confirmAddMedicine)
+)
+
 medicationRouter.put(
     "/update-medicine/:id",
     validation(VSchema.updateMedicineSchema),

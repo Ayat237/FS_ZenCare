@@ -211,7 +211,6 @@ export const verifyEmailOTP = async (req, res, next) => {
     { expiresIn: "24h" }
   );
 
-  console.log("verify email otp:", process.env.ACCESS_TOKEN_SECRET);
   // 6. Generate refresh token (long-lived)
   const refreshToken = crypto.randomBytes(32).toString("hex");
 

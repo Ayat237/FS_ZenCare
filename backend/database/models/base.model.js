@@ -20,8 +20,8 @@ class BaseModel {
     return await this.database.deleteById(this.collection,id);
   }
 
-  async find(query = {}) {
-    return await this.database.findDocument(this.collection, query);
+  async find(query = {}, options = {}) {
+    return await this.database.findDocument(this.collection, query,options);
   }
 
   async findById(id,options={}) {

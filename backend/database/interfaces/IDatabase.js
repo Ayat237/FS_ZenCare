@@ -22,7 +22,7 @@ class IDatabase {
     throw new Error("Method 'deleteById' must be implemented");
   }
 
-  async find(model,query = {}) {
+  async find(model,query = {},options = {}) {
     throw new Error("Method 'find' must be implemented");
   }
 

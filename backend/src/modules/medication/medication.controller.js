@@ -7,31 +7,22 @@ import {
 import { Frequency, ReminderStatus } from "../../utils/enums.utils.js";
 import database from "../../../database/databaseConnection.js";
 import { ErrorHandlerClass } from "../../utils/error-class.utils.js";
+import { checkDrugInteractionsService } from "../../services/index.js";
+import {
+  deletePendingMedication,
+  getPendingMedication,
+  storePendingMedication,
+} from "./utils/pendingMedications.utils.js";
 
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
 
 export const addMedicine = async (req, res, next) => {
   const user = req.authUser;
-
-  const patientId = user.patientID?._id || user.patientID;
-
-
-  const patient = await patientModel.findById(patientId);
-  if (!patient) {
-    return next(
-      new ErrorHandlerClass(
-        "Patient not found",
-        404,
-        "Not Found",
-        "Error in create medicine"
-      )
-    );
-  }
-
   const {
     medicineName,
     medicineType,
+    drugId,
     dose,
     frequency,
     timesPerDay,
@@ -44,16 +35,66 @@ export const addMedicine = async (req, res, next) => {
     reminders,
   } = req.body;
 
-  const startDate = DateTime.fromISO(startDateTime,{zone:"UTC"});
-  const endDate = DateTime.fromISO(endDateTime,{zone:"UTC"});
+  const patientId = user.patientID?._id || user.patientID;
+  const patient = await patientModel.findById(patientId);
+  if (!patient) {
+    return next(
+      new ErrorHandlerClass(
+        "Patient not found",
+        404,
+        "Not Found",
+        "Error in create medicine"
+      )
+    );
+  }
+  const interactionResult = await checkDrugInteractionsService(
+    patientId,
+    drugId
+  );
+  const { summary, drugs, metadata, filterCounts, interactions } =
+    interactionResult;
 
-  const startDateAtMidnight = startDate.toJSDate(); 
+  const hasPotentalInteractions =
+    filterCounts.major > 0 ||
+    filterCounts.moderate > 0 ||
+    filterCounts.minor > 0 ||
+    filterCounts.therapeuticDuplication > 0;
+
+  if (hasPotentalInteractions) {
+    const pendingId = `pendingMedicationId:${user.userName}`;
+    storePendingMedication(pendingId, {
+      patientId,
+      medicationData: req.body,
+      interactionResult,
+    });
+
+    return res.status(200).json({
+      success: false,
+      message: "Potential drug interactions found",
+      status: "Interaction Warning",
+      stack: "Please confirm before proceeding",
+      data: {
+        pendingId,
+        summary,
+        drugs,
+        metadata,
+        filterCounts,
+        interactions,
+      },
+    });
+  }
+
+  const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
+  const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
+
+  const startDateAtMidnight = startDate.toJSDate();
   const endDateAtMidnight = endDate.toJSDate();
 
   const medicineRecord = new Medication({
     CreatedBy: user._id,
     patientId,
     medicineName,
+    drugId,
     medicineType,
     dose,
     frequency,
@@ -65,6 +106,95 @@ export const addMedicine = async (req, res, next) => {
     intakeInstructions,
     notes,
     reminders: reminders || [],
+  });
+
+  await medicationModel.save(medicineRecord);
+
+  // Respond with the created medication
+  res.status(201).json({
+    success: true,
+    message: "Medication created successfully",
+    data: {
+      ...medicineRecord.toObject(),
+    },
+  });
+};
+
+export const confirmAddMedicine = async (req, res, next) => {
+  const user = req.authUser;
+  const { pendingId, accept } = req.body;
+
+  const pendingMedication = await getPendingMedication(pendingId);
+  console.log("pendingMedication", pendingMedication);
+
+  if (!pendingMedication) {
+    return next(
+      new ErrorHandlerClass(
+        "Pending medication not found",
+        404,
+        "Not Found",
+        "Error in confirm add medicine"
+      )
+    );
+  }
+  const { patientId, medicationData } = pendingMedication;
+  if (
+    patientId !== user.patientID?._id.toString() 
+  ) {
+    return next(
+      new ErrorHandlerClass(
+        "Unauthorized access to pending medication",
+        403,
+        "Forbidden",
+        "Error in confirm add medicine"
+      )
+    );
+  }
+  await deletePendingMedication(pendingId);
+
+  if (accept === "false") {
+    return res.status(200).json({
+      success: false,
+      message: "Medication addition cancelled by user",
+      data: null,
+    });
+  }
+  const {
+    medicineName,
+    medicineType,
+    drugId,
+    dose,
+    frequency,
+    timesPerDay,
+    daysOfWeek,
+    startHour,
+    startDateTime,
+    endDateTime,
+    intakeInstructions,
+    notes,
+  } = medicationData;
+
+  const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
+  const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
+
+  const startDateAtMidnight = startDate.toJSDate();
+  const endDateAtMidnight = endDate.toJSDate();
+
+  const medicineRecord = new Medication({
+    CreatedBy: user._id,
+    patientId,
+    medicineName,
+    drugId,
+    medicineType,
+    dose,
+    frequency,
+    startHour,
+    timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
+    daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
+    startDateTime: startDateAtMidnight,
+    endDateTime: endDateAtMidnight,
+    intakeInstructions,
+    notes,
   });
 
   await medicationModel.save(medicineRecord);
@@ -133,12 +263,12 @@ export const updateMedicationRecord = async (req, res, next) => {
     medication.startHour = startHour;
   }
   if (startDateTime) {
-    const startDate = DateTime.fromISO(startDateTime,{zone:"UTC"});
+    const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
     const startDateAtMidnight = startDate.toJSDate();
     medication.startDateTime = startDateAtMidnight;
   }
   if (endDateTime) {
-    const endDate = DateTime.fromISO(endDateTime,{zone:"UTC"});
+    const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
     const endDateAtMidnight = endDate.toJSDate();
     medication.endDateTime = endDateAtMidnight;
   }
@@ -281,7 +411,7 @@ export const getDashboardReminders = async (req, res, next) => {
     Today: [],
     Tomorrow: [],
   };
-  
+
   medications.forEach((medication) => {
     const remindersByDay = {
       Yesterday: [],
@@ -325,37 +455,37 @@ export const getDashboardReminders = async (req, res, next) => {
         : medication.frequency === Frequency.MONTHLY
         ? "monthly"
         : "as needed";
-        ["Yesterday", "Today", "Tomorrow"].forEach((day) => {
-          if (remindersByDay[day].length > 0) {
-            let reminderCount =
-              day === "Yesterday"
-                ? remindersByDay[day].filter(
-                    (reminder) =>
-                      reminder.status.toUpperCase() ===
-                      ReminderStatus.MISSED.toUpperCase()
-                  ).length
-                : remindersByDay[day].filter(
-                    (reminder) =>
-                      reminder.status.toUpperCase() ===
-                      ReminderStatus.PENDING.toUpperCase()
-                  ).length; // Only count PENDING reminders
-    
-            if (reminderCount > 0) {
-              dashboardData[day].push({
-                medicineName: medication.medicineName,
-                medicineType: medication.medicineType,
-                frequency: frequencyText,
-                intakeInstructions: medication.intakeInstructions,
-                reminderCount: reminderCount,
-                id: medication._id,
-                reminderIndexes: remindersByDay[day].map((reminder) => {
-                  return medication.reminders.indexOf(reminder);
-                }),
-                canMark: day === "Today" ? true : false,
-              });
-            }
-          }
-        });
+    ["Yesterday", "Today", "Tomorrow"].forEach((day) => {
+      if (remindersByDay[day].length > 0) {
+        let reminderCount =
+          day === "Yesterday"
+            ? remindersByDay[day].filter(
+                (reminder) =>
+                  reminder.status.toUpperCase() ===
+                  ReminderStatus.MISSED.toUpperCase()
+              ).length
+            : remindersByDay[day].filter(
+                (reminder) =>
+                  reminder.status.toUpperCase() ===
+                  ReminderStatus.PENDING.toUpperCase()
+              ).length; // Only count PENDING reminders
+
+        if (reminderCount > 0) {
+          dashboardData[day].push({
+            medicineName: medication.medicineName,
+            medicineType: medication.medicineType,
+            frequency: frequencyText,
+            intakeInstructions: medication.intakeInstructions,
+            reminderCount: reminderCount,
+            id: medication._id,
+            reminderIndexes: remindersByDay[day].map((reminder) => {
+              return medication.reminders.indexOf(reminder);
+            }),
+            canMark: day === "Today" ? true : false,
+          });
+        }
+      }
+    });
   });
 
   // Respond with the dashboard data
@@ -365,13 +495,12 @@ export const getDashboardReminders = async (req, res, next) => {
     data: dashboardData,
   });
 };
-//====================================================================================
+
 export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   const user = req.authUser;
   const patientId = user.patientID?._id || user.patientID;
   const { medicationId } = req.params;
   const { reminderIndex } = req.body;
-
 
   // Validate input
   if (!patientId) {
@@ -410,12 +539,11 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
     );
   }
 
-    // Define date ranges for Yesterday, Today, and Tomorrow
-    const now = DateTime.now().setZone("UTC");
-    const today = now.startOf("day");
-    const yesterday = today.minus({ days: 1 });
-    const tomorrow = today.plus({ days: 1 });
-  
+  // Define date ranges for Yesterday, Today, and Tomorrow
+  const now = DateTime.now().setZone("UTC");
+  const today = now.startOf("day");
+  const yesterday = today.minus({ days: 1 });
+  const tomorrow = today.plus({ days: 1 });
 
   // Find the next PENDING reminder for Today
   let nextReminderIndex = -1;
@@ -423,9 +551,8 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   for (let i = 0; i < medication.reminders.length; i++) {
     const reminder = medication.reminders[i];
     const reminderDate = DateTime.fromJSDate(reminder.date)
-      .setZone('UTC')
-      .startOf('day');
-
+      .setZone("UTC")
+      .startOf("day");
 
     if (
       reminderDate.equals(today) &&
@@ -442,14 +569,13 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   if (nextReminderIndex === -1) {
     return next(
       new ErrorHandlerClass(
-        'No pending reminders for today to mark as taken',
+        "No pending reminders for today to mark as taken",
         400,
-        'Bad Request',
-        'Error in markDoseTakenAndUpdateDashboard'
+        "Bad Request",
+        "Error in markDoseTakenAndUpdateDashboard"
       )
     );
   }
-
 
   // Mark the dose as taken (embedded logic from markDoseTaken)
   const reminder = medication.reminders[nextReminderIndex];
@@ -503,14 +629,13 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   // Update the todayReminderCount after marking the reminder as taken
   todayReminderCount--;
 
-
   // Find the next PENDING reminder index for Today (if any)
   let updatedNextReminderIndex = -1;
   for (let i = 0; i < medication.reminders.length; i++) {
     const reminder = medication.reminders[i];
     const reminderDate = DateTime.fromJSDate(reminder.date)
-      .setZone('UTC')
-      .startOf('day');
+      .setZone("UTC")
+      .startOf("day");
 
     if (
       reminderDate.equals(today) &&
@@ -520,7 +645,6 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
       break;
     }
   }
-
 
   // Organize reminders into Yesterday, Today, Tomorrow
   const dashboardData = {
@@ -648,14 +772,15 @@ export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   });
 };
 
-
-
 export const listHistoricalMedications = async (req, res, next) => {
   const user = req.authUser;
   const patientId = user.patientID?._id || user.patientID;
 
   // Fetch medications and filter by endDateTime at runtime
-  const medications = await medicationModel.find({ patientId, isActive: false });
+  const medications = await medicationModel.find({
+    patientId,
+    isActive: false,
+  });
   if (!medications || medications.length === 0) {
     return next(
       new ErrorHandlerClass(
@@ -667,7 +792,6 @@ export const listHistoricalMedications = async (req, res, next) => {
     );
   }
 
-
   const formattedMedications = medications.map((medication) => ({
     medicineName: medication.medicineName,
     medicineType: medication.medicineType,
@@ -677,8 +801,8 @@ export const listHistoricalMedications = async (req, res, next) => {
     daysOfWeek: medication.daysOfWeek,
     intakeInstructions: medication.intakeInstructions,
     startDateTime: medication.startDateTime,
-    endDateTime: medication.endDateTime, 
-    notes: medication.notes, 
+    endDateTime: medication.endDateTime,
+    notes: medication.notes,
   }));
 
   res.status(200).json({
@@ -686,8 +810,7 @@ export const listHistoricalMedications = async (req, res, next) => {
     message: "Historical medications fetched successfully",
     data: formattedMedications,
   });
-}
-
+};
 
 export const deleteMedication = async (req, res, next) => {
   const { medicationId } = req.params;
@@ -724,6 +847,8 @@ export const deleteMedication = async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: `Medication with id(${medication._id}) deleted successfully`,   
+    message: `Medication with id(${medication._id}) deleted successfully`,
   });
 };
+
+export const drugChecker = async (req, res, next) => {};

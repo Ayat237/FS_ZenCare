@@ -22,6 +22,10 @@ const medicationSchema = new Schema(
       ref: "Patient",
       required: true,
     },
+    drugId: {
+      type: String,
+      required: true,
+    },
     medicineName: {
       type: String,
       required: true,
