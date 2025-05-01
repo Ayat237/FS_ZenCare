@@ -5,13 +5,6 @@ import { MedicationModel } from "../../database/models/medications.model.js";
 import database from "../../database/databaseConnection.js";
 
 
-const inferSeverity = (description) => {
-  const lowerDesc = description.toLowerCase();
-  if (lowerDesc.includes('serious') || lowerDesc.includes('severe')) return 'Major';
-  if (lowerDesc.includes('moderate')) return 'Moderate';
-  return 'Minor';
-};
-
 const medicationModel = new MedicationModel(database);
 export const fetchDrugInteractions = async (drugIds) => {
   try {
@@ -66,40 +59,7 @@ export const fetchDrugInteractions = async (drugIds) => {
       }
     });
 
-    // Step 5: Extract interactions
-    const interactions = [];
-    const interactionWrapper = $('.interactions-reference');
-
-    const noInteractionsMessage = interactionWrapper.find('p b').text().trim();
-    if (noInteractionsMessage.includes('No drug interactions were found')) {
-      // No interactions to process
-      return {
-        summary: summaryText,
-        drugs,
-        metadata: {
-          drugList: drugListInput,
-          interactionListId,
-          professional: professionalValue === '1' ? true : false,
-        },
-        filterCounts, // New field with counts for each interaction type
-        interactions: [],
-      };
-    } else {
-      const interactionHeader = interactionWrapper.find('.interactions-reference-header');
-      if (interactionHeader.length) {
-        const description = interactionHeader.find('p').text().trim();
-        if (description) {
-          const severity = inferSeverity(description);
-          interactions.push({ severity ,description });
-        }
-      }
-
-      $('.interactions-list .interaction-item').each((index, element) => {
-        const severity = $(element).find('.severity').text().trim() || 'Unknown';
-        const description = $(element).find('.description').text().trim() || 'No description available';
-        interactions.push({ severity, description });
-      });
-    }
+   
     return{
       summary: summaryText,
        drugs,

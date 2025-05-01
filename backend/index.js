@@ -5,6 +5,9 @@ import cors from "cors";
 import * as router from './src/modules/index.js';
 import { ErrorHandlerClass, logger } from './src/utils/index.js';
 import { globalResponse } from './src/middlewares/error-hanling.middleware.js';
+import { createClient } from 'redis';
+import { startMissedDosesJob, updateMedicationStatus } from './src/modules/medication/utils/cron.utils.js';
+
 
 if(process.env.NODE_ENV === 'dev'){
     config({path: path.resolve('config/.dev.env')});
@@ -31,9 +34,6 @@ app.use('/patient', router.patientRouter);
 app.use('/medication', router.medicationRouter);
 
 
-
-import { createClient } from 'redis';
-import { startMissedDosesJob, updateMedicationStatus } from './src/modules/medication/utils/cron.utils.js';
 
 const client = createClient();
 
