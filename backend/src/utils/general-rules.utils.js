@@ -49,7 +49,7 @@ export const generalRules = {
       minDomainSegments: 2,
       maxDomainSegments: 4,
     })
-    .required().messages({
+   .messages({
       "string.email": "Email must be a valid email address",
       "any.required": "Email is required",
       "string.min": "Email must be at least 5 characters long",
@@ -66,7 +66,7 @@ export const generalRules = {
     }),
   phoneNumber: Joi.string()
     .pattern(/^01[0-2,5]\d{1,8}$/)
-    .required().messages({
+    .messages({
       "string.pattern.base":
         "Phone number must be in the format 01[0-2,5]xxxxxxxx",
       "any.required": "Phone number is required",

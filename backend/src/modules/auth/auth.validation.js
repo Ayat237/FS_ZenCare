@@ -154,8 +154,8 @@ export const updateAccountSchema = {
       "string.min": "Username must be at least 3 characters long",
       "string.max": "Username cannot exceed 10 characters"
     }),
-    email:  generalRules.email,
-    phoneNumber: generalRules.phoneNumber,
+    email:  generalRules.email.optional(),
+    mobilePhone: generalRules.phoneNumber.optional(),
   })
 };
 

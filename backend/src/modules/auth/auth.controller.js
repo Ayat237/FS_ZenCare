@@ -628,7 +628,7 @@ export const getLoggedInProfile = async (req, res, next) => {
       userName: user.userName,
       email: user.email,
       role: user.role,
-      phoneNumber: user.phoneNumber,
+      mobilePhone: user.mobilePhone,
       gender: user.gender,
       dateOfBirth: user.dateOfBirth,
       activeRole: user.activeRole,
@@ -647,7 +647,7 @@ export const updateAccount = async (req, res, next) => {
   // to ensure only the logged in user can update the account
   const user = req.authUser;
 
-  const { firstName, email, lastName, userName, phoneNumber } = req.body;
+  const { firstName, email, lastName, userName, mobilePhone } = req.body;
 
   if (userName) {
     const existingUser = await userModel.findOne({ userName });
@@ -670,8 +670,8 @@ export const updateAccount = async (req, res, next) => {
   if (lastName) {
     user.lastName = capitalizeName(lastName);
   }
-  if (phoneNumber) {
-    user.mobilePhone = phoneNumber;
+  if (mobilePhone) {
+    user.mobilePhone = mobilePhone;
   }
 
   let emailChanged = false;

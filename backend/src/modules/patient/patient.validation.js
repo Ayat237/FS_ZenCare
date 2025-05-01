@@ -18,8 +18,8 @@ export const registerSchema = {
       "string.max": "Username cannot exceed 10 characters",
       "any.required": "Username is required",
     }),
-    mobilePhone: generalRules.phoneNumber,
-    email: generalRules.email,
+    mobilePhone: generalRules.phoneNumber.required(),
+    email: generalRules.email.required(),
     password: generalRules.password,
     confirmedPassword: Joi.string()
       .valid(Joi.ref("password"))
