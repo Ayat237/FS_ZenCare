@@ -69,7 +69,6 @@ export const fetchDrugInteractions = async (drugIds) => {
         professional: professionalValue === '1' ? true : false,
       },
       filterCounts, // New field with counts for each interaction type
-      interactions,
     }
 
   } catch (error) {

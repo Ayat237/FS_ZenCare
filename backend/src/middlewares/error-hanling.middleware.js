@@ -20,19 +20,6 @@ import { ErrorHandlerClass, logger } from "../utils/index.js";
 //   };
 // };
 
-// export const globalResponse = async (err, req, res, xnext) => {
-//   if (err) {
-//     res.status(err["stausCode"] || 500).json({
-//       message:"Inernal server error. Please try again later",
-//       error: err.message,
-//       stack: err.stack, // where the error occurred in code
-//       errorPosition: err.position,
-//       data: err.data
-//     });
-//   }
-// };
-
-
 export const errorHandling = (API) => {
   return async (req, res, next) => {
     API(req, res, next)?.catch((err) => {
@@ -60,14 +47,27 @@ export const errorHandling = (API) => {
   };
 };
 
+// export const globalResponse = async (err, req, res, next) => {
+//   if (err) {
+//     res.status(err["stausCode"] || 500).json({
+//       message:"Inernal server error. Please try again later",
+//       error: err.message,
+//       stack: err.stack, // where the error occurred in code
+//       errorPosition: err.position,
+//       data: err.data
+//     });
+//   }
+// };
 
-export const globalResponse = async (err, req, res, xnext) => {
+
+
+export const globalResponse = async (err, req, res, next) => {
   if (err) {
-    res.status(err.statusCode || 500).json({
-      success: (err.statusCode >= 200 && err.statusCode < 300) ? false : false,
+    res.status(err["stausCode"] || 500).json({
+      success: (err["stausCode"] >= 200 && err["stausCode"] < 300) ? false : false,
       message: err.message || "Internal server error. Please try again later",
       error: err.message || "Internal server error. Please try again later",
-      stack: err.status || "Something went wrong", // Use status as stack for Interaction Warning
+      stack: err.stack || "Something went wrong", // Use status as stack for Interaction Warning
       errorPosition: err.position || "Unknown position",
       data: err.data || null
     });
