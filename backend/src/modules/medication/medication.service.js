@@ -19,47 +19,146 @@ import { logger } from "../../utils/logger.utils.js";
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
 
-const checkSignificantInteractions = async (patientId, drugId) => {
+const checkSignificantInteractions = async (
+  patientId,
+  drugId,
+  medicationId = null
+) => {
+  logger.debug("Checking for significant drug interactions");
+  // Step 1: Fetch the patient's existing medications (exclude the medication being updated if applicable)
+  const existingMedications = await medicationModel.find({
+    patientId,
+    _id: { $ne: medicationId }, // Exclude the medication being updated (for updateMedicationService)
+  });
+
+
+  const existingDrugIds = existingMedications
+    .map((med) => med.drugId)
+    .filter((id) => id && id !== drugId);
+
+  let preExistingInteractionResult = {
+    summary: "",
+    drugs: [],
+    metadata: {},
+    interactions: [],
+    filterCounts: {},
+  };
+  let hasPreExistingInteractions = false;
+  if (existingDrugIds.length > 0) {
+    preExistingInteractionResult = await checkDrugInteractionsService(
+      patientId,
+      ...existingDrugIds
+    );
+    const { filterCounts } = preExistingInteractionResult;
+  //  logger.debug("Pre-existing drug interactions",preExistingInteractionResult);
+    hasPreExistingInteractions =
+      filterCounts.major > 0 ||
+      filterCounts.moderate > 0 ||
+      filterCounts.minor > 0 ||
+      filterCounts.food > 0 ||
+      filterCounts.therapeuticDuplication > 0;
+  }
+   const allDrugIds = [...existingDrugIds, drugId];
+
   const interactionResult = await checkDrugInteractionsService(
     patientId,
-    drugId
+    ...allDrugIds
   );
+  const { summary, drugs, metadata,interactions, filterCounts } = interactionResult;
 
-  const { summary, drugs, metadata, filterCounts, interactions, consumerHtml } =
-    interactionResult;
+  const drugIds = metadata.drugList.split(",");
+  
+  let drugMap = {};
+  drugIds.forEach((drugId,index) => {
+    const drug = drugs[index];
 
-  const hasSignificantInteractions =
-    filterCounts.major > 0 ||
-    filterCounts.moderate > 0 ||
-    filterCounts.therapeuticDuplication > 0;
+    if (drug) {
+      drugMap[drugId] = {
+        drugName: drug.drugName,
+      };
+    }
+  });
 
+  const newDrugName = drugMap[drugId]; 
+  console.log("newDrugName", newDrugName);
+  
+
+  const filteredInteractions = interactions.filter((interaction) =>
+    interaction.drugs.some((drug) =>
+      drug.drugName.toLowerCase() === newDrugName.drugName.toLowerCase()
+    )
+  );
+  console.log("filteredInteractions", filteredInteractions);
+
+  // Count interactions by severity for the new drug
+  const newDrugFilterCounts = {
+    major: 0,
+    moderate: 0, 
+    minor: 0,
+    food: 0,
+    therapeuticDuplication: 0
+  };
+
+  // Increment counts based on severity
+  filteredInteractions.forEach(interaction => {
+    switch(interaction.severity) {
+      case 'Major':
+        newDrugFilterCounts.major++;
+        break;
+      case 'Moderate': 
+        logger.debug("Moderate interaction",interaction);
+        newDrugFilterCounts.moderate++;
+        break;
+      case 'Minor':
+        newDrugFilterCounts.minor++;
+        break;
+      case 'Food':
+        newDrugFilterCounts.food++;
+        break;
+      case 'Therapeutic Duplication':
+        newDrugFilterCounts.therapeuticDuplication++;
+        break;
+    }
+  });
+   console.log("newDrugFilterCounts", newDrugFilterCounts);
+
+  // Check if there are any significant interactions
+  const hasSignificantNewInteractions = 
+    newDrugFilterCounts.major > 0 ||
+    newDrugFilterCounts.moderate > 0 ||
+    newDrugFilterCounts.minor > 0 ||
+    newDrugFilterCounts.therapeuticDuplication > 0;
+    console.log("hasSignificantNewInteractions", hasSignificantNewInteractions);
+
+    console.log("newDrugFilterCounts", newDrugFilterCounts);
+    
   return {
-    hasSignificantInteractions,
+    hasSignificantNewInteractions,
     interactionResult: {
       summary,
       drugs,
       metadata,
-      filterCounts,
-      interactions,
-      consumerHtml,
+      filteredInteractions,
+      newDrugFilterCounts,
+
     },
   };
 };
 
 const handlePendingAction = async (
-  user,
+  patientId,
   medicationData,
   interactionResult,
   action
 ) => {
   const pendingId = randomUUID();
   await storePendingMedication(pendingId, {
-    user,
+    patientId,
     medicationData,
     interactionResult,
     action,
   });
-  
+
   throw new ErrorHandlerClass(
     "Potential drug interactions found",
     200,
@@ -128,10 +227,10 @@ export const addMedicationService = async (user, medicationData) => {
   });
 
   // Check for drug interactions
-  const { hasSignificantInteractions, interactionResult } =
+  const { hasSignificantNewInteractions, interactionResult } =
     await checkSignificantInteractions(patientId, drugId);
 
-  if (hasSignificantInteractions) {
+  if (hasSignificantNewInteractions) {
     // Store parsed dates in the medicationData for confirmAddMedicine
     const medicationDataWithParsedDates = {
       ...medicationData,
@@ -139,12 +238,10 @@ export const addMedicationService = async (user, medicationData) => {
       endDateTime: endDateAtMidnight,
     };
     await handlePendingAction(
-      user,
+      patientId,
       medicationDataWithParsedDates,
       interactionResult,
       "add"
     );
   }
-
-  
 };

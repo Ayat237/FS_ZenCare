@@ -122,6 +122,7 @@ const medicationModel = new MedicationModel(database);
 // };
 
 
+
 export const addMedicine = async (req, res, next) => {
   const user = req.authUser;
   const medicationData = req.body;
@@ -153,7 +154,7 @@ export const confirmAddMedicine = async (req, res, next) => {
       )
     );
   }
-  const { patientId, medicationData } = pendingMedication;
+  const { patientId , medicationData } = pendingMedication;
   if (
     patientId !== user.patientID?._id.toString() 
   ) {
