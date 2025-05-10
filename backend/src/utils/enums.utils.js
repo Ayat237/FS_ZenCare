@@ -37,7 +37,7 @@ export const DayOfWeek = {
   FRI: "Fri",
 };
 
-export const IntakeInstructionEnum = {
+export const IntakeInstruction = {
   AFTER_EAT: "After eat",
   WHILE_EATING: "While eating",
   BEFORE_EAT: "Before eat",

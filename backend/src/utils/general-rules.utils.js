@@ -7,7 +7,7 @@ export const objectIdValidation = (value, helper) => {
   return isValid ? value : helper.message("Invalid ObjectId");
 };
 
-export function validateEndDateTime(value, helpers) {
+export const validateEndDateTime = (value, helpers)=> {
 const { startDateTime } = helpers.state.ancestors[0];
 
         const start = DateTime.fromISO(startDateTime);
@@ -25,6 +25,22 @@ const { startDateTime } = helpers.state.ancestors[0];
   
 }
 
+export const validateStartDateTime=(value,helper)=>{
+    const now = DateTime.now().startOf("day").toUTC();
+    console.log(now);
+    
+    const start = DateTime.fromISO(value,{ zone: 'UTC' }).startOf("day");
+    console.log(start);
+    
+    if (!start.isValid) {
+      return helper.message('Invalid date format');
+    }
+    if (start < now) {
+      return helper.message('"startDateTime" must be after or on the current date');
+    }
+    return value;
+
+}
 export const generalRules = {
   id: Joi.custom(objectIdValidation).required(),
   email: Joi.string()
@@ -46,7 +62,8 @@ export const generalRules = {
         .required()
     )
     .required(),
-  endDate:Joi.string().isoDate().custom(validateEndDateTime).required(),
+  endDate:Joi.string().isoDate().custom(validateEndDateTime),
+  startDate:Joi.string().isoDate().custom(validateStartDateTime),
   headers: {
     "content-type": Joi.string(),
     accept: Joi.string(),

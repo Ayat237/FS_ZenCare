@@ -1,8 +1,9 @@
 import express from 'express';
 import { config } from 'dotenv';
 import  path from "path";
+import cors from "cors";
 import * as router from './src/modules/index.js';
-import { ErrorHandlerCalss, logger } from './src/utils/index.js';
+import { ErrorHandlerClass, logger } from './src/utils/index.js';
 import { globalResponse } from './src/middlewares/error-hanling.middleware.js';
 
 if(process.env.NODE_ENV === 'dev'){
@@ -21,6 +22,7 @@ const app = express()
 const port = process.env.PORT;
 
 
+app.use(cors());
 
 app.use(express.json());
 
@@ -31,6 +33,7 @@ app.use('/medication', router.medicationRouter);
 
 
 import { createClient } from 'redis';
+import { startMissedDosesJob, updateMedicationStatus } from './src/modules/medication/utils/cron.utils.js';
 
 const client = createClient();
 
@@ -44,10 +47,14 @@ await client.set('key', 'value');
 const value = await client.get('key');
 
 app.use('/*', (req, res,next) =>{
-    return next(new ErrorHandlerCalss(`Invalid URL : ${req.originalUrl}`,404,"Error in URL in index.js"))
+    return next(new ErrorHandlerClass(`Invalid URL : ${req.originalUrl}`,404,"Error in URL in index.js"))
 })
 
 app.use(globalResponse);
+
+startMissedDosesJob();
+updateMedicationStatus();
+
 app.get('/', (req, res) => res.send('server running!'))
 app.listen(port, () => 
     logger.info(`app listening on port ${port}!`))

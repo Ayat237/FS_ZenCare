@@ -10,7 +10,7 @@ import {
 } from "../../../database/models/index.js";
 import {
   capitalizeName,
-  ErrorHandlerCalss,
+  ErrorHandlerClass,
   generateRandomPassword,
   logger,
   possibleRoles,
@@ -31,7 +31,7 @@ export const login = async (req, res, next) => {
   const user = await userModel.findByEmail(email);
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User not found",
         400,
         "Valiation error",
@@ -44,7 +44,7 @@ export const login = async (req, res, next) => {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Invalid email or password",
         400,
         "Valiation Error",
@@ -61,7 +61,7 @@ export const login = async (req, res, next) => {
 
   if (!hasPatientRole && !hasDoctorRole) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User has no valid roles",
         400,
         "Validation Error",
@@ -107,7 +107,7 @@ export const selectRole = async (req, res, next) => {
   // populate("user.patientID userdoctorID");
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User not found",
         404,
         "Authentication Error",
@@ -119,7 +119,7 @@ export const selectRole = async (req, res, next) => {
   // 3. Validate selected role
   if (!user.role.includes(selectedRole)) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Invalid role selection",
         400,
         "Validation Error",
@@ -133,7 +133,7 @@ export const selectRole = async (req, res, next) => {
     selectedRole === possibleRoles.PATIENT ? user.patientID : user.doctorID;
   if (!selectedId) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "No profile found for selected role",
         400,
         "Validation Error",
@@ -151,7 +151,7 @@ export const forgetPassword = async (req, res, next) => {
   const user = await userModel.findByEmail(email);
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User not found",
         404,
         "Authentication Error",
@@ -185,7 +185,7 @@ export const forgetPassword = async (req, res, next) => {
   if (isEmailSent.rejected.length) {
     logger.error("Failed to send forget password OTP email", error);
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Failed to send OTP email",
         500,
         "Server Error",
@@ -207,7 +207,7 @@ export const resetPassword = async (req, res, next) => {
 
   if (newPassword !== confirmPassword) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "New password and confirm password do not match",
         400,
         "Validation Error",
@@ -220,7 +220,7 @@ export const resetPassword = async (req, res, next) => {
   const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
   if (!decodedToken) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Invalid email token",
         400,
         "decoded error",
@@ -233,7 +233,7 @@ export const resetPassword = async (req, res, next) => {
   const user = await userModel.findByEmail(decodedToken.email);
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User not found",
         404,
         "Authentication Error",
@@ -288,7 +288,7 @@ export const verifyPasswordOTP = async (req, res, next) => {
     const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
     if (!decodedToken) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Invalid email token",
           400,
           "decoded error",
@@ -300,7 +300,7 @@ export const verifyPasswordOTP = async (req, res, next) => {
     const user = await userModel.findByEmail(decodedToken.email);
     if (!user) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User not found",
           404,
           "validation error",
@@ -334,7 +334,7 @@ export const verifyPasswordOTP = async (req, res, next) => {
   } catch (error) {
     logger.error("OTP verification failed", error);
     next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "'OTP has expired or is invalid. Please request a new one.",
         500,
         error.stack,
@@ -352,7 +352,7 @@ export const resendOtp = async (req, res, next) => {
     const decodedToken = jwt.verify(emailToken, process.env.EMAIL_SECRET);
     if (!decodedToken) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Invalid email token",
           400,
           "decoded error",
@@ -364,7 +364,7 @@ export const resendOtp = async (req, res, next) => {
     const user = await userModel.findByEmail(decodedToken.email);
     if (!user) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User not found",
           404,
           "validation error",
@@ -376,7 +376,7 @@ export const resendOtp = async (req, res, next) => {
     // 2. Check if user is already verified
     if (user.isVerified) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "User is already verified. No OTP needed.",
           400,
           "OTP Error",
@@ -399,7 +399,7 @@ export const resendOtp = async (req, res, next) => {
     if (isEmailSent.rejected.length) {
       logger.error("Failed to send verification email", error);
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Failed to send verification email",
           500,
           "Server Error",
@@ -486,7 +486,7 @@ export const updateAccount = async (req, res, next) => {
     const existingUser = await userModel.findOne({ userName });
     if (existingUser) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Username already in use",
           400,
           "Validation Error",
@@ -513,7 +513,7 @@ export const updateAccount = async (req, res, next) => {
     const existingUser = await userModel.findByEmail(email);
     if (existingUser) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Email already in use",
           400,
           "Validation Error",
@@ -547,7 +547,7 @@ export const updateAccount = async (req, res, next) => {
     if (isEmailSent.rejected.length) {
       logger.error("Failed to send verification email", error);
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           "Failed to send verification email",
           500,
           "Server Error",
@@ -587,7 +587,7 @@ export const verifyNewEmail = async (req, res, next) => {
   const pendingEmailData = await redisClient.GET(`pendingEmail:${user._id}`);
   if (!pendingEmailData) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "No pending email verification found",
         400,
         "Validation Error",
@@ -601,7 +601,7 @@ export const verifyNewEmail = async (req, res, next) => {
   if (Date.now() > expiry) {
     await redisClient.DEL(`pendingEmail:${user._id}`);
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Verification otp has expired",
         400,
         "Validation Error",
@@ -612,7 +612,7 @@ export const verifyNewEmail = async (req, res, next) => {
 
   if (OTP !== verificationOTP) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Invalid verification otp",
         400,
         "Validation Error",
@@ -646,7 +646,7 @@ export const refreshToken = async (req, res, next) => {
 
   if (!refreshToken) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Refresh token is required",
         400,
         "Validation Error",
@@ -671,7 +671,7 @@ export const refreshToken = async (req, res, next) => {
 
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Invalid refresh token",
         401,
         "Authentication Error",
@@ -721,7 +721,7 @@ export const signupWithGoogle = async (req, res, next) => {
   if (!role || !role.includes(possibleRoles.PATIENT)) {
     logger.error("User must have patient role to register as a patient");
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User must have patient role to register as a patient",
         400,
         "Validation Error",
@@ -735,7 +735,7 @@ export const signupWithGoogle = async (req, res, next) => {
   if (!payload.email_verified) {
     logger.error("Google ID token is not verified");
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Google ID token is not verified",
         401,
         "Authentication Error",
@@ -750,7 +750,7 @@ export const signupWithGoogle = async (req, res, next) => {
   const user = await userModel.findByEmail(email);
   if (user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User with this email already exists",
         409,
         "Duplicate Error",
@@ -874,7 +874,7 @@ export const loginWithGoogle = async (req, res, next) => {
   if (!email_verified) {
     logger.error("Google ID token is not verified");
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "Google ID token is not verified",
         401,
         "Authentication Error",
@@ -887,7 +887,7 @@ export const loginWithGoogle = async (req, res, next) => {
   let user = await userModel.findOne({ googleId });
   if (!user) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User not found",
         404,
         "Not Found",
@@ -901,7 +901,6 @@ export const loginWithGoogle = async (req, res, next) => {
   if (picture) {
     if (user.role.includes(possibleRoles.PATIENT) && user.patientID) {
       const patient = await patientModel.findById(user.patientID);
-      console.log(patient);
 
       if (patient) {
         patient.profileImage.URL.secure_url = picture;
@@ -930,7 +929,7 @@ export const loginWithGoogle = async (req, res, next) => {
     
   if (!hasPatientRole && !hasDoctorRole) {
     return next(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         "User has no valid roles",
         400,
         "Validation Error",
