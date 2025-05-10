@@ -7,3 +7,5 @@ export * from "./general-rules.utils.js";
 export * from "./redis.utils.js";
 export * from "./servicesFunction.utils.js";
 export * from "./constants.utils.js";
+export * from "./googleOAuth.utils.js";
+export * from "./image.utils.js";
