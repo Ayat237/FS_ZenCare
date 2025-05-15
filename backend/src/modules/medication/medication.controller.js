@@ -13,7 +13,7 @@ import {
   getPendingMedication,
   storePendingMedication,
 } from "./utils/pendingMedications.utils.js";
-import { addMedicationService } from "./medication.service.js";
+import { addMedicationService, confirmAddMedicationService, confirmUpdateMedicationService, updateMedicationService } from "./medication.service.js";
 
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
@@ -129,9 +129,19 @@ export const addMedicine = async (req, res, next) => {
 
   const addedMedicine = await addMedicationService(user, medicationData);
 
+  // Check if the result includes a pre-existing interaction warning
+  if (addedMedicine.success !== undefined) {
+    return res.status(201).json({
+      success: addedMedicine.success,
+      message: addedMedicine.message,
+      data: addedMedicine.data,
+      preExistingWarning: addedMedicine.preExistingWarning || null,
+    });
+  }
+  
   return res.status(200).json({
     success: true,
-    message: "Medication added successfully",
+    message: "Medication created successfully",
     data: addedMedicine,
   })
 }
@@ -141,172 +151,141 @@ export const confirmAddMedicine = async (req, res, next) => {
   const user = req.authUser;
   const { pendingId, accept } = req.body;
 
-  const pendingMedication = await getPendingMedication(pendingId);
-  console.log("pendingMedication", pendingMedication);
-
-  if (!pendingMedication) {
-    return next(
-      new ErrorHandlerClass(
-        "Pending medication not found",
-        404,
-        "Not Found",
-        "Error in confirm add medicine"
-      )
-    );
-  }
-  const { patientId , medicationData } = pendingMedication;
-  if (
-    patientId !== user.patientID?._id.toString() 
-  ) {
-    return next(
-      new ErrorHandlerClass(
-        "Unauthorized access to pending medication",
-        403,
-        "Forbidden",
-        "Error in confirm add medicine"
-      )
-    );
-  }
-  await deletePendingMedication(pendingId);
-
-  if (accept === "false") {
-    return res.status(200).json({
-      success: false,
-      message: "Medication addition cancelled by user",
-      data: null,
-    });
-  }
-  const {
-    medicineName,
-    medicineType,
-    drugId,
-    dose,
-    frequency,
-    timesPerDay,
-    daysOfWeek,
-    startHour,
-    startDateTime,
-    endDateTime,
-    intakeInstructions,
-    notes,
-  } = medicationData;
-
-  const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
-  const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
-
-  const startDateAtMidnight = startDate.toJSDate();
-  const endDateAtMidnight = endDate.toJSDate();
-
-  const medicineRecord = new Medication({
-    CreatedBy: user._id,
-    patientId,
-    medicineName,
-    drugId,
-    medicineType,
-    dose,
-    frequency,
-    startHour,
-    timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
-    daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
-    startDateTime: startDateAtMidnight,
-    endDateTime: endDateAtMidnight,
-    intakeInstructions,
-    notes,
-  });
-
-  await medicationModel.save(medicineRecord);
+  const result = await confirmAddMedicationService(user, pendingId, accept);
 
   // Respond with the created medication
   res.status(201).json({
     success: true,
     message: "Medication created successfully",
-    data: {
-      ...medicineRecord.toObject(),
-    },
+    data: result,
   });
 };
 
 export const updateMedicationRecord = async (req, res, next) => {
+  const user = req.authUser;
   const { id } = req.params;
-  const {
-    medicineName,
-    medicineType,
-    dose,
-    frequency,
-    timesPerDay,
-    daysOfWeek,
-    startHour,
-    startDateTime,
-    endDateTime,
-    intakeInstructions,
-    notes,
-  } = req.body; // Fields to update (e.g., name, dosage, frequency, timesPerDay)
 
-  // Find the medication by ID
-  const medication = await medicationModel.findById(id);
-  if (!medication) {
-    return next(
-      new ErrorHandlerClass(
-        "Medication not found",
-        404,
-        "Not Found",
-        "Error in update medication"
-      )
-    );
+  const result = await updateMedicationService(
+    user,
+    id,
+    req.body
+  )
+
+  // Check if the result includes a pre-existing interaction warning
+  if (result.success !== undefined) {
+    return res.status(200).json({
+      success: result.success,
+      message: result.message,
+      data: result.data,
+      preExistingWarning: result.preExistingWarning || null,
+    });
   }
 
-  if (medicineName) {
-    medication.medicineName = medicineName;
-  }
-  if (medicineType) {
-    medication.medicineType = medicineType;
-  }
-  if (dose) {
-    medication.dose = dose;
-  }
-
-  // Update the frequency and related fields based on the new frequency
-  if (frequency && frequency !== medication.frequency) {
-    medication.frequency = frequency;
-    medication.timesPerDay = frequency === Frequency.DAILY ? timesPerDay : null;
-    medication.daysOfWeek = frequency === Frequency.WEEKLY ? daysOfWeek : null;
-  } else if (frequency === Frequency.DAILY && timesPerDay) {
-    medication.timesPerDay = timesPerDay;
-  } else if (frequency === Frequency.WEEKLY && daysOfWeek) {
-    medication.daysOfWeek = daysOfWeek;
-  }
-
-  if (startHour) {
-    medication.startHour = startHour;
-  }
-  if (startDateTime) {
-    const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
-    const startDateAtMidnight = startDate.toJSDate();
-    medication.startDateTime = startDateAtMidnight;
-  }
-  if (endDateTime) {
-    const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
-    const endDateAtMidnight = endDate.toJSDate();
-    medication.endDateTime = endDateAtMidnight;
-  }
-  if (intakeInstructions) {
-    medication.intakeInstructions = intakeInstructions;
-  }
-  if (notes) {
-    medication.notes = notes;
-  }
-  // Save the updated medication record
-  await medicationModel.save(medication);
-
-  // Respond with the updated medication
   res.status(200).json({
     success: true,
-    message: "Medication updated successfully",
-    data: {
-      ...medication.toObject(),
-    },
+    message: 'Medication updated successfully',
+    data: result,
   });
-};
+}
+
+
+export const confirmUpdateMedication = async (req, res, next) => {
+  const user = req.authUser;
+  const { pendingId, accept } = req.body;
+  
+  const result = await confirmUpdateMedicationService(user, pendingId, accept);
+
+  res.status(200).json({
+    success: true,
+    message: 'Medication updated successfully',
+    data: result,
+  });
+}
+
+
+
+
+// export const updateMedicationRecord = async (req, res, next) => {
+//   const { id } = req.params;
+//   const {
+//     medicineName,
+//     medicineType,
+//     dose,
+//     frequency,
+//     timesPerDay,
+//     daysOfWeek,
+//     startHour,
+//     startDateTime,
+//     endDateTime,
+//     intakeInstructions,
+//     notes,
+//   } = req.body; // Fields to update (e.g., name, dosage, frequency, timesPerDay)
+
+//   // Find the medication by ID
+//   const medication = await medicationModel.findById(id);
+//   if (!medication) {
+//     return next(
+//       new ErrorHandlerClass(
+//         "Medication not found",
+//         404,
+//         "Not Found",
+//         "Error in update medication"
+//       )
+//     );
+//   }
+
+//   if (medicineName) {
+//     medication.medicineName = medicineName;
+//   }
+//   if (medicineType) {
+//     medication.medicineType = medicineType;
+//   }
+//   if (dose) {
+//     medication.dose = dose;
+//   }
+
+//   // Update the frequency and related fields based on the new frequency
+//   if (frequency && frequency !== medication.frequency) {
+//     medication.frequency = frequency;
+//     medication.timesPerDay = frequency === Frequency.DAILY ? timesPerDay : null;
+//     medication.daysOfWeek = frequency === Frequency.WEEKLY ? daysOfWeek : null;
+//   } else if (frequency === Frequency.DAILY && timesPerDay) {
+//     medication.timesPerDay = timesPerDay;
+//   } else if (frequency === Frequency.WEEKLY && daysOfWeek) {
+//     medication.daysOfWeek = daysOfWeek;
+//   }
+
+//   if (startHour) {
+//     medication.startHour = startHour;
+//   }
+//   if (startDateTime) {
+//     const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
+//     const startDateAtMidnight = startDate.toJSDate();
+//     medication.startDateTime = startDateAtMidnight;
+//   }
+//   if (endDateTime) {
+//     const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
+//     const endDateAtMidnight = endDate.toJSDate();
+//     medication.endDateTime = endDateAtMidnight;
+//   }
+//   if (intakeInstructions) {
+//     medication.intakeInstructions = intakeInstructions;
+//   }
+//   if (notes) {
+//     medication.notes = notes;
+//   }
+//   // Save the updated medication record
+//   await medicationModel.save(medication);
+
+//   // Respond with the updated medication
+//   res.status(200).json({
+//     success: true,
+//     message: "Medication updated successfully",
+//     data: {
+//       ...medication.toObject(),
+//     },
+//   });
+// };
 
 export const listAllMedications = async (req, res, next) => {
   const user = req.authUser;

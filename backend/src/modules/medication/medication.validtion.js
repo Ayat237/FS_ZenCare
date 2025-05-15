@@ -7,6 +7,7 @@ import {
   MedicineType,
 } from "../../utils/index.js";
 
+
 export const addMedicineSchema = {
   body: Joi.object({
     medicineName: Joi.string().trim().min(1).max(100).required().messages({
@@ -128,6 +129,25 @@ export const addMedicineSchema = {
       }),
   }),
 };
+
+//===========================================================
+
+export const confirmAddMedicineSchema = {
+  body: Joi.object({
+    pendingId:Joi.string().required().messages({
+      "string.base": "Pending ID must be a string",
+      "string.empty": "Pending ID cannot be empty",
+      "any.required": "Pending ID is required",
+      "any.unknown": "Pending ID is not allowed",
+    }),
+    accept: Joi.boolean().required().messages({
+      "boolean.base": "Accept must be a boolean value",
+      "any.required": "Accept status is required",
+      "any.unknown": "Accept status is not allowed"
+    })
+  }),
+};
+
 //=============================================================================
 export const updateMedicineSchema = {
   params: Joi.object({
@@ -152,6 +172,10 @@ export const updateMedicineSchema = {
       .messages({
         "any.only": "Medicine type must be one of: {{#valid}}",
       }),
+    drugId: Joi.string().optional().messages({
+      "string.base": "Drug ID must be a string",
+      "string.empty": "Drug ID cannot be empty",
+    }),
     dose: Joi.number().integer().min(1).optional().messages({
       "number.base": "Dose must be a number",
       "number.integer": "Dose must be an integer",
@@ -223,7 +247,25 @@ export const updateMedicineSchema = {
         "array.base": "Reminders must be an array",
         "array.includes": "Reminders must contain valid reminder objects",
       }),
-  }).with("startDateTime", "endDateTime"),
+  }).with("startDateTime", "endDateTime").with("medicineName", "drugId"),
+};
+
+//===========================================================================
+
+export const confirmUpdateMedicineSchema = {
+  body: Joi.object({
+    pendingId:Joi.string().required().messages({
+      "string.base": "Pending ID must be a string",
+      "string.empty": "Pending ID cannot be empty",
+      "any.required": "Pending ID is required",
+      "any.unknown": "Pending ID is not allowed",
+    }),
+    accept: Joi.boolean().required().messages({
+      "boolean.base": "Accept must be a boolean value",
+      "any.required": "Accept status is required",
+      "any.unknown": "Accept status is not allowed"
+    })
+  }),
 };
 
 //===========================================================================
