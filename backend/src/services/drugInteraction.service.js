@@ -177,6 +177,7 @@ export const fetchDrugInteractions = async (drugIds) => {
       drugCount: drugIds.length,
       interactionCount: interactions.length,
     });
+    console.log("result", result);
 
     return result;
   } catch (error) {
@@ -201,52 +202,200 @@ export const fetchDrugInteractions = async (drugIds) => {
  * @returns {Promise<DrugInteractionResult>} Object containing interaction results
  * @throws {ErrorHandlerClass} Throws an error if the check fails
  */
-export const checkDrugInteractionsService = async (patientId, ...drugIds) => {
+// export const checkDrugInteractionsService = async (
+//   patientId,
+//   existingDrugIds,
+//   newDrugIds
+// ) => {
+//   logger.info("Starting drug interaction check", {
+//     patientId,
+//     existingDrugCount: existingDrugIds.length,
+//     newDrugCount: newDrugIds.length,
+//   });
+
+//   try {
+//     // Step 1: Combine all drug IDs (existing + new)
+//     const allDrugIds = Array.from(new Set([...existingDrugIds, ...newDrugIds]));
+//     console.log("existing drug ids",existingDrugIds);
+//     console.log("new drug ids",newDrugIds);
+//     console.log("all drug ids",allDrugIds);
+
+//     // Step 3: If fewer than 2 drugs, return a default response
+//     if (allDrugIds.length < 2) {
+//       logger.info("Insufficient drugs for interaction check", {
+//         drugCount: allDrugIds.length,
+//         existingDrugCount: existingDrugIds.length,
+//         newDrugCount: drugIds.length,
+//       });
+//       return {
+//         summary:
+//           allDrugIds.length === 0
+//             ? "No medications found for the patient"
+//             : "No interactions possible with fewer than 2 drugs",
+//         drugs: allDrugIds.map((drugId) => ({
+//           drugName: drugId,
+//           genericName: "",
+//         })),
+//         metadata: {
+//           drugList: allDrugIds.join(","),
+//           interactionListId: "0",
+//           professional: false,
+//         },
+//         filterCounts: {
+//           major: 0,
+//           moderate: 0,
+//           minor: 0,
+//           food: 0,
+//           therapeuticDuplication: 0,
+//         },
+//         interactions: [],
+//         interactionsByDrug: [],
+//       };
+//     }
+
+//     logger.info("Checking interactions for all drugs", {
+//       totalDrugCount: allDrugIds.length,
+//     });
+//     const interactionResult = await fetchDrugInteractions(allDrugIds);
+
+//     const { drugs, metadata, interactions, filterCounts } = interactionResult;
+
+//     //mapping drugId with drugName and put it into object
+//     const drugIds = metadata.drugList.split(",");
+//     const drugMap = Object.fromEntries(
+//       drugIds.map((id, idx) => [id, drugs[idx]?.drugName])
+//     );
+
+//     const newDrugNames = newDrugIds.map((id) => drugMap[id]);
+
+//     //if there are interactions with new drugs then filter it
+//     const filteredInteractions = interactions.filter((interaction) =>
+//       interaction.drugs.some((drug) => newDrugNames.includes(drug.drugName))
+//     );
+
+//     // Step 4: Group interactions by new drug
+//     const interactionsByDrug = newDrugIds.map((newDrugId) => {
+//       const drugName = drugMap[newDrugId];
+//       const drugInteractions = filteredInteractions.filter((interaction) =>
+//         interaction.drugs.some((drug) => drug.drugName === drugName)
+//       );
+
+//       const majorInteractions = drugInteractions
+//         .filter((i) => i.severity.toLowerCase() === "major")
+//         .map((i) => i.description);
+//       const moderateInteractions = drugInteractions
+//         .filter((i) => i.severity.toLowerCase() === "moderate")
+//         .map((i) => i.description);
+//       const minorInteractions = drugInteractions
+//         .filter((i) => i.severity.toLowerCase() === "minor")
+//         .map((i) => i.description);
+//       const therapeuticDuplications = drugInteractions
+//         .filter((i) => i.severity.toLowerCase() === "therapeutic duplication")
+//         .map((i) => i.description);
+
+//       let summary = `No significant interactions found for ${drugName}.`;
+//       if (majorInteractions.length > 0) {
+//         summary = `Major interactions for ${drugName}: ${majorInteractions.join(". ")}`;
+//       } else {
+//         const summaries = [];
+//         if (therapeuticDuplications.length)
+//           summaries.push(
+//             `Therapeutic duplications for ${drugName}: ${therapeuticDuplications.join(". ")}`
+//           );
+//         if (moderateInteractions.length)
+//           summaries.push(
+//             `Moderate interactions for ${drugName}: ${moderateInteractions.join(". ")}`
+//           );
+//         if (minorInteractions.length)
+//           summaries.push(
+//             `Minor interactions for ${drugName}: ${minorInteractions.join(". ")}`
+//           );
+//         summary = summaries.join(". ") || summary;
+//       }
+
+//       return {
+//         drugName,
+//         drugId: newDrugId,
+//         summary,
+//         interactions: drugInteractions,
+//       };
+//     }).filter((drug) => drug.interactions.length > 0); // Only include drugs with interactions
+
+//     let majorCount = 0;
+//     let moderateCount = 0;
+//     let minorCount = 0;
+//     let foodCount = 0;
+//     let therapeuticDuplicationCount = 0;
+
+//     filteredInteractions.forEach((i) => {
+//       const severity = i.severity.toLowerCase();
+//       if (severity === "major") majorCount++;
+//       else if (severity === "moderate") moderateCount++;
+//       else if (severity === "minor") minorCount++;
+//       else if (severity === "food") foodCount++;
+//       else if (severity === "therapeutic duplication")
+//         therapeuticDuplicationCount++;
+//     });
+
+//     interactions = filteredInteractions;
+//     filterCounts = {
+//       major: majorCount,
+//       moderate: moderateCount,
+//       minor: minorCount,
+//       food: foodCount,
+//       therapeuticDuplication: therapeuticDuplicationCount,
+//     };
+//     interactionResult.interactionsByDrug = interactionsByDrug;
+
+//     logger.info("Filtered interactions involving new drugs", {
+//       interactionCount: filteredInteractions.length,
+//     });
+
+//     return await interactionResult;
+
+//   } catch (error) {
+//     logger.error("Error in drug interaction check", {
+//       error: error.message,
+//       patientId,
+//       drugCount: drugIds.length,
+//     });
+//     throw error instanceof ErrorHandlerClass
+//       ? error
+//       : new ErrorHandlerClass(
+//           "Error checking drug interactions",
+//           500,
+//           "Server Error",
+//           "Error in checkDrugInteractionsService",
+//           { error: error.message }
+//         );
+//   }
+// };
+
+export const checkDrugInteractionsService = async (
+  patientId,
+  existingDrugIds,
+  newDrugs
+) => {
   logger.info("Starting drug interaction check", {
     patientId,
-    drugCount: drugIds.length,
+    existingDrugCount: existingDrugIds.length,
+    newDrugCount: newDrugs.length,
   });
 
   try {
-    // Step 1: Fetch patient's existing medications with projection
-    const medications = await medicationModel.find(
-      { patientId, isActive: true },
-      { drugId: 1, _id: 0 } // Project only drugId, exclude _id
-    );
+    // Step 1: Combine all drug IDs (existing + new)
+    const newDrugIds = newDrugs.map((drug) => drug.drugId);
+    const allDrugIds = Array.from(new Set([...existingDrugIds, ...newDrugIds]));
+    console.log("existing drug ids", existingDrugIds);
+    console.log("new drug ids", newDrugIds);
+    console.log("all drug ids", allDrugIds);
 
-    if (!medications || medications.length === 0) {
-      logger.info("No existing medications found for patient", { patientId });
-      return {
-        summary: "No existing medications found for the patient",
-        drugs: [],
-        metadata: { drugList: [], interactionListId: "0", professional: false },
-        filterCounts: {
-          major: 0,
-          moderate: 0,
-          minor: 0,
-          food: 0,
-          therapeuticDuplication: 0,
-        },
-        interactions: [],
-      };
-    }
-
-    // Step 2: Process existing medications
-    const existingDrugIds = Array.from(
-      new Set(
-        medications
-          .map((med) => med.drugId)
-          .filter((id) => id && !drugIds.includes(id))
-      )
-    );
-    const allDrugIds = Array.from(new Set([...existingDrugIds, ...drugIds]));
-
-    // Step 3: If fewer than 2 drugs, return a default response
+    // Step 2: If fewer than 2 drugs, return a default response
     if (allDrugIds.length < 2) {
       logger.info("Insufficient drugs for interaction check", {
         drugCount: allDrugIds.length,
         existingDrugCount: existingDrugIds.length,
-        newDrugCount: drugIds.length,
+        newDrugCount: newDrugIds.length,
       });
       return {
         summary:
@@ -270,20 +419,119 @@ export const checkDrugInteractionsService = async (patientId, ...drugIds) => {
           therapeuticDuplication: 0,
         },
         interactions: [],
+        interactionsByDrug: [],
       };
     }
 
     logger.info("Checking interactions for all drugs", {
       totalDrugCount: allDrugIds.length,
-      existingDrugCount: existingDrugIds.length,
-      newDrugCount: drugIds.length,
     });
-    return await fetchDrugInteractions(allDrugIds);
+    const interactionResult = await fetchDrugInteractions(allDrugIds);
+
+    const { drugs, metadata, interactions, filterCounts } = interactionResult;
+
+    // Mapping drugId with drugName
+    const drugIds = metadata.drugList.split(",");
+    const drugMap = Object.fromEntries(
+      drugIds.map((id, idx) => [id, drugs[idx]?.drugName || id])
+    );
+
+    const newDrugNames = newDrugs.map((drug) => drugMap[drug.drugId]);
+
+    // Filter interactions involving new drugs
+    const filteredInteractions = interactions.filter((interaction) =>
+      interaction.drugs.some((drug) => newDrugNames.includes(drug.drugName))
+    );
+
+    // Group interactions by new drug
+    const interactionsByDrug = newDrugs
+      .map((newDrug) => {
+        const drugName = drugMap[newDrug.drugId] || newDrug.drugName;
+        const drugInteractions = filteredInteractions.filter((interaction) =>
+          interaction.drugs.some((drug) => drug.drugName === drugName)
+        );
+
+        const majorInteractions = drugInteractions
+          .filter((i) => i.severity.toLowerCase() === "major")
+          .map((i) => i.description);
+        const moderateInteractions = drugInteractions
+          .filter((i) => i.severity.toLowerCase() === "moderate")
+          .map((i) => i.description);
+        const minorInteractions = drugInteractions
+          .filter((i) => i.severity.toLowerCase() === "minor")
+          .map((i) => i.description);
+        const therapeuticDuplications = drugInteractions
+          .filter((i) => i.severity.toLowerCase() === "therapeutic duplication")
+          .map((i) => i.description);
+
+        let summary = `No significant interactions found for ${drugName}.`;
+        if (majorInteractions.length > 0) {
+          summary = `Major interactions for ${drugName}: ${majorInteractions.join(
+            ". "
+          )}`;
+        } else {
+          const summaries = [];
+          if (therapeuticDuplications.length)
+            summaries.push(
+              `Therapeutic duplications for ${drugName}: ${therapeuticDuplications.join(
+                ". "
+              )}`
+            );
+          if (moderateInteractions.length)
+            summaries.push(
+              `Moderate interactions for ${drugName}: ${moderateInteractions.join(
+                ". "
+              )}`
+            );
+          if (minorInteractions.length)
+            summaries.push(
+              `Minor interactions for ${drugName}: ${minorInteractions.join(
+                ". "
+              )}`
+            );
+          summary = summaries.join(". ") || summary;
+        }
+
+        return {
+          drugName,
+          drugId: newDrug.drugId,
+          summary,
+          interactions: drugInteractions,
+        };
+      })
+      .filter((drug) => drug.interactions.length > 0);
+
+    // Update interactionResult
+    interactionResult.interactions = filteredInteractions;
+    interactionResult.filterCounts = {
+      major: filteredInteractions.filter(
+        (i) => i.severity.toLowerCase() === "major"
+      ).length,
+      moderate: filteredInteractions.filter(
+        (i) => i.severity.toLowerCase() === "moderate"
+      ).length,
+      minor: filteredInteractions.filter(
+        (i) => i.severity.toLowerCase() === "minor"
+      ).length,
+      food: filteredInteractions.filter(
+        (i) => i.severity.toLowerCase() === "food"
+      ).length,
+      therapeuticDuplication: filteredInteractions.filter(
+        (i) => i.severity.toLowerCase() === "therapeutic duplication"
+      ).length,
+    };
+    interactionResult.interactionsByDrug = interactionsByDrug;
+
+    logger.info("Filtered interactions involving new drugs", {
+      interactionCount: filteredInteractions.length,
+    });
+
+    return interactionResult;
   } catch (error) {
     logger.error("Error in drug interaction check", {
       error: error.message,
       patientId,
-      drugCount: drugIds.length,
+      drugCount: allDrugIds.length,
     });
     throw error instanceof ErrorHandlerClass
       ? error

@@ -13,7 +13,7 @@ import {
   getPendingMedication,
   storePendingMedication,
 } from "./utils/pendingMedications.utils.js";
-import { addMedicationService, confirmAddMedicationService, confirmUpdateMedicationService, updateMedicationService } from "./medication.service.js";
+import { addMedicationService, confirmUpdateMedicationService, updateMedicationService } from "./medication.service.js";
 
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
@@ -147,19 +147,19 @@ export const addMedicine = async (req, res, next) => {
 }
 
 
-export const confirmAddMedicine = async (req, res, next) => {
-  const user = req.authUser;
-  const { pendingId, accept } = req.body;
+// export const confirmAddMedicine = async (req, res, next) => {
+//   const user = req.authUser;
+//   const { pendingId, accept } = req.body;
 
-  const result = await confirmAddMedicationService(user, pendingId, accept);
+//   const result = await confirmAddMedicationService(user, pendingId, accept);
 
-  // Respond with the created medication
-  res.status(201).json({
-    success: true,
-    message: "Medication created successfully",
-    data: result,
-  });
-};
+//   // Respond with the created medication
+//   res.status(201).json({
+//     success: true,
+//     message: "Medication created successfully",
+//     data: result,
+//   });
+// };
 
 export const updateMedicationRecord = async (req, res, next) => {
   const user = req.authUser;
@@ -847,4 +847,4 @@ export const deleteMedication = async (req, res, next) => {
   });
 };
 
-export const drugChecker = async (req, res, next) => {};
+

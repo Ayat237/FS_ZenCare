@@ -148,6 +148,8 @@ const medicationSchema = new Schema(
     timestamps: true,
   }
 );
+medicationSchema.index({ patientId: 1 });
+
 
 // calculate total doses between start and end dates (total number of scheduled dose events)
 medicationSchema.methods.calculateTotalDoses = function () {
@@ -587,6 +589,7 @@ medicationSchema.pre("save", function (next) {
   this.checkMissedDoses();
   next();
 });
+
 
 const Medication =
   mongoose.models.medicationModel || model("Medication", medicationSchema);

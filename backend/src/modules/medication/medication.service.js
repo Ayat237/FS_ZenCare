@@ -42,191 +42,74 @@ const medicationModel = new MedicationModel(database);
  * @param {string} [medicationId=null] - Optional ID of medication being updated
  * @returns {Promise<InteractionCheckResult>} Object containing interaction check results
  */
-const checkSignificantInteractions = async (
-  patientId,
-  drugId,
-  medicationId = null
-) => {
+
+export const checkSignificantInteractions = async (patientId, newDrugs) => {
   logger.info("Starting drug interaction check", {
     patientId,
-    drugId,
-    medicationId,
+    newDrugCount: newDrugs.length,
   });
 
-  try {
-    // Step 1: Fetch the patient's existing medications (exclude the medication being updated if applicable)
-    logger.debug("Fetching existing medications for patient");
-    const existingMedications = await medicationModel.find({
+  // Step 1: Fetch the patient's existing medications
+  logger.debug("Fetching existing medications for patient");
+  const existingMedications = await medicationModel.find(
+    { patientId, isActive: true },
+    { select: "drugId" }
+  );
+
+  logger.debug("Found existing medications", {
+    count: existingMedications.length,
+  });
+
+  // Step 2: Collect existing drug IDs
+  const existingDrugIds = existingMedications
+    .map((med) => med.drugId)
+    .filter((id) => id);
+
+  logger.debug("Extracted drug IDs", {
+    existingCount: existingDrugIds.length,
+    newCount: newDrugs.length,
+  });
+
+  let interactionResult = {
+    summary: "No significant interactions found with the new medications.",
+    drugs: [],
+    metadata: {},
+    interactions: [],
+    filterCounts: {},
+    interactionsByDrug: [],
+  };
+
+  const allDrugLength = existingDrugIds.length + newDrugs.length;
+  // Step 3: Check interactions involving new drugs
+  if (allDrugLength > 1) {
+    interactionResult = await checkDrugInteractionsService(
       patientId,
-      _id: { $ne: medicationId }, // Exclude the medication being updated
-      isActive: true,
-    });
-    logger.debug("Found existing medications", {
-      count: existingMedications.length,
-    });
-
-    let currentDrugId = drugId; // Default to new drugId
-    if (medicationId) {
-      // Fetch the current medication to check its drugId
-      const currentMedication = await medicationModel.findById(medicationId,{
-        isActive: true,
-      });
-      if (currentMedication) {
-        currentDrugId = currentMedication.drugId; // Use the original drugId if updating
-        if (currentDrugId === drugId) {
-          // If drugId hasn't changed, exclude it from the check
-          logger.debug("DrugId unchanged, excluding from interaction check");
-        } else {
-          logger.debug("DrugId changed, including new drugId in check");
-        }
-      }
-    }
-
-    const existingDrugIds = [
-      ...new Set(
-        existingMedications
-          .map((med) => med.drugId)
-          .filter(
-            (id) =>
-              id &&
-              id !== drugId &&
-              (medicationId ? id !== currentDrugId : true)
-          )
-      ),
-    ];
-
-    logger.debug("Extracted existing drug IDs", {
-      count: existingDrugIds.length,
-    });
-
-    let preExistingInteractionResult = {
-      summary: "",
-      drugs: [],
-      metadata: {},
-      interactions: [],
-      filterCounts: {},
-    };
-    let hasPreExistingInteractions = false;
-
-    if (existingDrugIds.length > 0) {
-      preExistingInteractionResult = await checkDrugInteractionsService(
-        patientId,
-        ...existingDrugIds
-      );
-      const { filterCounts } = preExistingInteractionResult;
-      hasPreExistingInteractions = Object.values(filterCounts).some(
-        (count) => count > 0
-      );
-    }
-
-    // Only check interactions if drugId has changed or it's a new medication
-    let interactionResult = {
-      summary: "No significant interactions found with the new medication.",
-      drugs: [],
-      metadata: {},
-      interactions: [],
-      filterCounts: {},
-    };
-    if (!medicationId || (medicationId && currentDrugId !== drugId)) {
-      const allDrugIds = [...existingDrugIds, drugId];
-      interactionResult = await checkDrugInteractionsService(
-        patientId,
-        ...allDrugIds
-      );
-    } else {
-      logger.debug(
-        "No new interaction check needed, using pre-existing result"
-      );
-      interactionResult = preExistingInteractionResult;
-    }
-    console.log("interactionResult", interactionResult);
-
-    const { drugs, metadata, interactions, filterCounts } = interactionResult;
-    const drugIds = metadata.drugList.split(",");
-    const drugMap = Object.fromEntries(
-      drugIds.map((id, idx) => [id, drugs[idx]?.drugName || id])
+      existingDrugIds,
+      newDrugs
     );
-
-    const newDrugName = drugMap[drugId];
-    const filteredInteractions = interactions.filter((interaction) =>
-      interaction.drugs.some(
-        (drug) => drug.drugName.toLowerCase() === newDrugName.toLowerCase()
-      )
-    );
-
-    // Optimize interaction filtering with parallel processing
-    const [
-      majorInteractions,
-      moderateInteractions,
-      minorInteractions,
-      therapeuticDuplications,
-    ] = await Promise.all([
-      filteredInteractions
-        .filter((i) => i.severity.toLowerCase() === "major")
-        .map((i) => i.description),
-      filteredInteractions
-        .filter((i) => i.severity.toLowerCase() === "moderate")
-        .map((i) => i.description),
-      filteredInteractions
-        .filter((i) => i.severity.toLowerCase() === "minor")
-        .map((i) => i.description),
-      filteredInteractions
-        .filter((i) => i.severity.toLowerCase() === "therapeutic duplication")
-        .map((i) => i.description),
-    ]);
-
-    let summary = "No significant interactions found with the new medication.";
-    if (majorInteractions.length > 0) {
-      summary = `Major interactions: ${majorInteractions.join(". ")}`;
-    } else {
-      const summaries = [];
-      if (therapeuticDuplications.length)
-        summaries.push(
-          `Therapeutic duplications: ${therapeuticDuplications.join(". ")}`
-        );
-      if (moderateInteractions.length)
-        summaries.push(
-          `Moderate interactions: ${moderateInteractions.join(". ")}`
-        );
-      if (minorInteractions.length)
-        summaries.push(`Minor interactions: ${minorInteractions.join(". ")}`);
-      summary = summaries.join(". ") || summary;
-    }
-
-    const newDrugFilterCounts = {
-      major: majorInteractions.length,
-      moderate: moderateInteractions.length,
-      minor: minorInteractions.length,
-      food: filteredInteractions.filter(
-        (i) => i.severity.toLowerCase() === "food"
-      ).length,
-      therapeuticDuplication: therapeuticDuplications.length,
-    };
-
-    const hasSignificantNewInteractions = Object.values(
-      newDrugFilterCounts
-    ).some((count) => count > 0);
-
-    logger.info("Significant interactions check completed", {
-      hasSignificantNewInteractions,
-      newDrugFilterCounts,
-    });
-    return {
-      hasSignificantNewInteractions,
-      interactionResult: { summary },
-      preExistingInteractionResult,
-      hasPreExistingInteractions,
-    };
-  } catch (error) {
-    logger.error("Error checking drug interactions", {
-      error: error.message,
-      patientId,
-      drugId,
-      medicationId,
-    });
-    throw error;
   }
+
+  const { interactionsByDrug } = interactionResult;
+
+  const hasSignificantNewInteractions = interactionsByDrug.length > 0;
+
+  logger.info("Significant interactions check completed", {
+    hasSignificantNewInteractions,
+    drugsWithInteractions: interactionsByDrug.length,
+  });
+
+  return {
+    hasSignificantNewInteractions,
+    interactionResult: {
+      interactionsByDrug: interactionsByDrug.map((drug) => ({
+        drugName: drug.drugName,
+        drugId: drug.drugId,
+        summary: drug.summary,
+      })),
+    },
+  };
 };
+
 
 /**
  * Handles pending medication actions when drug interactions are found
@@ -280,7 +163,9 @@ const handlePendingAction = async (
 };
 
 const formatMedicationResponse = (medication) => ({
+  id: medication._id,
   medicineName: medication.medicineName,
+  drugId: medication.drugId,
   medicineType: medication.medicineType,
   startDate: medication.startDateTime,
   endDate: medication.endDateTime,
@@ -426,25 +311,11 @@ export const addMedicationService = async (user, medicationData) => {
       notes: notes || "",
       reminders: reminders || [],
     });
-
-    const { hasSignificantNewInteractions, interactionResult } =
-      await checkSignificantInteractions(patientId, drugId);
-    if (hasSignificantNewInteractions) {
-      const medicationDataWithDates = {
-        ...medicationData,
-        startDateTime: startDateAtMidnight,
-        endDateTime: startDateAtMidnight,
-      };
-      await handlePendingAction(
-        patientId,
-        medicationDataWithDates,
-        interactionResult,
-        "add"
-      );
-    }
-
+    console.log("medicineRecord", medicineRecord);
+    
     await medicationModel.save(medicineRecord);
     logger.info("Medication successfully added", { medicineName, patientId });
+
     return formatMedicationResponse(medicineRecord);
   } catch (error) {
     logger.error("Error adding medication", {
@@ -456,97 +327,96 @@ export const addMedicationService = async (user, medicationData) => {
   }
 };
 
-export const confirmAddMedicationService = async (user, pendingId, accept) => {
-  logger.debug("Confirming medication addition", {
-    userId: user._id,
-    pendingId,
-    accept,
-  });
+// export const confirmAddMedicationService = async (user, pendingId, accept) => {
+//   logger.debug("Confirming medication addition", {
+//     userId: user._id,
+//     pendingId,
+//     accept,
+//   });
 
-  const pendingData = await getPendingMedication(pendingId);
-  console.log("pending Data", pendingData);
+//   const pendingData = await getPendingMedication(pendingId);
+//   console.log("pending Data", pendingData);
 
-  if (!pendingData) {
-    throw new ErrorHandlerClass(
-      "Pending medication not found",
-      404,
-      "Not Found",
-      "The pending medication request has expired or does not exist"
-    );
-  }
+//   if (!pendingData) {
+//     throw new ErrorHandlerClass(
+//       "Pending medication not found",
+//       404,
+//       "Not Found",
+//       "The pending medication request has expired or does not exist"
+//     );
+//   }
 
-  const { patientId, medicationData, action } = pendingData;
-  if (patientId !== user.patientID?._id.toString()) {
-    throw new ErrorHandlerClass(
-      "Unauthorized access to pending medication",
-      403,
-      "Forbidden",
-      "You are not authorized to confirm this medication addition"
-    );
-  }
+//   const { patientId, medicationData, action } = pendingData;
+//   if (patientId !== user.patientID?._id.toString()) {
+//     throw new ErrorHandlerClass(
+//       "Unauthorized access to pending medication",
+//       403,
+//       "Forbidden",
+//       "You are not authorized to confirm this medication addition"
+//     );
+//   }
 
-  if (action !== "add") {
-    throw new ErrorHandlerClass(
-      "Invalid action",
-      400,
-      "Bad Request",
-      "This pending request is not for an add action"
-    );
-  }
+//   if (action !== "add") {
+//     throw new ErrorHandlerClass(
+//       "Invalid action",
+//       400,
+//       "Bad Request",
+//       "This pending request is not for an add action"
+//     );
+//   }
 
+//   // Convert accept to boolean for consistency
+//   const isAccepted = accept === true || accept === "true";
 
-    // Convert accept to boolean for consistency
-    const isAccepted = accept === true || accept === "true";
+//   if (!isAccepted) {
+//     await deletePendingMedication(pendingId);
+//     throw new ErrorHandlerClass(
+//       "Medication addition cancelled",
+//       200,
+//       "Cancelled Request",
+//       "The medication addition request has been cancelled"
+//     );
+//   }
 
-    if (!isAccepted) {
-      await deletePendingMedication(pendingId);
-      throw new ErrorHandlerClass(
-        "Medication addition cancelled",
-        200,
-        "Cancelled Request",
-        "The medication addition request has been cancelled"
-      );
-    }
+//   const {
+//     medicineName,
+//     drugId,
+//     medicineType,
+//     dose,
+//     frequency,
+//     timesPerDay,
+//     daysOfWeek,
+//     startHour,
+//     startDateTime,
+//     endDateTime,
+//     intakeInstructions,
+//     notes,
+//     reminders,
+//   } = medicationData;
 
-  const {
-    medicineName,
-    drugId,
-    medicineType,
-    dose,
-    frequency,
-    timesPerDay,
-    daysOfWeek,
-    startHour,
-    startDateTime,
-    endDateTime,
-    intakeInstructions,
-    notes,
-    reminders,
-  } = medicationData;
+//   const medicineRecord = new Medication({
+//     CreatedBy: user._id,
+//     patientId,
+//     medicineName,
+//     drugId,
+//     medicineType,
+//     dose,
+//     frequency,
+//     startHour,
+//     timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
+//     daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
+//     startDateTime,
+//     endDateTime,
+//     intakeInstructions,
+//     notes: notes || "",
+//     reminders: reminders || [],
+//   });
 
-  const medicineRecord = new Medication({
-    CreatedBy: user._id,
-    patientId,
-    medicineName,
-    drugId,
-    medicineType,
-    dose,
-    frequency,
-    startHour,
-    timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
-    daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
-    startDateTime,
-    endDateTime,
-    intakeInstructions,
-    notes: notes || "",
-    reminders: reminders || [],
-  });
+//   await medicationModel.save(medicineRecord);
+//   await deletePendingMedication(pendingId);
 
-  await medicationModel.save(medicineRecord);
-  await deletePendingMedication(pendingId);
-
-  return formatMedicationResponse(medicineRecord);
-};
+//   return formatMedicationResponse(medicineRecord);
+// };
 
 export const updateMedicationService = async (
   user,
@@ -581,35 +451,34 @@ export const updateMedicationService = async (
     );
   }
 
-
   const originalDrugId = medicationRecord.drugId;
   const originalMedicineName = medicationRecord.medicineName;
   console.log("originalDrugId", originalDrugId);
   console.log("originalMedicineName", originalMedicineName);
-  
-  
+
   updateMedicationFields(medicationRecord, updateData);
 
-  
   let interactionResult;
   let preExistingInteractionResult;
   let hasPreExistingInteractions = false;
 
-
-  const newMedicineName = updateData.medicineName;
-  const drugId = updateData.drugId;
+  const newMedicineName = medicationRecord.medicineName;
+  const drugId = medicationRecord.drugId;
   const medicineNameChanged = newMedicineName !== originalMedicineName;
 
+  console.log("newMedicineName", newMedicineName);
+  console.log("drugId", drugId);
+  console.log("medicineNameChanged", medicineNameChanged);
+
   if (medicineNameChanged) {
-    if (!drugId) {
-      throw new ErrorHandlerClass(
-        "Drug ID is required",
-        400,
-        "Bad Request",
-        "Drug ID is required for medication update"
-      );
-    }
-  
+    // if (!drugId) {
+    //   throw new ErrorHandlerClass(
+    //     "Drug ID is required",
+    //     400,
+    //     "Bad Request",
+    //     "Drug ID is required for medication update"
+    //   );
+    // }
 
     const drugIdChanged = drugId !== originalDrugId;
 
@@ -719,7 +588,6 @@ export const confirmUpdateMedicationService = async (
     );
   }
 
-
   // Convert accept to boolean for consistency
   const isAccepted = accept === true || accept === "true";
 
@@ -759,8 +627,6 @@ export const confirmUpdateMedicationService = async (
 
   console.log("medication Record", medicationRecord);
   console.log("medication Data", medicationData);
-  
-  
 
   await medicationModel.save(medicationRecord);
   await deletePendingMedication(pendingId);

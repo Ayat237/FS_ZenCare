@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import IDatabase from "./interfaces/IDatabase.js";
 import { logger } from "../src/utils/index.js";
-import { Medication, Patient, User } from "./models/index.js";
+import { Medication, Patient, Prescription, User } from "./models/index.js";
+
 
 class MongooseDatabase extends IDatabase {
   constructor(uri) {
@@ -11,6 +12,7 @@ class MongooseDatabase extends IDatabase {
       patient: Patient,
       user: User,
       medication: Medication,
+      prescription : Prescription,
     };
   }
 
