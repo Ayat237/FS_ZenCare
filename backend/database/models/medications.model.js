@@ -22,6 +22,11 @@ const medicationSchema = new Schema(
       ref: "Patient",
       required: true,
     },
+    prescriptionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Prescription",
+      required: true,
+    },
     drugId: {
       type: String,
       required: true,
@@ -143,13 +148,16 @@ const medicationSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    hasInteractions: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 medicationSchema.index({ patientId: 1 });
-
 
 // calculate total doses between start and end dates (total number of scheduled dose events)
 medicationSchema.methods.calculateTotalDoses = function () {
@@ -172,7 +180,7 @@ medicationSchema.methods.calculateTotalDoses = function () {
     while (currentDate <= endDate) {
       const dayName = currentDate.toFormat("ccc");
       if (this.daysOfWeek.includes(dayName)) {
-        totalDoses += this.timesPerDay || 1; 
+        totalDoses += this.timesPerDay || 1;
       }
       //increase one day
       currentDate = currentDate.plus({ days: 1 });
@@ -193,7 +201,7 @@ medicationSchema.methods.calculateTotalDoses = function () {
     totalDoses = 0;
   }
   console.log("totalDoses: ", totalDoses);
-  
+
   return totalDoses;
 };
 
@@ -209,10 +217,10 @@ medicationSchema.methods.calculateDosesTaken = function () {
 medicationSchema.methods.calculateQuantityLeft = function () {
   const totalDoses = this.calculateTotalDoses();
   //The total number of individual units of medication (capsules) prescribed for the entire duration.
-  const totalQuantity = totalDoses ;
+  const totalQuantity = totalDoses;
   const dosesTaken = this.calculateDosesTaken();
-  const quantityTaken = dosesTaken ;
-  const quantityLeft = Math.max(0, (totalQuantity - quantityTaken));
+  const quantityTaken = dosesTaken;
+  const quantityLeft = Math.max(0, totalQuantity - quantityTaken);
   return quantityLeft;
 };
 
@@ -265,7 +273,6 @@ medicationSchema.methods.getRemainingDosesForDay = function (
       .equals(targetDay)
   );
 
-
   // If no reminders exist for the day, return 0 (e.g., day outside schedule)
   if (dayReminders.length === 0) return 0;
 
@@ -314,7 +321,7 @@ medicationSchema.methods.checkMissedDoses = function () {
 
     if (remainingDoses > 0) {
       let dosesToMarkAsMissed = remainingDoses;
-      
+
       for (const { reminder, index } of dayReminders) {
         if (
           dosesToMarkAsMissed > 0 &&
@@ -331,7 +338,7 @@ medicationSchema.methods.checkMissedDoses = function () {
       }
     }
   });
-  
+
   this.quantityLeft = this.calculateQuantityLeft();
 };
 
@@ -356,7 +363,7 @@ medicationSchema.methods.markDoseTaken = async function (reminderIndex) {
     reminder.isTaken = true;
     reminder.takenAt = DateTime.now().toJSDate();
     console.log("reminder.takenAt: ", reminder.takenAt);
-    
+
     reminder.status = ReminderStatus.TAKEN;
 
     this.quantityLeft = this.calculateQuantityLeft();
@@ -386,13 +393,13 @@ medicationSchema.pre("save", function (next) {
 
     if (endDate.endOf("day") < now) {
       this.isActive = false;
-    }   else{
+    } else {
       this.isActive = true;
     }
 
     //calculate total doses
     const totalDoses = this.calculateTotalDoses();
-    this.initialQuantity = totalDoses ;
+    this.initialQuantity = totalDoses;
     this.quantityLeft = this.initialQuantity;
 
     // Generate reminders
@@ -453,7 +460,7 @@ medicationSchema.pre("save", function (next) {
         // If no reminders were scheduled for the first day (all times passed), adjust totalDoses
         if (currentDate.equals(startDate) && reminders.length === 0) {
           console.log(" No reminders were scheduled for the first day");
-          
+
           currentDate = currentDate.plus({ days: 1 });
           this.totalDoses = this.calculateTotalDoses(); // Recalculate based on new start
           this.initialQuantity = this.totalDoses;
@@ -466,14 +473,16 @@ medicationSchema.pre("save", function (next) {
     }
     this.reminders = reminders;
   } else {
-    
     // Check if the medication is still active based on the new endDateTime
-    const startDate = DateTime.fromJSDate(this.startDateTime, { zone: "UTC" }).startOf("day");
-    const endDate = DateTime.fromJSDate(this.endDateTime, { zone: "UTC" }).startOf("day");
+    const startDate = DateTime.fromJSDate(this.startDateTime, {
+      zone: "UTC",
+    }).startOf("day");
+    const endDate = DateTime.fromJSDate(this.endDateTime, {
+      zone: "UTC",
+    }).startOf("day");
     if (endDate.endOf("day") < now) {
       this.isActive = false;
-    }
-    else{
+    } else {
       this.isActive = true;
     }
 
@@ -486,12 +495,11 @@ medicationSchema.pre("save", function (next) {
       this.isModified("startDateTime") ||
       this.isModified("endDateTime");
     if (isModifiedFields) {
-
       // Preserve old reminders to retain their statuses
       const oldReminders = this.reminders || [];
       const oldMissedDoses = this.missedDoses || [];
       const newReminders = [];
-      
+
       let currentDate = startDate;
       const scheduledDay = startDate.day;
 
@@ -506,7 +514,6 @@ medicationSchema.pre("save", function (next) {
             currentDate.day === scheduledDay);
 
         if (shouldSchedule) {
-          
           const timesPerDay = this.timesPerDay || 1;
           const interval = 24 / timesPerDay;
           let currentHour = this.startHour;
@@ -534,10 +541,16 @@ medicationSchema.pre("save", function (next) {
             newReminders.push({
               date: reminderDate.toJSDate(),
               time,
-              isTaken: matchingOldReminder ? matchingOldReminder.isTaken : false,
-              status: matchingOldReminder ? matchingOldReminder.status : ReminderStatus.PENDING,
+              isTaken: matchingOldReminder
+                ? matchingOldReminder.isTaken
+                : false,
+              status: matchingOldReminder
+                ? matchingOldReminder.status
+                : ReminderStatus.PENDING,
               takenAt: matchingOldReminder ? matchingOldReminder.takenAt : null,
-              lastResetDate: matchingOldReminder ? matchingOldReminder.lastResetDate : null,
+              lastResetDate: matchingOldReminder
+                ? matchingOldReminder.lastResetDate
+                : null,
             });
           }
         }
@@ -551,7 +564,7 @@ medicationSchema.pre("save", function (next) {
 
       // Recalculate missed doses based on the new date range
       // 1. Clear missed doses outside the new date range or for reminders that no longer exist
-      this.missedDoses= oldMissedDoses.filter((missed) => {
+      this.missedDoses = oldMissedDoses.filter((missed) => {
         const reminderIndex = missed.reminderIndex;
         const reminderExists = newReminders[reminderIndex];
         if (!reminderExists) return false; // Remove if the reminder no longer exists
@@ -561,35 +574,40 @@ medicationSchema.pre("save", function (next) {
       });
 
       // 2. Update indices of missed doses to match new reminder array
-      this.missedDoses = this.missedDoses.map((missed) => {
-        const oldReminder = oldReminders[missed.reminderIndex];
-        if (!oldReminder) return null;
+      this.missedDoses = this.missedDoses
+        .map((missed) => {
+          const oldReminder = oldReminders[missed.reminderIndex];
+          if (!oldReminder) return null;
 
-        const newIndex = newReminders.findIndex((newReminder) =>
-          DateTime.fromJSDate(newReminder.date).equals(DateTime.fromJSDate(oldReminder.date))
-        );
+          const newIndex = newReminders.findIndex((newReminder) =>
+            DateTime.fromJSDate(newReminder.date).equals(
+              DateTime.fromJSDate(oldReminder.date)
+            )
+          );
 
-        return newIndex !== -1 ? { ...missed, reminderIndex: newIndex } : null;
-      }).filter((missed) => missed !== null);
+          return newIndex !== -1
+            ? { ...missed, reminderIndex: newIndex }
+            : null;
+        })
+        .filter((missed) => missed !== null);
 
       this.markModified("missedDoses");
       // Recalculate total doses and quantities
       const totalDoses = this.calculateTotalDoses();
-      this.initialQuantity = totalDoses;   
+      this.initialQuantity = totalDoses;
       this.quantityLeft = this.calculateQuantityLeft();
     } else {
       // If scheduling fields are not modified, just update quantityLeft
       this.quantityLeft = this.calculateQuantityLeft();
     }
   }
-  if(this.isModified("reminders")) {
-   // Save the updated medication
-   this.markModified('reminders'); 
+  if (this.isModified("reminders")) {
+    // Save the updated medication
+    this.markModified("reminders");
   }
   this.checkMissedDoses();
   next();
 });
-
 
 const Medication =
   mongoose.models.medicationModel || model("Medication", medicationSchema);

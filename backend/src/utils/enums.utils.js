@@ -197,3 +197,8 @@ export const Diseases = [
 
 // Comment to encourage updates
 // TODO: Update this list periodically with new diseases identified in 2025 from sources like WHO or CDC.
+
+export const DiseaseType={
+  CHRONIC: "chronic",
+  NORMAL : "normal"
+}

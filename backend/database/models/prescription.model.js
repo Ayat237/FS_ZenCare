@@ -1,18 +1,18 @@
 import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
-import {
-  Diseases,
-} from "../../src/utils/enums.utils.js";
-import { DateTime } from "luxon";
-import { logger } from "../../src/utils/logger.utils.js";
+import { Diseases, DiseaseType } from "../../src/utils/enums.utils.js";
 
 const prescriptionSchema = new Schema(
   {
-
     diseaseName: {
       type: String,
       required: true,
-      enum : Diseases
+      enum: Diseases,
+    },
+    diseaseType: {
+      type: String,
+      required: true,
+      enum: DiseaseType,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,8 +29,8 @@ const prescriptionSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "Medication",
         required: true,
-      }
-    ]
+      },
+    ],
   },
   {
     timestamps: true,
@@ -39,12 +39,15 @@ const prescriptionSchema = new Schema(
 
 // Cascade delete for medications
 prescriptionSchema.pre("deleteOne", { document: true }, async function (next) {
-  await mongoose.model("Medication").deleteMany({ _id: { $in: this.medicationId } });
+  await mongoose
+    .model("Medication")
+    .deleteMany({ _id: { $in: this.medicationId } });
   next();
 });
 
 const Prescription =
-  mongoose.models.prescriptionModel || model("Prescription", prescriptionSchema);
+  mongoose.models.prescriptionModel ||
+  model("Prescription", prescriptionSchema);
 
 class PrescriptionModel extends BaseModel {
   constructor(database) {
@@ -52,4 +55,4 @@ class PrescriptionModel extends BaseModel {
   }
 }
 
-export { PrescriptionModel, Prescription};
+export { PrescriptionModel, Prescription };

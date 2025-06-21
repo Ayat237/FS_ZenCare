@@ -170,7 +170,7 @@ export const fetchDrugInteractions = async (drugIds) => {
       drugs,
       metadata,
       filterCounts,
-      interactions,
+      interactions
     };
 
     logger.info("Drug interaction check completed", {
@@ -543,4 +543,81 @@ export const checkDrugInteractionsService = async (
           { error: error.message }
         );
   }
+};
+
+
+/**
+ * Checks for significant drug interactions between a new drug and existing medications
+ * @param {string} patientId - The ID of the patient
+ * @param {string} drugId - The ID of the new drug to check
+ * @param {string} [medicationId=null] - Optional ID of medication being updated
+ * @returns {Promise<interactionResult>} Object containing interaction check results
+ */
+
+export const checkSignificantInteractions = async (patientId, newDrugs) => {
+  logger.info("Starting drug interaction check", {
+    patientId,
+    newDrugCount: newDrugs.length,
+  });
+
+  // Step 1: Fetch the patient's existing medications
+  logger.debug("Fetching existing medications for patient");
+  const existingMedications = await medicationModel.find(
+    { patientId, isActive: true },
+    { select: "drugId" }
+  );
+
+  logger.debug("Found existing medications", {
+    count: existingMedications.length,
+  });
+
+  // Step 2: Collect existing drug IDs
+  const existingDrugIds = existingMedications
+    .map((med) => med.drugId)
+    .filter((id) => id);
+
+  logger.debug("Extracted drug IDs", {
+    existingCount: existingDrugIds.length,
+    newCount: newDrugs.length,
+  });
+
+  let interactionResult = {
+    summary: "No significant interactions found with the new medications.",
+    drugs: [],
+    metadata: {},
+    interactions: [],
+    filterCounts: {},
+    interactionsByDrug: [],
+  };
+
+  const allDrugLength = existingDrugIds.length + newDrugs.length;
+  // Step 3: Check interactions involving new drugs
+  if (allDrugLength > 1) {
+    interactionResult = await checkDrugInteractionsService(
+      patientId,
+      existingDrugIds,
+      newDrugs
+    );
+  }
+
+  const { interactionsByDrug, interactions } = interactionResult;
+
+  const hasSignificantNewInteractions = interactionsByDrug.length > 0;
+
+  logger.info("Significant interactions check completed", {
+    hasSignificantNewInteractions,
+    drugsWithInteractions: interactionsByDrug.length,
+  });
+
+  return {
+    hasSignificantNewInteractions,
+    interactionResult: {
+      interactions,
+      interactionsByDrug: interactionsByDrug.map((drug) => ({
+        drugName: drug.drugName,
+        drugId: drug.drugId,
+        summary: drug.summary,
+      })),
+    },
+  };
 };

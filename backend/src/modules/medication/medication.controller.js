@@ -2,18 +2,11 @@ import { DateTime } from "luxon";
 import { PatientModel } from "../../../database/models/patient.model.js";
 import {
   MedicationModel,
-  Medication,
 } from "../../../database/models/medications.model.js";
 import { Frequency, ReminderStatus } from "../../utils/enums.utils.js";
 import database from "../../../database/databaseConnection.js";
 import { ErrorHandlerClass } from "../../utils/error-class.utils.js";
-import { checkDrugInteractionsService } from "../../services/index.js";
-import {
-  deletePendingMedication,
-  getPendingMedication,
-  storePendingMedication,
-} from "./utils/pendingMedications.utils.js";
-import { addMedicationService, confirmUpdateMedicationService, updateMedicationService } from "./medication.service.js";
+import {  addSignificantMedicationsService, confirmAddMedicationService, updateMedicationService } from "./medication.service.js";
 
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
@@ -125,9 +118,8 @@ const medicationModel = new MedicationModel(database);
 
 export const addMedicine = async (req, res, next) => {
   const user = req.authUser;
-  const medicationData = req.body;
 
-  const addedMedicine = await addMedicationService(user, medicationData);
+  const addedMedicine = await addSignificantMedicationsService(user, req.body);
 
   // Check if the result includes a pre-existing interaction warning
   if (addedMedicine.success !== undefined) {
@@ -147,19 +139,20 @@ export const addMedicine = async (req, res, next) => {
 }
 
 
-// export const confirmAddMedicine = async (req, res, next) => {
-//   const user = req.authUser;
-//   const { pendingId, accept } = req.body;
 
-//   const result = await confirmAddMedicationService(user, pendingId, accept);
 
-//   // Respond with the created medication
-//   res.status(201).json({
-//     success: true,
-//     message: "Medication created successfully",
-//     data: result,
-//   });
-// };
+ export const confirmAddMedicine = async (req, res, next) => {
+  const user = req.authUser;
+
+  const result = await confirmAddMedicationService(user, req.body);
+
+  // Respond with the created medication
+  res.status(201).json({
+      success: true,
+      message: "Medication added with confirmed interactions",
+      data: result,
+  });
+};
 
 export const updateMedicationRecord = async (req, res, next) => {
   const user = req.authUser;
@@ -189,18 +182,6 @@ export const updateMedicationRecord = async (req, res, next) => {
 }
 
 
-export const confirmUpdateMedication = async (req, res, next) => {
-  const user = req.authUser;
-  const { pendingId, accept } = req.body;
-  
-  const result = await confirmUpdateMedicationService(user, pendingId, accept);
-
-  res.status(200).json({
-    success: true,
-    message: 'Medication updated successfully',
-    data: result,
-  });
-}
 
 
 
@@ -492,7 +473,7 @@ export const getDashboardReminders = async (req, res, next) => {
   });
 };
 
-export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
+  export const markDoseTakenAndUpdateDashboard = async (req, res, next) => {
   const user = req.authUser;
   const patientId = user.patientID?._id || user.patientID;
   const { medicationId } = req.params;

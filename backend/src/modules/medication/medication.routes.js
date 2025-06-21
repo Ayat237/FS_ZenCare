@@ -31,13 +31,7 @@ medicationRouter.put(
     errorHandling(medicationsController.updateMedicationRecord)
 )
 
-medicationRouter.post(
-    "/confirm-Update-medicine",
-    validation(VSchema.confirmUpdateMedicineSchema),
-    authenticattion(),
-    authorization(possibleRoles.PATIENT),
-    errorHandling(medicationsController.confirmUpdateMedication)
-)
+
 medicationRouter.get(
     "/list-all-medications",
     authenticattion(),
