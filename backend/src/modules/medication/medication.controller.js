@@ -11,109 +11,6 @@ import {  addSignificantMedicationsService, confirmAddMedicationService, updateM
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
 
-// export const addMedicine = async (req, res, next) => {
-//   const user = req.authUser;
-//   const {
-//     medicineName,
-//     medicineType,
-//     drugId,
-//     dose,
-//     frequency,
-//     timesPerDay,
-//     daysOfWeek,
-//     startHour,
-//     startDateTime,
-//     endDateTime,
-//     intakeInstructions,
-//     notes,
-//     reminders,
-//   } = req.body;
-
-//   const patientId = user.patientID?._id || user.patientID;
-//   const patient = await patientModel.findById(patientId);
-//   if (!patient) {
-//     return next(
-//       new ErrorHandlerClass(
-//         "Patient not found",
-//         404,
-//         "Not Found",
-//         "Error in create medicine"
-//       )
-//     );
-//   }
-//   const interactionResult = await checkDrugInteractionsService(
-//     patientId,
-//     drugId
-//   );
-//   const { summary, drugs, metadata, filterCounts, interactions } =
-//     interactionResult;
-
-//   const hasPotentalInteractions =
-//     filterCounts.major > 0 ||
-//     filterCounts.moderate > 0 ||
-//     filterCounts.minor > 0 ||
-//     filterCounts.therapeuticDuplication > 0;
-
-//   if (hasPotentalInteractions) {
-//     const pendingId = `pendingMedicationId:${user.userName}`;
-//     storePendingMedication(pendingId, {
-//       patientId,
-//       medicationData: req.body,
-//       interactionResult,
-//     });
-
-//     return res.status(200).json({
-//       success: false,
-//       message: "Potential drug interactions found",
-//       status: "Interaction Warning",
-//       stack: "Please confirm before proceeding",
-//       data: {
-//         pendingId,
-//         summary,
-//         drugs,
-//         metadata,
-//         filterCounts,
-//         interactions,
-//       },
-//     });
-//   }
-
-//   const startDate = DateTime.fromISO(startDateTime, { zone: "UTC" });
-//   const endDate = DateTime.fromISO(endDateTime, { zone: "UTC" });
-
-//   const startDateAtMidnight = startDate.toJSDate();
-//   const endDateAtMidnight = endDate.toJSDate();
-
-//   const medicineRecord = new Medication({
-//     CreatedBy: user._id,
-//     patientId,
-//     medicineName,
-//     drugId,
-//     medicineType,
-//     dose,
-//     frequency,
-//     startHour,
-//     timesPerDay: frequency === Frequency.DAILY ? timesPerDay : null,
-//     daysOfWeek: frequency === Frequency.WEEKLY ? daysOfWeek : null,
-//     startDateTime: startDateAtMidnight,
-//     endDateTime: endDateAtMidnight,
-//     intakeInstructions,
-//     notes,
-//     reminders: reminders || [],
-//   });
-
-//   await medicationModel.save(medicineRecord);
-
-//   // Respond with the created medication
-//   res.status(201).json({
-//     success: true,
-//     message: "Medication created successfully",
-//     data: {
-//       ...medicineRecord.toObject(),
-//     },
-//   });
-// };
-
 
 
 export const addMedicine = async (req, res, next) => {
@@ -123,7 +20,7 @@ export const addMedicine = async (req, res, next) => {
 
   // Check if the result includes a pre-existing interaction warning
   if (addedMedicine.success !== undefined) {
-    return res.status(201).json({
+    return res.status(200).json({
       success: addedMedicine.success,
       message: addedMedicine.message,
       data: addedMedicine.data,

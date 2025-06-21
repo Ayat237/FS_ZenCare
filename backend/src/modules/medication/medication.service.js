@@ -17,57 +17,6 @@ const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
 const prescriptionModel = new PrescriptionModel(database);
 
-/**
- * Handles pending medication actions when drug interactions are found
- * @param {string} patientId - The ID of the patient
- * @param {Object} medicationData - The medication data to be stored
- * @param {Object} interactionResult - Results of the drug interaction check
- * @param {string} action - The action being performed (e.g., 'add', 'update')
- * @throws {ErrorHandlerClass} Throws an error with interaction warning details
- */
-// const handlePendingAction = async (
-//   patientId,
-//   medicationData,
-//   interactionResult,
-//   action
-// ) => {
-//   logger.info("Handling pending medication action", {
-//     patientId,
-//     action,
-//     hasInteractions: !!interactionResult.summary,
-//   });
-
-//   try {
-//     const pendingId = randomUUID();
-//     await storePendingMedication(pendingId, {
-//       patientId,
-//       medicationData,
-//       interactionResult,
-//       action,
-//     });
-//     logger.warn("Potential drug interactions found", {
-//       pendingId,
-//       action,
-//       interactionSummary: interactionResult.summary,
-//     });
-
-//     throw new ErrorHandlerClass(
-//       "Potential drug interactions found",
-//       200,
-//       "Interaction Warning",
-//       `Please confirm before proceeding with the ${action}`,
-//       { pendingId, ...interactionResult }
-//     );
-//   } catch (error) {
-//     logger.error("Error handling pending action", {
-//       error: error.message,
-//       patientId,
-//       action,
-//     });
-//     throw error;
-//   }
-// };
-
 const formatMedicationResponse = (medication) => ({
   id: medication._id,
   medicineName: medication.medicineName,
@@ -289,9 +238,10 @@ export const addSignificantMedicationsService = async (
         "This medication is already active for the patient",
         {
           duplicates: existingMedications.map((med) => ({
+            id: med._id,
             medicineName: med.medicineName,
             drugId: med.drugId,
-            patientId: med.patientId,
+            hasInteractions: med.hasInteractions,
           })),
         }
       );

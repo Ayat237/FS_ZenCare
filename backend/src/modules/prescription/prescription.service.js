@@ -102,54 +102,6 @@ export const addPrescriptionService = async (user, prescriptionData) => {
     medicationResults.push(result);
     prescription.medicationIds.push(result._id);
   }
-
-
-
-  // // Prepare new drugs for interaction check (include both drugId and drugName)
-  // const newDrugs = medications.map((med) => ({
-  //   drugId: med.drugId,
-  //   drugName: med.medicineName,
-  // }));
-
-  // // Check interactions for all new medications
-  // const { hasSignificantNewInteractions, interactionResult } =
-  //   await checkSignificantInteractions(patientId, newDrugs);
-
-  // if (hasSignificantNewInteractions) {
-  //   throw new ErrorHandlerClass(
-  //     "Potential drug interactions found",
-  //     200,
-  //     "Interaction Warning",
-  //     `Please confirm before proceeding with adding `,
-  //     interactionResult
-  //   );
-  // }
-
-  // // Add medications using addMedicationService
-  // const medicationResults = [];
-  // const duplicateMedications = [];
-
-  // for (const medicationData of medications) {
-  //   const updatedMedicationData = {
-  //     ...medicationData,
-  //   };
-
-  //   const result = await addMedicationService(user, updatedMedicationData,prescription._id);
-  //   console.log("result",result);  
-  //   if (result.success !== undefined) {
-  //     // Interaction warning found
-  //     return {
-  //       success: false,
-  //       message: "Potential drug interactions found",
-  //       data: { result },
-  //     };
-  //   }
-  //   medicationResults.push(result);
-  //   prescription.medicationIds.push(result.id);
-  // }
-  // console.log("prescription",prescription);
-  // console.log("medicationResults",medicationResults);
-  
   
   await prescriptionModel.save(prescription);
 
