@@ -32,6 +32,13 @@ class BaseModel {
     return await this.database.findOne(this.collection,query,options);
   }
 
+  async findOneAndDelete(query = {},options = {}) {
+    return await this.database.findOneAndDeleteDocument(this.collection,query,options);
+  }
+  async deleteMany(query = {}) {
+    return await this.database.deleteManyDocuments(this.collection,query);
+  }
+
   async save(document) {
     try {
       if (!document) {

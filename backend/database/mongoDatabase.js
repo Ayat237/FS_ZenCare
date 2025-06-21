@@ -295,6 +295,17 @@ class MongooseDatabase extends IDatabase {
     }
   }
 
+  async deleteManyDocuments(collection, query = {}) {
+    try {
+      
+      const model = this.model[collection];
+      const result = await model.deleteMany(query);
+      logger.info(`Deleted ${result.deletedCount} documents in ${collection}`);
+      return result;
+    }catch (error) {
+      throw error;
+    }
+  }
   async findByEmail(email) {
     try {
       const user = await this.model.user.findOne({ email });
@@ -308,6 +319,62 @@ class MongooseDatabase extends IDatabase {
     }
   }
 
+  async findOneAndDeleteDocument(collection, query = {}, options = {}) {
+    try {
+      const model = this.model[collection];
+      // Build the query starting with findOneAndDelete
+      let queryBuilder = model.findOneAndDelete(query);
+
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+
+      const result = await queryBuilder.exec();
+
+      logger.debug(`Found one document in ${collection}`, { query, options });
+
+      return result;
+    }catch (error) {
+      throw error;
+    }
+  }
   async saveDocument(collection, document) {
     try {
       const model = this.model[collection];

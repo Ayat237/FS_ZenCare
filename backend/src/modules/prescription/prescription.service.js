@@ -100,11 +100,21 @@ export const addPrescriptionService = async (user, prescriptionData) => {
     };
     const result = await addMedicationService(user, updatedMedicationData, prescription._id);
     medicationResults.push(result);
-    prescription.medicationIds.push(result._id);
+    prescription.medicationIds.push(result.id);
+    
   }
-  
   await prescriptionModel.save(prescription);
 
+  logger.info("Prescription with medications successfully created", {
+    userId: user._id,
+    prescriptionId: prescription._id,
+    medicationCount: medications.length,
+  });
+
+  console.log("medicationResults", medicationResults);
+  console.log("prescription", prescription);
+  
+  
   return {
     prescription,
     medications: medicationResults,
@@ -184,5 +194,60 @@ export const addAllAcceptedMedicationsService = async (
           "Server Error",
           error.message
         );
+  }
+};
+
+
+
+export const deletePrescriptionService = async (authUser, prescriptionId) => {
+  logger.info("Starting to delete prescription and related medications", { prescriptionId, userId: authUser._id });
+
+  try {
+    const patientId = authUser.patientID?._id || authUser.patientID;
+
+    const prescription = await prescriptionModel.findById(prescriptionId);
+    if (!prescription) {
+      logger.warn("Prescription not found", { prescriptionId });
+      return {
+        success: false,
+        message: "Prescription not found",
+        data: {},
+        status: 404,
+      };
+    }
+
+    // Verify patient ownership through associated medications
+    const medications = await medicationModel.find({ prescriptionId, patientId });
+    if (medications.length === 0) {
+      logger.warn("No medications found for prescription or unauthorized", { prescriptionId, patientId });
+      return {
+        success: false,
+        message: "No medications found for prescription or unauthorized",
+        data: {},
+        status: 403,
+      };
+    }
+
+    // Delete all medications in bulk
+    await medicationModel.deleteMany({ prescriptionId });
+    logger.info("Deleted all medications for prescription", { prescriptionId, count: medications.length });
+
+    // Delete the prescription
+    await prescriptionModel.deleteById(prescriptionId);
+    logger.info("Deleted prescription", { prescriptionId });
+
+    return {
+      success: true,
+      message: `Prescription with id(${prescriptionId}) and its medications deleted successfully`,
+      data: {},
+      status: 200,
+    };
+  } catch (error) {
+    logger.error("Error deleting prescription and related medications", {
+      error: error.message,
+      prescriptionId,
+      userId: authUser._id,
+    });
+    throw error;
   }
 };
