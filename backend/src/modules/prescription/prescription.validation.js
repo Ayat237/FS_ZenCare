@@ -186,3 +186,17 @@ export const acceptAndAddPrescriptionSchema = {
       }),
   }),
 };
+
+export const deletePrescriptionSchema = {
+  params: Joi.object({
+    prescriptionId: generalRules.id.messages({
+      "string.base": "Prescription ID must be a string",
+      "string.empty": "Prescription ID cannot be empty",
+      "any.required": "Prescription ID is required",
+      "any.unknown": "Prescription ID is not allowed",
+    }).required(),
+  }),
+};
+
+
+

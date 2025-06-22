@@ -2,6 +2,7 @@ import {
   addAllAcceptedMedicationsService,
   addPrescriptionService,
   deletePrescriptionService,
+  historicalPrescriptionService,
 } from "./prescription.service.js";
 
 export const createPrescription = async (req, res, next) => {
@@ -38,7 +39,6 @@ export const acceptAndAddPrescription = async (req, res, next) => {
 };
 
 export const deletePrescription = async (req, res, next) => {
-  try {
     const { prescriptionId } = req.params;
     const user = req.authUser;
 
@@ -49,7 +49,28 @@ export const deletePrescription = async (req, res, next) => {
       message: result.message,
       data: result.data,
     });
-  } catch (error) {
-    next(error);
-  }
 };
+
+
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Retrieves all historical prescriptions for the authenticated user.
+ * @param {Object} req - The request object containing user authentication information.
+ * @param {Object} res - The response object used to send back the desired HTTP response.
+ * @param {Function} next - The next middleware function in the stack.
+/*******  7c9749b7-7db2-4e0e-ac0d-eb358e14226f  *******/
+
+export const historicalPrescriptions = async (req, res, next) => {
+  const user = req.authUser;
+  const patientId =  user.patientID?._id || user.patientID;
+
+
+  const result = await historicalPrescriptionService(patientId);
+
+  return res.status(result.status).json({
+    success: result.success,
+    message: result.message,
+    data: result.data,
+  });
+
+}

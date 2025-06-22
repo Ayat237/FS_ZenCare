@@ -18,6 +18,15 @@ export const MedicineType = {
   SYRUP: "Syrup",
   INHALER: "Inhaler",
   DROPS: "Drops",
+  CREAM: "Cream",
+  INHALATION: "Inhalation",
+  OINTMENT: "Ointment",
+  SOLUTION: "Solution",
+  SYRINGE: "Syringe",
+  TOPICAL: "Topical",
+  VACCINE: "Vaccine",
+  PATCH : "Patch",
+  OTHERS: "Others",
 };
 
 export const Frequency = {

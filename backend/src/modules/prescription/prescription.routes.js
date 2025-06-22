@@ -28,13 +28,17 @@ prescriptionRouter.post(
 
 prescriptionRouter.delete(
     "/delete-prescription/:prescriptionId",
-//errorHandling(validation(VSchema.acceptAndAddPrescriptionSchema)),
+    errorHandling(validation(VSchema.deletePrescriptionSchema)),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
     errorHandling(prescriptionController.deletePrescription)
 )
 
 
-
-
+prescriptionRouter.get(
+    "/prescriptions-history",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.historicalPrescriptions)
+)
 export { prescriptionRouter };

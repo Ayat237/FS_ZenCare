@@ -10,7 +10,7 @@ import { ErrorHandlerClass } from "../../utils/error-class.utils.js";
 import { checkSignificantInteractions } from "../../services/index.js";
 import { logger } from "../../utils/logger.utils.js";
 import { PrescriptionModel } from "../../../database/models/prescription.model.js";
-import { populate } from "dotenv";
+
 
 const patientModel = new PatientModel(database);
 const medicationModel = new MedicationModel(database);
@@ -34,6 +34,8 @@ const formatMedicationResponse = (medication) => ({
 const updateMedicationFields = (medication, updateData) => {
   const updates = {};
   const {
+    medicineType,
+    dose,
     frequency,
     timesPerDay,
     daysOfWeek,
@@ -43,7 +45,8 @@ const updateMedicationFields = (medication, updateData) => {
     intakeInstructions,
     notes,
   } = updateData;
-
+  if (medicineType) updates.medicineType = medicineType;
+  if (dose) updates.dose = dose;
   if (frequency && frequency !== medication.frequency) {
     updates.frequency = frequency;
     updates.timesPerDay = frequency === Frequency.DAILY ? timesPerDay : null;
@@ -148,7 +151,10 @@ export const addMedicationService = async (
     await medicationModel.save(medicineRecord);
     logger.info("Medication successfully added", { medicineName, patientId });
 
-    return formatMedicationResponse(medicineRecord);
+    return {
+      ...formatMedicationResponse(medicineRecord),
+      reminders:medicineRecord.reminders
+    };
   } catch (error) {
     logger.error("Error adding medication", {
       error: error.message,
@@ -289,7 +295,10 @@ export const addSignificantMedicationsService = async (
     prescription.medicationIds.push(medicineRecord._id);
     await prescriptionModel.save(prescription);
 
-    return formatMedicationResponse(medicineRecord);
+    return{
+      ...formatMedicationResponse(medicineRecord),
+      reminders:medicineRecord.reminders
+    };
   } catch (error) {
     logger.error("Error adding medication", {
       error: error.message,
@@ -380,7 +389,10 @@ export const confirmAddMedicationService = async (user, medicationData) => {
       prescriptionId,
     });
 
-    return formatMedicationResponse(medicineRecord);
+    return {
+      ...formatMedicationResponse(medicineRecord),
+      reminders:medicineRecord.reminders
+    };
   } catch (error) {
     logger.error("Error confirming medication addition", {
       error: error.message,
@@ -441,7 +453,10 @@ export const updateMedicationService = async (
     medicationId,
   });
 
-  return formatMedicationResponse(medicationRecord);
+  return {
+   ...formatMedicationResponse(medicationRecord),
+    reminders:medicationRecord.reminders
+  };
 };
 
 /**
@@ -490,6 +505,7 @@ export const listAllActiveMedicationsService = async (patientId) => {
     const medicationsWithDisease = activeMedications.map((med) => ({
       ...formatMedicationResponse(med),
       diseaseName: med.prescriptionId?.diseaseName || null,
+
     }));
 
     logger.info("Successfully fetched active medications", {
@@ -559,6 +575,7 @@ export const getMedicationByIdService = async (id, patientId) => {
       data: {
         ...formatMedicationResponse(medication),
         diseaseName: medication.prescriptionId?.diseaseName || null,
+        diseaseType : medication.prescriptionId?.diseaseType || null
       },
       status: 200,
     };

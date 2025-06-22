@@ -9,8 +9,6 @@ import {
 } from "../../src/utils/enums.utils.js";
 import { DateTime } from "luxon";
 import { logger } from "../../src/utils/logger.utils.js";
-import { PrescriptionModel } from "./prescription.model.js";
-import database from "../databaseConnection.js";
 
 
 const medicationSchema = new Schema(
