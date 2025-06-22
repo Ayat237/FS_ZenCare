@@ -9,6 +9,9 @@ import {
 } from "../../src/utils/enums.utils.js";
 import { DateTime } from "luxon";
 import { logger } from "../../src/utils/logger.utils.js";
+import { PrescriptionModel } from "./prescription.model.js";
+import database from "../databaseConnection.js";
+
 
 const medicationSchema = new Schema(
   {
@@ -609,6 +612,10 @@ medicationSchema.pre("save", function (next) {
   next();
 });
 
+
+
+
+
 const Medication =
   mongoose.models.medicationModel || model("Medication", medicationSchema);
 
@@ -616,6 +623,8 @@ class MedicationModel extends BaseModel {
   constructor(database) {
     super(database, "medication");
   }
+
+
 }
 
 export { MedicationModel, Medication };

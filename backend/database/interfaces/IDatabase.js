@@ -33,6 +33,14 @@ class IDatabase {
   async findOne(model,query = {},options = {}) {
     throw new Error("Method 'findOne' must be implemented");
   }
+
+  async findOneAndDelete(model,query = {},options = {}) {
+    throw new Error("Method 'findOneAndDelete' must be implemented");
+  }
+
+  async deleteMany(model,query = {}) {
+    throw new Error("Method 'deleteMany' must be implemented");
+  }
   async save(model, data) {
     throw new Error("Method 'save' must be implemented");
   }

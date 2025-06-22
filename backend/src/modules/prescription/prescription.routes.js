@@ -26,5 +26,15 @@ prescriptionRouter.post(
 
 
 
+prescriptionRouter.delete(
+    "/delete-prescription/:prescriptionId",
+//errorHandling(validation(VSchema.acceptAndAddPrescriptionSchema)),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.deletePrescription)
+)
+
+
+
 
 export { prescriptionRouter };
