@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
 import { logger, Provider, systemRoles } from "../../src/utils/index.js";
 import MongooseDatabase from "../mongoDatabase.js";

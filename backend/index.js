@@ -33,6 +33,7 @@ app.use('/auth',router.authRouter);
 app.use('/patient', router.patientRouter);
 app.use('/medication', router.medicationRouter);
 app.use('/prescription', router.prescriptionRouter);
+app.use('/drugs', router.drugRoutes);
 
 
 

@@ -4,4 +4,5 @@ export * from "./doctor.model.js";
 export * from "./base.model.js";
 export * from "./medications.model.js";
 export * from "./prescription.model.js";
+export * from "./drug.model.js";
 
