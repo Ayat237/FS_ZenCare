@@ -58,11 +58,12 @@ export const multerMiddleware = ({
   return multer({ fileFilter, storage });
 };
 
-export const multerHost = ({ allowedExtensions = extensions.Images }={}) => {
+export const multerHost = ({ allowedExtensions = extensions.Images.concat(extensions.Documents) }={}) => {
   const storage = multer.diskStorage({});
 
   // fileFilter
   const fileFilter = (req, file, cb) => {
+
     if (allowedExtensions.includes(file.mimetype)) {
       return cb(null, true);
     }

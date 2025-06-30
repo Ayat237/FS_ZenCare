@@ -5,4 +5,6 @@ export * from "./base.model.js";
 export * from "./medications.model.js";
 export * from "./prescription.model.js";
 export * from "./drug.model.js";
+export * from "./medical_history.model.js";
+export * from "./address.model.js";
 

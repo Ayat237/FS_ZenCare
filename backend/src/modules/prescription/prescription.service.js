@@ -155,6 +155,7 @@ export const addPrescriptionService = async (user, prescriptionData) => {
     prescription.medicationIds.push(result.id);
   }
   await prescriptionModel.save(prescription);
+  console.log("prescription", prescription);
 
   logger.info("Prescription with medications successfully created", {
     userId: user._id,

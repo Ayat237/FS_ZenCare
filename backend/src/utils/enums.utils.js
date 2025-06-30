@@ -209,5 +209,80 @@ export const Diseases = [
 
 export const DiseaseType={
   CHRONIC: "chronic",
-  NORMAL : "normal"
+  NORMAL : "normal",
+  GENETIC: "Genetic",
 }
+
+export const LifeStyleName = {
+  SMOKER: "Smoker",
+  EXERCISER: "Exerciser",
+  ALCOHOL_USER: "Alcohol User",
+  DIET_CHANGER: "Diet Changer",
+  DRUG_USE:"drugUse"
+};
+
+
+export const Specialties = {
+  ALLERGY_IMMUNOLOGY: "Allergy and Immunology",
+  ANESTHESIOLOGY: "Anesthesiology",
+  CARDIOLOGY: "Cardiology",
+  CARDIOTHORACIC_SURGERY: "Cardiothoracic Surgery",
+  COLORECTAL_SURGERY: "Colorectal Surgery",
+  CRITICAL_CARE_MEDICINE: "Critical Care Medicine",
+  DERMATOLOGY: "Dermatology",
+  EMERGENCY_MEDICINE: "Emergency Medicine",
+  ENDOCRINOLOGY: "Endocrinology",
+  FAMILY_MEDICINE: "Family Medicine",
+  FORENSIC_PATHOLOGY: "Forensic Pathology",
+  GASTROENTEROLOGY: "Gastroenterology",
+  GERIATRICS: "Geriatrics",
+  GENERAL_SURGERY: "General Surgery",
+  GYNECOLOGY: "Gynecology",
+  HEMATOLOGY: "Hematology",
+  INFECTIOUS_DISEASE: "Infectious Disease",
+  INTERNAL_MEDICINE: "Internal Medicine",
+  INTERVENTIONAL_CARDIOLOGY: "Interventional Cardiology",
+  INTERVENTIONAL_RADIOLOGY: "Interventional Radiology",
+  MEDICAL_GENETICS: "Medical Genetics",
+  MEDICAL_ONCOLOGY: "Medical Oncology",
+  NEPHROLOGY: "Nephrology",
+  NEUROLOGY: "Neurology",
+  NEUROSURGERY: "Neurosurgery",
+  NUCLEAR_MEDICINE: "Nuclear Medicine",
+  OBSTETRICS: "Obstetrics",
+  OCCUPATIONAL_MEDICINE: "Occupational Medicine",
+  ONCOLOGY: "Oncology",
+  OPHTHALMOLOGY: "Ophthalmology",
+  ORAL_MAXILLOFACIAL_SURGERY: "Oral and Maxillofacial Surgery",
+  ORTHOPEDIC_SURGERY: "Orthopedic Surgery",
+  OTOLARYNGOLOGY: "Otolaryngology (ENT)",
+  PAIN_MEDICINE: "Pain Medicine",
+  PALLIATIVE_CARE: "Palliative Care",
+  PATHOLOGY: "Pathology",
+  PEDIATRICS: "Pediatrics",
+  PHYSICAL_MEDICINE_REHAB: "Physical Medicine and Rehabilitation",
+  PLASTIC_SURGERY: "Plastic Surgery",
+  PSYCHIATRY: "Psychiatry",
+  PULMONOLOGY: "Pulmonology",
+  RADIATION_ONCOLOGY: "Radiation Oncology",
+  RADIOLOGY: "Radiology",
+  REPRODUCTIVE_ENDOCRINOLOGY: "Reproductive Endocrinology and Infertility",
+  RHEUMATOLOGY: "Rheumatology",
+  SLEEP_MEDICINE: "Sleep Medicine",
+  SPORTS_MEDICINE: "Sports Medicine",
+  SURGICAL_ONCOLOGY: "Surgical Oncology",
+  THORACIC_SURGERY: "Thoracic Surgery",
+  TRANSFUSION_MEDICINE: "Transfusion Medicine",
+  TRANSPLANT_SURGERY: "Transplant Surgery",
+  TRAUMA_SURGERY: "Trauma Surgery",
+  UROLOGY: "Urology",
+  VASCULAR_SURGERY: "Vascular Surgery"
+};
+
+
+
+export const AccessMedicalHistoryStatus = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+};

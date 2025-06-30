@@ -4,4 +4,5 @@ export * from "./doctor/doctor.routes.js";
 export * from "./medication/medication.routes.js";
 export * from "./medical_history/medical-history.routes.js";
 export * from "./prescription/prescription.routes.js";
-export { drugRoutes } from "./drug/drug.routes.js";
+export * from "./drug/drug.routes.js";
+export * from "./address/address.routes.js";

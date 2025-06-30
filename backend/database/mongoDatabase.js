@@ -1,19 +1,30 @@
 import mongoose from "mongoose";
 import IDatabase from "./interfaces/IDatabase.js";
-import { logger } from "../src/utils/index.js";
-import { Drug, Medication, Patient, Prescription, User } from "./models/index.js";
-
+import {
+  User,
+  Patient,
+  Doctor,
+  Address,
+  MedicalHistory,
+  Medication,
+  Prescription,
+  Drug,
+} from "./models/index.js";
+import { logger } from "../src/utils/logger.utils.js";
 
 class MongooseDatabase extends IDatabase {
   constructor(uri) {
     super();
     this.uri = uri;
     this.model = {
-      patient: Patient,
       user: User,
+      patient: Patient,
+      doctor: Doctor,
       medication: Medication,
-      prescription : Prescription,
-      drug: Drug
+      prescription: Prescription,
+      medicalHistory: MedicalHistory,
+      drug: Drug,
+      address: Address,
     };
   }
 
@@ -60,7 +71,6 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-
   async updateById(collection, id, data) {
     try {
       const model = this.model[collection];
@@ -98,41 +108,41 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findDocument(collection, query = {},options = {}) {
+  async findDocument(collection, query = {}, options = {}) {
     try {
       const model = this.model[collection];
       if (!model) {
         throw new Error(`Model for collection ${collection} not found`);
       }
-  
+
       // Build the query starting with findOne
       let queryBuilder = model.find(query);
-  
+
       // Apply query options dynamically
       if (options.select) {
         queryBuilder = queryBuilder.select(options.select);
       }
-  
+
       if (options.populate) {
         queryBuilder = queryBuilder.populate(options.populate);
       }
-  
+
       if (options.sort) {
         queryBuilder = queryBuilder.sort(options.sort);
       }
-  
+
       if (options.limit) {
         queryBuilder = queryBuilder.limit(options.limit);
       }
-  
+
       if (options.skip) {
         queryBuilder = queryBuilder.skip(options.skip);
       }
-  
+
       if (options.lean) {
         queryBuilder = queryBuilder.lean();
       }
-  
+
       if (options.conditions) {
         // Add additional conditions to the query
         queryBuilder = queryBuilder.setQuery({
@@ -140,21 +150,21 @@ class MongooseDatabase extends IDatabase {
           ...options.conditions,
         });
       }
-  
+
       if (options.fields) {
         // Alternative to `select` for specific field projections
         queryBuilder = queryBuilder.select(options.fields);
       }
-  
+
       if (options.execOptions) {
         // Pass additional execution options (e.g., collation, session)
         queryBuilder = queryBuilder.setOptions(options.execOptions);
       }
-  
+
       const result = await queryBuilder.exec();
-  
+
       logger.debug(`Found documents in ${collection}`, { query, options });
-  
+
       return result;
     } catch (error) {
       logger.error(`Failed to find documents in ${this.model.modelName}`, {
@@ -171,37 +181,35 @@ class MongooseDatabase extends IDatabase {
       if (!model) {
         throw new Error(`Model for collection ${collection} not found`);
       }
-  
+
       // Build the query starting with findOne
       let queryBuilder = model.findOne(query);
 
-      
-  
       // Apply query options dynamically
       if (options.select) {
         queryBuilder = queryBuilder.select(options.select);
       }
-  
+
       if (options.populate) {
         queryBuilder = queryBuilder.populate(options.populate);
       }
-  
+
       if (options.sort) {
         queryBuilder = queryBuilder.sort(options.sort);
       }
-  
+
       if (options.limit) {
         queryBuilder = queryBuilder.limit(options.limit);
       }
-  
+
       if (options.skip) {
         queryBuilder = queryBuilder.skip(options.skip);
       }
-  
+
       if (options.lean) {
         queryBuilder = queryBuilder.lean();
       }
-  
+
       if (options.conditions) {
         // Add additional conditions to the query
         queryBuilder = queryBuilder.setQuery({
@@ -209,21 +217,21 @@ class MongooseDatabase extends IDatabase {
           ...options.conditions,
         });
       }
-  
+
       if (options.fields) {
         // Alternative to `select` for specific field projections
         queryBuilder = queryBuilder.select(options.fields);
       }
-  
+
       if (options.execOptions) {
         // Pass additional execution options (e.g., collation, session)
         queryBuilder = queryBuilder.setOptions(options.execOptions);
       }
-  
+
       const result = await queryBuilder.exec();
-  
+
       logger.debug(`Found one document in ${collection}`, { query, options });
-  
+
       return result;
     } catch (error) {
       logger.error(`Failed to find one document in ${this.model.modelName}`, {
@@ -281,7 +289,6 @@ class MongooseDatabase extends IDatabase {
       }
 
       const result = await query.exec();
- 
 
       logger.debug(`Found one document in ${collection}`, { id });
 
@@ -298,24 +305,11 @@ class MongooseDatabase extends IDatabase {
 
   async deleteManyDocuments(collection, query = {}) {
     try {
-      
       const model = this.model[collection];
       const result = await model.deleteMany(query);
       logger.info(`Deleted ${result.deletedCount} documents in ${collection}`);
       return result;
-    }catch (error) {
-      throw error;
-    }
-  }
-  async findByEmail(email) {
-    try {
-      const user = await this.model.user.findOne({ email });
-      return user;
     } catch (error) {
-      logger.error("Error in finding user by email:", {
-        error: error.message,
-        stack: error.stack,
-      });
       throw error;
     }
   }
@@ -372,7 +366,7 @@ class MongooseDatabase extends IDatabase {
       logger.debug(`Found one document in ${collection}`, { query, options });
 
       return result;
-    }catch (error) {
+    } catch (error) {
       throw error;
     }
   }

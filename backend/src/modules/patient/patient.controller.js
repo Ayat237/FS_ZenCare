@@ -125,6 +125,7 @@ export const registerPatient = async (req, res, next) => {
     // If no file is uploaded, set a default image based on gender
     const defaultImage = getDefaultImageByGender(patientData.gender);
     profileImageObject = {
+      
       URL: {
         secure_url: defaultImage.secure_url,
         public_id: defaultImage.public_id,
