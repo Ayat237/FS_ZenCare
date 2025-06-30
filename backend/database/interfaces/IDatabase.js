@@ -45,5 +45,8 @@ class IDatabase {
     throw new Error("Method 'save' must be implemented");
   }
 
+  async findByEmail(email) {
+    throw new Error("Method 'findByEmail' must be implemented");
+  }
 }
 export default IDatabase;

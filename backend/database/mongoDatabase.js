@@ -382,6 +382,18 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
+  async findByEmail(email) {
+    try {
+      const user = await this.model.user.findOne({ email });
+      return user;
+    } catch (error) {
+      logger.error("Error in finding user by email:", {
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
 }
 
 export default MongooseDatabase;

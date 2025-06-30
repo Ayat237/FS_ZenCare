@@ -49,8 +49,6 @@ class BaseModel {
       throw error;
     }
   }
-
-  
 }
 
 export default BaseModel;
