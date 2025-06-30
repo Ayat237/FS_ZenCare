@@ -385,6 +385,7 @@ class MongooseDatabase extends IDatabase {
   async findByEmail(email) {
     try {
       const user = await this.model.user.findOne({ email });
+      logger.info("User found by email:", { user });
       return user;
     } catch (error) {
       logger.error("Error in finding user by email:", {
