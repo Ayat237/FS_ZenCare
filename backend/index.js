@@ -36,6 +36,8 @@ app.use('/prescription', router.prescriptionRouter);
 app.use('/drugs', router.drugRoutes);
 app.use('/medical-history', router.medicalHistoryRouter);
 app.use('/address', router.addressRouter);
+app.use('/doctor', router.doctorRouter);
+//app.use('/admin', router.adminRouter);
 
 
 const client = createClient();

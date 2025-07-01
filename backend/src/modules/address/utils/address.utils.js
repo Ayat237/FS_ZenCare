@@ -116,9 +116,9 @@ export const validateAddressData = (addressData) => {
   }
   
   // Check user reference
-  if (!addressData.patientId && !addressData.doctorId) {
-    errors.push("Either patientId or doctorId is required");
-  }
+  // if (!addressData.patientId && !addressData.doctorId) {
+  //   errors.push("Either patientId or doctorId is required");
+  // }
   
   if (addressData.patientId && addressData.doctorId) {
     errors.push("Cannot specify both patientId and doctorId");

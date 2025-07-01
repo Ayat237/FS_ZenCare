@@ -4,6 +4,11 @@ import { Gender, Specialties } from "../../src/utils/enums.utils.js";
 
 const doctorSchema = new Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     verification: {
       isVerified: {
         type: Boolean,
@@ -97,4 +102,10 @@ const doctorSchema = new Schema(
 
 const Doctor = mongoose.models.doctorModel || model("Doctor", doctorSchema);
 
-export { Doctor };
+class DoctorModel extends BaseModel {
+  constructor(database) {
+    super(database, "doctor");
+  }
+}
+
+export { DoctorModel, Doctor };

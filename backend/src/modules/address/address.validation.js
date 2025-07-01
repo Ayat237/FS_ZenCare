@@ -54,11 +54,11 @@ export const createAddressSchema = {
     }),
   }).custom((value, helpers) => {
     // Custom validation to ensure either patientId or doctorId is provided, but not both
-    if (!value.patientId && !value.doctorId) {
-      return helpers.error("any.invalid", { 
-        message: "Either patientId or doctorId is required" 
-      });
-    }
+    // if (!value.patientId && !value.doctorId) {
+    //   return helpers.error("any.invalid", { 
+    //     message: "Either patientId or doctorId is required" 
+    //   });
+    // }
     if (value.patientId && value.doctorId) {
       return helpers.error("any.invalid", { 
         message: "Cannot specify both patientId and doctorId" 

@@ -6,7 +6,7 @@ const addressSchema = new Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +16,10 @@ const addressSchema = new Schema(
     doctorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Doctor",
+      required: false,
+    },
+    displayName: {
+      type: String,
       required: false,
     },
     street: {
@@ -61,9 +65,9 @@ const addressSchema = new Schema(
 );
 // Ensure either patientId or doctorId is provided, but not both
 addressSchema.pre("save", function (next) {
-  if (!this.patientId && !this.doctorId) {
-    return next(new Error("Either patientId or doctorId is required"));
-  }
+  // if (!this.patientId && !this.doctorId) {
+  //   return next(new Error("Either patientId or doctorId is required"));
+  // }
   if (this.patientId && this.doctorId) {
     return next(new Error("Cannot specify both patientId and doctorId"));
   }
