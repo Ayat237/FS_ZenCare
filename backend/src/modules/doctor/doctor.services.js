@@ -150,23 +150,25 @@ export const registerNewDoctorUserService = async (
     );
 
     // Send verification email
-    const isEmailSent = await sendEmailService({
-      to: userData.email,
-      subject: "Action Required: Verify Your Email Address",
-      htmlMessage: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #007BFF;">Email Verification Code</h2>
-          <p>Hello ${userData.fullName || "Doctor"},</p>
-          <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
-          <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
-          <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
-          <p>If you did not initiate this request, please ignore this message.</p>
-          <br/>
-          <p>Best regards,</p>
-          <p><strong>The zenCareTeam</strong></p>
-        </div>
-      `,
-    });
+    let emailSentSuccessfully = false;
+    try {
+      const isEmailSent = await sendEmailService({
+        to: userData.email,
+        subject: "Action Required: Verify Your Email Address",
+        htmlMessage: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #007BFF;">Email Verification Code</h2>
+            <p>Hello ${userData.fullName || "Doctor"},</p>
+            <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
+            <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
+            <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
+            <p>If you did not initiate this request, please ignore this message.</p>
+            <br/>
+            <p>Best regards,</p>
+            <p><strong>The zenCareTeam</strong></p>
+          </div>
+        `,
+      });
 
       emailSentSuccessfully = !isEmailSent.rejected.length;
     } catch (emailError) {
@@ -179,24 +181,24 @@ export const registerNewDoctorUserService = async (
     if (files && files.verificationId) {
       const uploadResult = files.verificationId[0]; // Multer already processed it
       const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
-      
+
       // Read the uploaded file and encrypt it
       const fileBuffer = fs.readFileSync(uploadResult.path);
       const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
-      
+
       // Save encrypted data to local server
       fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
-      
+
       // Store reference in Redis for 48 hours
       await redisClient.SET(
         `verification:${doctor._id}`,
         filePath,
         172800 // 48 hours expiry
       );
-      
+
       // Clean up the original uploaded file
       fs.unlinkSync(uploadResult.path);
-      
+
       verificationData = { filePath, filename: uploadResult.filename };
     }
 
