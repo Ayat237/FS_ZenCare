@@ -6,6 +6,7 @@ import fs from "fs";
 import { UserModel } from "../../../database/models/user.model.js";
 import { DoctorModel } from "../../../database/models/doctor.model.js";
 import database from "../../../database/databaseConnection.js";
+import mongoose from "mongoose";
 
 const userModel = new UserModel(database);
 const doctorModel = new DoctorModel(database);
@@ -69,42 +70,79 @@ export const getPendingDoctorsService = async () => {
 };
 
 export const verifyDoctorService = async (doctorId) => {
-  const doctor = await doctorModel.findById(doctorId);
-  if (!doctor) {
-    throw new ErrorHandlerClass(
-      "Doctor not found, please check the doctor id",
-      404,
-      "Not Found",
-      "Doctor not found"
-    );
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const doctor = await doctorModel.findById(doctorId).session(session);
+    if (!doctor) {
+      throw new ErrorHandlerClass(
+        "Doctor not found, please check the doctor id",
+        404,
+        "Not Found",
+        "Doctor not found"
+      );
+    }
+    if (doctor.isAdminApproved) {
+      throw new ErrorHandlerClass(
+        "Doctor already approved",
+        400,
+        "Validation Error",
+        "Already approved"
+      );
+    }
+
+    doctor.isAdminApproved = true;
+    await doctorModel.save(doctor, { session });
+
+    // Delete verification data from Redis
+    const redisKey = `verification:${doctorId}`;
+    let filePath = null;
+    try {
+      filePath = await redisClient.GET(redisKey);
+      await redisClient.DEL(redisKey);
+    } catch (e) {
+      await session.abortTransaction();
+      session.endSession();
+      throw new ErrorHandlerClass(
+        "Failed to delete verification data from Redis",
+        500,
+        "Server Error",
+        "Redis deletion failed"
+      );
+    }
+
+    // Delete verificationId file from local server
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (e) {
+        await session.abortTransaction();
+        session.endSession();
+        throw new ErrorHandlerClass(
+          "Failed to delete verification file from local server",
+          500,
+          "Server Error",
+          "File deletion failed"
+        );
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      status: 200,
+      success: true,
+      message: "Doctor verified successfully",
+      data: { doctor },
+    };
+  } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+    throw error;
   }
-  if (doctor.isAdminApproved) {
-    throw new ErrorHandlerClass(
-      "Doctor already approved",
-      400,
-      "Validation Error",
-      "Already approved"
-    );
-  }
-  doctor.isAdminApproved = true;
-  await doctorModel.save(doctor);
-
-  // Delete verification data from Redis
-  const redisKey = `verification:${doctorId}`;
-  let filePath = null;
-
-  filePath = await redisClient.GET(redisKey);
-  await redisClient.DEL(redisKey);
-
-  // Delete verificationId file from local server
-  if (filePath && fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-
-  return {
-    status: 200,
-    success: true,
-    message: "Doctor verified successfully",
-    data: { doctor },
-  };
 };
