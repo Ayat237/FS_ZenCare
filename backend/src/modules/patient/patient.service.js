@@ -211,8 +211,7 @@ export const addPatientRoleToExistingUserService = async (existingUser, patientD
     return {
       status: 201,
       success: true,
-      message: "Patient role added to existing user.",
-      data: { user: existingUser, patient: patientObject },
+      message: "Patient added successfully to existing user.",
     };
   } catch (error) {
     throw error;
