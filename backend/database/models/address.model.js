@@ -22,31 +22,6 @@ const addressSchema = new Schema(
       type: String,
       required: false,
     },
-    street: {
-      type: String,
-      required: true,
-    },
-    city: {
-      type: String,
-      required: true,
-    },
-    country: {
-      type: String,
-      required: true,
-      default: "Egypt",
-    },
-    buildingNumber: {
-      type: Number,
-      required: false,
-    },
-    buildingName: {
-      type: String,
-      required: false,
-    },
-    neighborhood: {
-      type: String,
-      required: false,
-    },
     coordinates: {
       longitude: {
         type: Number,

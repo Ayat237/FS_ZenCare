@@ -3,9 +3,10 @@ import * as doctorController from "./doctor.controller.js";
 import { errorHandling } from "../../middlewares/error-hanling.middleware.js";
 import { validation } from "../../middlewares/validation.middleware.js";
 import * as validate from "./doctor.validation.js";
-import { authenticattion } from "../../middlewares/index.js";
+import { authenticattion, parseCoordinatesFromFormData, parseDoctorFormData } from "../../middlewares/index.js";
 import { multerMiddleware } from "../../middlewares/multer.middleware.js";
 import extensions from "../../utils/file-extenstions.utils.js";
+import { doctorRegisterNewSchema, doctorRegisterExistingSchema } from "./doctor.validation.js";
 
 const doctorRouter = Router();
 
@@ -15,50 +16,34 @@ const upload = multerMiddleware({
 });
 
 const profileUpload = multerMiddleware({
-  filePath: "profile",
   allowedExtensions: extensions.Images,
 });
 
-export const parseDoctorFormData = (req, res, next) => {
-  function safeParseArray(field) {
-    try {
-      const value = req.body[field];
-      if (!value || value === "") {
-        req.body[field] = []; // empty or missing becomes empty array
-        return;
-      }
-  
-      if (Array.isArray(value)) return;
-  
-      const parsed = JSON.parse(value);
-      req.body[field] = Array.isArray(parsed) ? parsed : [parsed]; // ensure it's always array
-    } catch (e) {
-      console.warn(`Failed to parse field ${field}:`, e.message);
-      req.body[field] = [];
-    }
-  }
-  
 
-  // Parse fields expected to be arrays or objects
-  safeParseArray("education");
-  safeParseArray("certifications");
-  safeParseArray("hospitalAffiliation");
-  safeParseArray("clinicBranches");
-  safeParseArray("role");
-
-  next();
-};
-
-// Doctor registration (with verificationId and profile image upload)
+// Register a new doctor (new user)
 doctorRouter.post(
-  "/register",
+  "/register-new",
   upload.fields([
     { name: "verificationId", maxCount: 1 },
     { name: "profileImage", maxCount: 1 },
   ]),
   parseDoctorFormData,
-  errorHandling(validation(validate.doctorRegisterSchema)),
-  errorHandling(doctorController.registerDoctor)
+  parseCoordinatesFromFormData,
+  errorHandling(validation(doctorRegisterNewSchema)),
+  errorHandling(doctorController.registerNewDoctorUser)
+);
+
+// Add doctor role to existing user
+doctorRouter.post(
+  "/register-existing",
+  upload.fields([
+    { name: "verificationId", maxCount: 1 },
+    { name: "profileImage", maxCount: 1 },
+  ]),
+  parseDoctorFormData,
+  parseCoordinatesFromFormData,
+  errorHandling(validation(doctorRegisterExistingSchema)),
+  errorHandling(doctorController.addDoctorRoleToExistingUser)
 );
 
 // Doctor email verification

@@ -1,63 +1,34 @@
 import Joi from "joi";
 import { Gender, generalRules, systemRoles } from "../../utils/index.js";
 
-export const registerSchema = {
-  body: Joi.object({
-    firstName: Joi.string().min(3).max(20).required().messages({
-      "string.min": "First name must be at least 3 characters long",
-      "string.max": "First name cannot exceed 10 characters",
-      "any.required": "First name is required",
-    }),
-    lastName: Joi.string().min(3).max(20).required().messages({
-      "string.min": "Last name must be at least 3 characters long",
-      "string.max": "Last name cannot exceed 10 characters",
-      "any.required": "Last name is required",
-    }),
-    userName: Joi.string().min(3).max(20).required().messages({
-      "string.min": "Username must be at least 3 characters long",
-      "string.max": "Username cannot exceed 10 characters",
-      "any.required": "Username is required",
-    }),
-    mobilePhone: generalRules.phoneNumber.required(),
-    email: generalRules.email.required(),
-    password: generalRules.password,
-    confirmedPassword: Joi.string()
-      .valid(Joi.ref("password"))
-      .required()
-      .messages({
-        "any.only": "Confirmed password must match password",
-        "any.required": "Password confirmation is required",
-      }),
-    role: Joi.string().valid(systemRoles.PATIENT).required().messages({
-      "any.only": "Role must be PATIENT for patient registration",
-      "any.required": "Role is required",
-    }),
-    gender: Joi.string()
-      .valid(Gender.MALE, Gender.FEMALE, Gender.OTHER)
-      .required()
-      .messages({
-        "any.only": "Gender must be MALE, FEMALE or OTHER",
-        "any.required": "Gender is required",
-      }),
-    birthDate: Joi.date().required().messages({
-      "date.base": "Birth date must be a valid date",
-      "any.required": "Birth date is required",
-    }),
-    profileImage: Joi.object({
-      URL: Joi.object({
-        public_id: Joi.string().required().messages({
-          "any.required": "Profile image public ID is required",
-        }),
-        secure_url: Joi.string().required().messages({
-          "any.required": "Profile image secure URL is required",
-        }),
-      }),
-      customId: Joi.string().required().messages({
-        "any.required": "Profile image custom ID is required",
-      }),
-    }),
-  }).with("password", "confirmedPassword"),
-};
+export const patientRegisterNewSchema = Joi.object({
+  firstName: Joi.string().min(3).max(20).required(),
+  lastName: Joi.string().min(3).max(20).required(),
+  userName: Joi.string().min(3).max(20).required(),
+  mobilePhone: generalRules.phoneNumber.required(),
+  email: generalRules.email.required(),
+  password: generalRules.password,
+  confirmedPassword: Joi.string().valid(Joi.ref("password")).required(),
+  role: Joi.array().items(Joi.string().valid(systemRoles.PATIENT)).required(),
+  gender: Joi.string().valid(Gender.MALE, Gender.FEMALE, Gender.OTHER).required(),
+  birthDate: Joi.date().required(),
+  address: Joi.string().required(),
+  coordinates: Joi.object({
+    longitude: Joi.number().required(),
+    latitude: Joi.number().required(),
+  }).required(),
+});
+
+export const patientRegisterExistingSchema = Joi.object({
+  email: generalRules.email.required(),
+  gender: Joi.string().valid(Gender.MALE, Gender.FEMALE, Gender.OTHER).required(),
+  birthDate: Joi.date().required(),
+  address: Joi.string().required(),
+  coordinates: Joi.object({
+    longitude: Joi.number().required(),
+    latitude: Joi.number().required(),
+  }).required(),
+});
 
 export const deletePatientAccountSchema = {
   headers: Joi.object({

@@ -9,23 +9,23 @@ const doctorSchema = new Schema(
       ref: "User",
       required: true,
     },
-    verification: {
-      isVerified: {
-        type: Boolean,
-        default: false,
-      },
+    isAdminApproved: {
+      type: Boolean,
+      default: false,
     },
     specialty: {
       type: String,
       required: true,
       enum: Object.values(Specialties),
     },
-    hospitalAffiliation: [{ 
-      name: { 
-        type: String, 
-        required: true 
-      } 
-    }],
+    hospitalAffiliation: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
     clinicBranches: [
       {
         address: {
@@ -98,7 +98,8 @@ const doctorSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
-  });
+  }
+);
 
 const Doctor = mongoose.models.doctorModel || model("Doctor", doctorSchema);
 

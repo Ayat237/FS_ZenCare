@@ -99,6 +99,21 @@ class UserModel extends BaseModel {
       throw error;
     }
   }
+
+  async findByEmailOrUserName(email, userName) {
+    try {
+      const result = await this.database.findByEmailOrUserName(email, userName);
+      return result;
+    } catch (error) {
+      logger.error("Failed to find user by email or user name in repository", {
+        error: error.message,
+        stack: error.stack,
+        email,
+        userName,
+      });
+      throw error;
+    }
+  }
 }
 
 export { UserModel, User };

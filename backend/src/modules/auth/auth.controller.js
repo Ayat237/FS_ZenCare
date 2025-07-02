@@ -635,30 +635,42 @@ export const getLoggedInProfile = async (req, res, next) => {
   // Determine profile image based on active role
   let profileImage = null;
   if (user.activeRole === possibleRoles.PATIENT && user.patientID) {
-    const patient = user.patientID; // Already populated
+    const patient = user.patientID.toObject(); // Already populated
     profileImage = patient?.profileImage?.URL?.secure_url;
+    // Return user profile
+    res.status(200).json({
+      success: true,
+      message: "User profile retrieved successfully",
+      data: {
+        Name: user.firstName + " " + user.lastName,
+        userName: user.userName,
+        email: user.email,
+        role: user.role,
+        mobilePhone: user.mobilePhone,
+        gender: user.gender,
+        age: patient.age,
+        activeRole: user.activeRole,
+        profileImage,
+      },
+    });
   } else if (user.activeRole === possibleRoles.DOCTOR && user.doctorID) {
     const doctor = user.doctorID; // Already populated
     profileImage = doctor?.profileImage?.URL?.secure_url;
+    return res.status(200).json({
+      success: true,
+      message: "User profile retrieved successfully",
+      data: {
+        Name: user.firstName + " " + user.lastName,
+        userName: user.userName,
+        email: user.email,
+        role: user.role,
+        mobilePhone: user.mobilePhone,
+        gender: user.gender,
+        activeRole: user.activeRole,
+        profileImage,
+      },
+    });
   }
-
-  // Return user profile
-  res.status(200).json({
-    success: true,
-    message: "User profile retrieved successfully",
-    data: {
-      id: user._id,
-      Name: user.firstName + " " + user.lastName,
-      userName: user.userName,
-      email: user.email,
-      role: user.role,
-      mobilePhone: user.mobilePhone,
-      gender: user.gender,
-      dateOfBirth: user.dateOfBirth,
-      activeRole: user.activeRole,
-      profileImage,
-    },
-  });
 };
 
 /**

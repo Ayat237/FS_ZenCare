@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
 import { possibleRoles } from "../../utils/index.js";
-import { registerDoctorService } from "./doctor.services.js";
+import { registerNewDoctorUserService, addDoctorRoleToExistingUserService } from "./doctor.services.js";
 import { ErrorHandlerClass, logger } from "../../utils/index.js";
 import { UserModel } from "../../../database/models/user.model.js";
 import database from "../../../database/databaseConnection.js";
@@ -32,7 +32,9 @@ export const registerDoctor = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      clinicBranches,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
       gender,
     } = req.body;
 
@@ -53,8 +55,10 @@ export const registerDoctor = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      clinicBranches,
       gender,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
     };
 
     const result = await registerDoctorService(userData, doctorData, req.files);
@@ -450,6 +454,122 @@ export const updateProfileImage = async (req, res, next) => {
       data: {
         profileImage: user.doctorID.profileImage,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Register a new doctor (new user)
+ * @route POST /doctor/register-new
+ */
+export const registerNewDoctorUser = async (req, res, next) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      userName,
+      email,
+      password,
+      confirmedPassword,
+      mobilePhone,
+      role,
+      specialty,
+      yearsOfExperience,
+      education,
+      certifications,
+      hospitalAffiliation,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
+      gender,
+    } = req.body;
+
+    const userData = {
+      firstName,
+      lastName,
+      userName,
+      email,
+      password,
+      confirmedPassword,
+      mobilePhone,
+      role,
+    };
+
+    const doctorData = {
+      specialty,
+      yearsOfExperience,
+      education,
+      certifications,
+      hospitalAffiliation,
+      gender,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
+    };
+
+    const result = await registerNewDoctorUserService(userData, doctorData, req.files);
+
+    res.status(result.status).json({
+      success: result.success,
+      message: result.message,
+      data: result.data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add doctor role to existing user
+ * @route POST /doctor/add-role
+ */
+export const addDoctorRoleToExistingUser = async (req, res, next) => {
+  try {
+    const {
+      specialty,
+      yearsOfExperience,
+      education,
+      certifications,
+      hospitalAffiliation,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
+      gender,
+      email,
+    } = req.body;
+
+    // Find the existing user by email
+    const existingUser = await userModel.findByEmail(email);
+
+    if (!existingUser) {
+      return next(new ErrorHandlerClass(
+        "User with this email does not exist",
+        404,
+        "Not Found Error",
+        "User does not exist"
+      ));
+    }
+
+    const doctorData = {
+      specialty,
+      yearsOfExperience,
+      education,
+      certifications,
+      hospitalAffiliation,
+      gender,
+      addressLabel,
+      clinicPhoneNumber,
+      coordinates,
+    };
+
+    const result = await addDoctorRoleToExistingUserService(existingUser, doctorData, req.files);
+
+    res.status(result.status).json({
+      success: result.success,
+      message: result.message,
+      data: result.data,
     });
   } catch (error) {
     next(error);
