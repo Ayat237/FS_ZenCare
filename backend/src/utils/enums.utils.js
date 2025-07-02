@@ -286,3 +286,8 @@ export const AccessMedicalHistoryStatus = {
   APPROVED: "approved",
   REJECTED: "rejected",
 };
+
+export const AppointmentType = {
+  TELEMEDICINE: 'telemedicine',
+  IN_PERSON: 'inperson'
+};
