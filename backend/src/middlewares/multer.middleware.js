@@ -8,23 +8,23 @@ import { ErrorHandlerClass } from "../utils/index.js";
 
 
 
+
 export const multerMiddleware = ({
   filePath = "general",
   allowedExtensions = extensions.Images,
 }) => {
   // disk storage engine
   // memory storage engine
-  const destinationPath = path.resolve(`src/uploads/${filePath}`);
-  // check if the folder exists
-  if (!fs.existsSync(destinationPath)) {
-    // create the folder
-    fs.mkdirSync(destinationPath, { recursive: true });
-  }
+//   const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+//   const destinationPath = path.join(__dirname, "..", "..", "uploads", filePath);
+//   // check if the folder exists
+//   if (!fs.existsSync(destinationPath)) {
+//     // create the folder
+//     fs.mkdirSync(destinationPath, { recursive: true });
+//   }
   const storage = multer.diskStorage({
-    // destination
-    destination: (req, file, cb) => {
-      cb(null, destinationPath);
-    },
+
     // filename
     filename: (req, file, cb) => {
       // 2024-12-12

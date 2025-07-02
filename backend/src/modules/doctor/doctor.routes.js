@@ -15,9 +15,6 @@ const upload = multerMiddleware({
   allowedExtensions: extensions.Images,
 });
 
-const profileUpload = multerMiddleware({
-  allowedExtensions: extensions.Images,
-});
 
 
 // Register a new doctor (new user)
@@ -46,43 +43,5 @@ doctorRouter.post(
   errorHandling(doctorController.addDoctorRoleToExistingUser)
 );
 
-// Doctor email verification
-doctorRouter.patch(
-  "/verify-email",
-  errorHandling(validation(validate.verifyDoctorEmailSchema)),
-  errorHandling(doctorController.verifyDoctorEmail)
-);
-
-// Admin approval for doctor verification
-doctorRouter.patch(
-  "/admin-approve/:doctorId",
-  authenticattion(),
-  errorHandling(validation(validate.adminApproveDoctorSchema)),
-  errorHandling(doctorController.adminApproveDoctor)
-);
-
-// Get doctor profile (authenticated)
-doctorRouter.get(
-  "/profile",
-  authenticattion(),
-  errorHandling(doctorController.getDoctorProfile)
-);
-
-// Update doctor profile (authenticated)
-doctorRouter.put(
-  "/profile",
-  authenticattion(),
-  errorHandling(validation(validate.updateDoctorProfileSchema)),
-  errorHandling(doctorController.updateDoctorProfile)
-);
-
-// Update doctor profile image (authenticated)
-doctorRouter.patch(
-  "/profile/image",
-  authenticattion(),
-  profileUpload.single("profileImage"),
-  errorHandling(validation(validate.updateProfileImageSchema)),
-  errorHandling(doctorController.updateProfileImage)
-);
 
 export { doctorRouter };
