@@ -10,6 +10,7 @@ import {
   Prescription,
   Drug,
   Slot,
+  Appointment,
 } from "./models/index.js";
 import { logger } from "../src/utils/logger.utils.js";
 
@@ -27,6 +28,7 @@ class MongooseDatabase extends IDatabase {
       drug: Drug,
       address: Address,
       slot: Slot,
+      appointment: Appointment,
     };
   }
 

@@ -8,4 +8,4 @@ export * from "./drug.model.js";
 export * from "./medical_history.model.js";
 export * from "./address.model.js";
 export * from "./slot.model.js";
-
+export * from "./appointment.model.js";

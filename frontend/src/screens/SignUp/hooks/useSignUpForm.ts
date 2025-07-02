@@ -30,7 +30,7 @@ export const useSignUpForm = () => {
     []
   );
 
-  const validateForm = () => {
+  const validateForm = (userRole?: string) => {
     // First Name validation
     if (!formData.firstName.trim()) {
       setValidationError("First name is required");
@@ -93,8 +93,8 @@ export const useSignUpForm = () => {
       return false;
     }
 
-    // Birth date validation
-    if (!formData.birthDate.trim()) {
+    // Birth date validation (only for patients)
+    if (userRole !== "doctor" && !formData.birthDate.trim()) {
       setValidationError("Birth date is required");
       return false;
     }
@@ -128,7 +128,10 @@ export const useSignUpForm = () => {
     return true;
   };
 
-  const getFieldError = (field: keyof SignUpFormData): string | undefined => {
+  const getFieldError = (
+    field: keyof SignUpFormData,
+    userRole?: string
+  ): string | undefined => {
     if (!validationError) return undefined;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -176,7 +179,8 @@ export const useSignUpForm = () => {
         return undefined;
 
       case "birthDate":
-        if (!formData.birthDate.trim()) return "Birth date is required";
+        if (userRole !== "doctor" && !formData.birthDate.trim())
+          return "Birth date is required";
         return undefined;
 
       case "password":

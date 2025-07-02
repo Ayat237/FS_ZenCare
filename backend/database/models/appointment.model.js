@@ -1,5 +1,6 @@
 import mongoose, { Schema, model } from "mongoose";
-import { AppointmentStatus } from "../../src/utils/enums.utils.js";
+import BaseModel from "./base.model.js";
+import { AppointmentType } from "../../src/utils/enums.utils.js";
 
 const appointmentSchema = new mongoose.Schema(
   {
@@ -13,6 +14,17 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Doctor",
       required: true,
     },
+    slotId: {
+      type: Schema.Types.ObjectId,
+      ref: "Slot",
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(AppointmentType),
+      required: true,
+      default: AppointmentType.TELEMEDICINE,
+    },
     dateTime: {
       type: Date,
       required: true,
@@ -23,18 +35,27 @@ const appointmentSchema = new mongoose.Schema(
       min: 1,
       max: 40,
     },
-    telemedicineDetails: {
-      jitsiRoomId: {
+    jitsiMeeting: {
+      roomName: {
         type: String,
-        required: true,
-        unique: true,
+        required: false,
       },
-      jitsiMeetingLink: {
+      moderatorToken: {
         type: String,
-        required: true,
+        required: false,
       },
-      startTime: { type: Date },
-      endTime: { type: Date },
+      guestToken: {
+        type: String,
+        required: false,
+      },
+      createdAt: {
+        type: Date,
+        required: false,
+      },
+      expiresAt: {
+        type: Date,
+        required: false,
+      },
     },
     notes: { type: String },
     attachments: [
@@ -63,5 +84,14 @@ const appointmentSchema = new mongoose.Schema(
   }
 );
 
-const Appointment = mongoose.models.Appointment || model("Appointment", appointmentSchema);
+const Appointment =
+  mongoose.models.Appointment || model("Appointment", appointmentSchema);
+
+class AppointmentModel extends BaseModel {
+  constructor(database) {
+    super(database, "Appointment");
+  }
+}
+
+export { AppointmentModel, Appointment };
 export default Appointment;

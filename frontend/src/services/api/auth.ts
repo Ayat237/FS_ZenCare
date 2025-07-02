@@ -2,6 +2,12 @@ import apiClient from "./apiClient";
 // Import store reference function instead of direct import to avoid circular dependency
 import { injectStore } from "./apiClient";
 
+// Get store reference directly for use in service functions
+let store: any;
+export const injectAuthStore = (_store: any) => {
+  store = _store;
+};
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -38,10 +44,13 @@ export const authService = {
   login: async (credentials: LoginCredentials) => {
     try {
       // Import the dummy doctor data for local authentication
-      const { dummyDoctor } = await import('../../mockData/doctors.ts');
-      
+      const { dummyDoctor } = await import("../../mockData/doctors.js");
+
       // Check if the credentials match the dummy doctor account
-      if (credentials.email === dummyDoctor.email && credentials.password === dummyDoctor.password) {
+      if (
+        credentials.email === dummyDoctor.email &&
+        credentials.password === dummyDoctor.password
+      ) {
         console.log("Doctor login successful");
         // Return mock doctor data with dummy tokens
         return {
@@ -52,7 +61,7 @@ export const authService = {
           },
         };
       }
-      
+
       // If not a doctor login, proceed with regular API call
       const response = await apiClient.post("/auth/login", credentials);
       const { data } = response.data; // Access nested data structure
@@ -94,6 +103,25 @@ export const authService = {
       throw new Error(errorMessage);
     }
   },
+
+  signupDoctorFormData: async (data: FormData) => {
+    try {
+      const response = await apiClient.post("/doctor/register", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.log("error:", error.response);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Doctor registration failed";
+      throw new Error(errorMessage);
+    }
+  },
+
   verifyEmailOtp: async (data: { otp: string; emailToken: string | null }) => {
     try {
       console.log("data", data);
@@ -199,29 +227,29 @@ export const authService = {
 
   refreshToken: async () => {
     try {
-      // Get the current refresh token from the store using the store reference from apiClient
-      // This avoids circular dependency issues
-      const store = apiClient.getStore?.();
+      // Get the current refresh token from the store
       if (!store) {
-        throw new Error('Store not initialized');
+        throw new Error("Store not initialized");
       }
-      
+
       const state = store.getState();
       // Add null check for state.auth to prevent TypeError
       const refreshToken = state?.auth?.user?.refreshToken;
-      
+
       if (!refreshToken) {
-        throw new Error('No refresh token available');
+        throw new Error("No refresh token available");
       }
-      
-      const response = await apiClient.post("/auth/refresh-token", { refreshToken });
+
+      const response = await apiClient.post("/auth/refresh-token", {
+        refreshToken,
+      });
       return response.data;
     } catch (error: any) {
-      console.error('Error refreshing token:', error);
-      const errorMessage = 
+      console.error("Error refreshing token:", error);
+      const errorMessage =
         error.response?.data?.error ||
         error.message ||
-        'Failed to refresh authentication token';
+        "Failed to refresh authentication token";
       throw new Error(errorMessage);
     }
   },
@@ -244,6 +272,36 @@ export const authService = {
         error.response?.data?.error ||
         error.message ||
         "Failed to update profile image";
+      throw new Error(errorMessage);
+    }
+  },
+
+  verifyDoctorEmailOtp: async (data: {
+    otp: string;
+    email: string;
+    emailToken: string;
+  }) => {
+    try {
+      const response = await apiClient.patch(
+        "/doctor/verify-email",
+        {
+          otp: data.otp,
+          email: data.email,
+        },
+        {
+          headers: {
+            emailtoken: data.emailToken,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.log("Doctor email verification error:", error.response?.data);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Doctor email verification failed";
       throw new Error(errorMessage);
     }
   },

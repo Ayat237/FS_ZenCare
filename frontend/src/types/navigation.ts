@@ -57,8 +57,11 @@ export type RootStackParamList = {
       };
     };
   };
+  RegistrationSubmitted: undefined;
   EmailVerification: {
     emailToken: string | null;
+    userRole?: "patient" | "doctor";
+    email?: string;
   };
   ResetPasswordEmail: undefined;
   ResetPasswordVerification: {
@@ -70,12 +73,16 @@ export type RootStackParamList = {
     emailToken: string;
   };
   MainTabs: undefined;
-  Drawer: {
-    screen?: keyof DrawerParamList;
-  } | undefined;
-  DoctorDrawer: {
-    screen?: keyof DoctorDrawerParamList;
-  } | undefined;
+  Drawer:
+    | {
+        screen?: keyof DrawerParamList;
+      }
+    | undefined;
+  DoctorDrawer:
+    | {
+        screen?: keyof DoctorDrawerParamList;
+      }
+    | undefined;
   PDFViewerTest: undefined;
   LabResult: {
     filePath: string;
@@ -124,7 +131,9 @@ export type DoctorDrawerParamList = {
   PatientList: undefined;
   PatientMedicalHistory: { patientId: string };
   TelemedicineSessions: undefined;
-  DoctorTelemedicine: { session?: import('./telemedicine').TelemedicineSession } | undefined;
+  DoctorTelemedicine:
+    | { session?: import("./telemedicine").TelemedicineSession }
+    | undefined;
   DoctorNotifications: undefined;
   DoctorPayments: undefined;
   TelemedicineTest: undefined;

@@ -34,9 +34,9 @@ if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
   fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 }
 
-
 export const registerDoctorService = async (userData, doctorData, files) => {
   let session;
+  let transactionCommitted = false;
   try {
     session = await mongoose.startSession();
     session.startTransaction();
@@ -164,6 +164,7 @@ export const registerDoctorService = async (userData, doctorData, files) => {
 
     await session.commitTransaction();
     session.endSession();
+    transactionCommitted = true;
 
     // Generate email token
     const emailToken = jwt.sign(
@@ -171,69 +172,76 @@ export const registerDoctorService = async (userData, doctorData, files) => {
       process.env.EMAIL_SECRET
     );
 
-    // Send verification email
-    const isEmailSent = await sendEmailService({
-      to: userData.email,
-      subject: "Action Required: Verify Your Email Address",
-      htmlMessage: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #007BFF;">Email Verification Code</h2>
-          <p>Hello ${userData.fullName || "Doctor"},</p>
-          <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
-          <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
-          <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
-          <p>If you did not initiate this request, please ignore this message.</p>
-          <br/>
-          <p>Best regards,</p>
-          <p><strong>The zenCareTeam</strong></p>
-        </div>
-      `,
-    });
+    // Send verification email (after transaction commit)
+    let emailSentSuccessfully = false;
+    try {
+      const isEmailSent = await sendEmailService({
+        to: userData.email,
+        subject: "Action Required: Verify Your Email Address",
+        htmlMessage: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #007BFF;">Email Verification Code</h2>
+            <p>Hello ${userData.fullName || "Doctor"},</p>
+            <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
+            <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
+            <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
+            <p>If you did not initiate this request, please ignore this message.</p>
+            <br/>
+            <p>Best regards,</p>
+            <p><strong>The zenCareTeam</strong></p>
+          </div>
+        `,
+      });
 
-    if (isEmailSent.rejected.length) {
-      throw new ErrorHandlerClass(
-        "Failed to send verification email",
-        500,
-        "Server Error",
-        "Error in sending email"
-      );
+      emailSentSuccessfully = !isEmailSent.rejected.length;
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError);
+      // Don't throw error - registration was successful, just email failed
     }
 
     // Handle verification ID image (store locally encrypted)
     let verificationData = null;
     if (files && files.verificationId) {
-      const uploadResult = files.verificationId[0]; // Multer already processed it
-      const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
-      
-      // Read the uploaded file and encrypt it
-      const fileBuffer = fs.readFileSync(uploadResult.path);
-      const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
-      
-      // Save encrypted data to local server
-      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
-      
-      // Store reference in Redis for 48 hours
-      await redisClient.SET(
-        `verification:${doctor._id}`,
-        filePath,
-        172800 // 48 hours expiry
-      );
-      
-      // Clean up the original uploaded file
-      fs.unlinkSync(uploadResult.path);
-      
-      verificationData = { filePath, filename: uploadResult.filename };
+      try {
+        const uploadResult = files.verificationId[0]; // Multer already processed it
+        const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+
+        // Read the uploaded file and encrypt it
+        const fileBuffer = fs.readFileSync(uploadResult.path);
+        const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
+
+        // Save encrypted data to local server
+        fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+
+        // Store reference in Redis for 48 hours
+        await redisClient.SET(
+          `verification:${doctor._id}`,
+          filePath,
+          172800 // 48 hours expiry
+        );
+
+        // Clean up the original uploaded file
+        fs.unlinkSync(uploadResult.path);
+
+        verificationData = { filePath, filename: uploadResult.filename };
+      } catch (fileError) {
+        console.error("File processing failed:", fileError);
+        // Don't throw error - registration was successful, just file processing failed
+      }
     }
+
+    const successMessage = emailSentSuccessfully
+      ? "Doctor registered successfully. Please verify with the OTP sent to your email."
+      : "Doctor registered successfully. Please contact support for email verification as the verification email could not be sent.";
 
     return {
       status: 201,
       success: true,
-      message:
-        "Doctor registered successfully. Please verify with the OTP sent to your email.",
+      message: successMessage,
       data: { user, doctor, emailToken, verificationData },
     };
   } catch (error) {
-    if (session) {
+    if (session && !transactionCommitted) {
       await session.abortTransaction();
       session.endSession();
     }

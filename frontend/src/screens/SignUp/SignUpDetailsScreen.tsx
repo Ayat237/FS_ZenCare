@@ -24,7 +24,10 @@ import DoctorRegistrationFields from "./components/DoctorRegistrationFields";
 import DocumentUpload from "./components/DocumentUpload";
 import SearchableMapExample from "@/components/maps/SearchableMapExample";
 import { useSignUpForm } from "./hooks/useSignUpForm";
-import { useDoctorSignUpForm, INITIAL_DOCTOR_FORM_DATA } from "./hooks/useDoctorSignUpForm";
+import {
+  useDoctorSignUpForm,
+  INITIAL_DOCTOR_FORM_DATA,
+} from "./hooks/useDoctorSignUpForm";
 import { styles } from "./styles";
 import { formattedDate } from "@/utils/formattedDate";
 import ErrorOverlay from "@components/ui/feedback/ErrorOverlay";
@@ -47,7 +50,7 @@ const SignUpDetailsScreen: React.FC = () => {
     validateForm,
     getFieldError,
   } = useSignUpForm();
-  
+
   const {
     doctorFormData,
     handleDoctorFormChange,
@@ -74,7 +77,11 @@ const SignUpDetailsScreen: React.FC = () => {
     setShowDatePicker(false);
   };
 
-  const handleLocationConfirmed = (location: { latitude: number; longitude: number; displayName?: string }) => {
+  const handleLocationConfirmed = (location: {
+    latitude: number;
+    longitude: number;
+    displayName?: string;
+  }) => {
     setFormData((prev) => ({
       ...prev,
       location: {
@@ -87,25 +94,30 @@ const SignUpDetailsScreen: React.FC = () => {
   };
 
   const handleNext = () => {
-    const basicFormValid = validateForm();
+    const basicFormValid = validateForm(role);
     let doctorFormValid = true;
-    
+
     if (isDoctor) {
       doctorFormValid = validateDoctorForm();
     }
-    
+
     // For patients, check if location is selected
-    if (!isDoctor && (!formData.location.latitude || !formData.location.longitude)) {
+    if (
+      !isDoctor &&
+      (!formData.location.latitude || !formData.location.longitude)
+    ) {
       setErrorOverlayMsg("Please select your location");
       return;
     }
-    
+
     if (basicFormValid && (isDoctor ? doctorFormValid : true)) {
       navigation.navigate("PhotoUpload", {
         role,
         userData: {
           ...formData,
-          birthDate: formattedDate(formData.birthDate),
+          ...(formData.birthDate && {
+            birthDate: formattedDate(formData.birthDate),
+          }),
           ...(isDoctor && { doctorData: doctorFormData }),
         },
       });
@@ -120,15 +132,16 @@ const SignUpDetailsScreen: React.FC = () => {
           break;
         }
       }
-      
+
       // If no basic form errors but doctor form has errors
       if (!firstError && isDoctor) {
         const doctorErrors = Object.values(doctorValidationErrors);
         if (doctorErrors.length > 0) {
-          firstError = doctorErrors[0] || "Please complete all doctor information fields.";
+          firstError =
+            doctorErrors[0] || "Please complete all doctor information fields.";
         }
       }
-      
+
       setErrorOverlayMsg(firstError || "Please fix the errors above.");
     }
   };
@@ -204,7 +217,8 @@ const SignUpDetailsScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.selectionButton,
-                    getFieldError("gender") && styles.selectionButtonError,
+                    getFieldError("gender", role) &&
+                      styles.selectionButtonError,
                   ]}
                   onPress={() => setShowGenderModal(true)}
                 >
@@ -218,34 +232,37 @@ const SignUpDetailsScreen: React.FC = () => {
                   </Text>
                   <Text style={styles.chevronDown}>▼</Text>
                 </TouchableOpacity>
-                {getFieldError("gender") && (
+                {getFieldError("gender", role) && (
                   <Text style={styles.errorText}>
-                    {getFieldError("gender")}
+                    {getFieldError("gender", role)}
                   </Text>
                 )}
               </View>
 
-              <View style={styles.inputWrapper}>
-                <TouchableOpacity
-                  style={styles.datePickerButton}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text
-                    style={[
-                      styles.datePickerText,
-                      !formData.birthDate && styles.placeholderText,
-                    ]}
+              {/* Birth Date - Only for patients */}
+              {!isDoctor && (
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowDatePicker(true)}
                   >
-                    {formData.birthDate || "Select birth date"}
-                  </Text>
-                  <Text style={styles.calendarIcon}>📅</Text>
-                </TouchableOpacity>
-                {getFieldError("birthDate") && (
-                  <Text style={styles.errorText}>
-                    {getFieldError("birthDate")}
-                  </Text>
-                )}
-              </View>
+                    <Text
+                      style={[
+                        styles.datePickerText,
+                        !formData.birthDate && styles.placeholderText,
+                      ]}
+                    >
+                      {formData.birthDate || "Select birth date"}
+                    </Text>
+                    <Text style={styles.calendarIcon}>📅</Text>
+                  </TouchableOpacity>
+                  {getFieldError("birthDate", role) && (
+                    <Text style={styles.errorText}>
+                      {getFieldError("birthDate", role)}
+                    </Text>
+                  )}
+                </View>
+              )}
 
               {!isDoctor && (
                 <View style={styles.inputWrapper}>
@@ -256,26 +273,40 @@ const SignUpDetailsScreen: React.FC = () => {
                   >
                     <Ionicons name="location" size={20} color="white" />
                     <Text style={styles.mapButtonText}>
-                      {formData.location.latitude ? "Change Location" : "Select Location"}
+                      {formData.location.latitude
+                        ? "Change Location"
+                        : "Select Location"}
                     </Text>
                   </TouchableOpacity>
-                  
-                  {formData.location.latitude && formData.location.longitude && (
-                    <View style={styles.addressPreview}>
-                      <View style={styles.addressHeaderRow}>
-                        <Ionicons name="location" size={20} color={Colors.primary500} />
-                        <Text style={styles.addressHeaderText}>Selected Location</Text>
+
+                  {formData.location.latitude &&
+                    formData.location.longitude && (
+                      <View style={styles.addressPreview}>
+                        <View style={styles.addressHeaderRow}>
+                          <Ionicons
+                            name="location"
+                            size={20}
+                            color={Colors.primary500}
+                          />
+                          <Text style={styles.addressHeaderText}>
+                            Selected Location
+                          </Text>
+                        </View>
+                        {formData.location.displayName ? (
+                          <Text style={styles.addressText}>
+                            {formData.location.displayName}
+                          </Text>
+                        ) : (
+                          <Text style={styles.addressText}>
+                            Location selected
+                          </Text>
+                        )}
+                        <Text style={styles.coordsText}>
+                          Lat: {formData.location.latitude.toFixed(6)}, Lng:{" "}
+                          {formData.location.longitude.toFixed(6)}
+                        </Text>
                       </View>
-                      {formData.location.displayName ? (
-                        <Text style={styles.addressText}>{formData.location.displayName}</Text>
-                      ) : (
-                        <Text style={styles.addressText}>Location selected</Text>
-                      )}
-                      <Text style={styles.coordsText}>
-                        Lat: {formData.location.latitude.toFixed(6)}, Lng: {formData.location.longitude.toFixed(6)}
-                      </Text>
-                    </View>
-                  )}
+                    )}
                 </View>
               )}
 
@@ -321,7 +352,7 @@ const SignUpDetailsScreen: React.FC = () => {
                       errors={doctorValidationErrors}
                     />
                   </View>
-                  
+
                   <View style={styles.documentUploadContainer}>
                     <DocumentUpload
                       documentUri={doctorFormData.verificationId}
@@ -356,6 +387,7 @@ const SignUpDetailsScreen: React.FC = () => {
         visible={showGenderModal}
         onClose={() => setShowGenderModal(false)}
         onSelect={(gender) => handleInputChange("gender", gender)}
+        selectedGender={formData.gender}
       />
 
       {/* Map Modal - Only for patients */}
@@ -368,13 +400,13 @@ const SignUpDetailsScreen: React.FC = () => {
         >
           <View style={styles.fullScreenModalContainer}>
             <View style={styles.fullScreenModalContent}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowMapModal(false)}
               >
                 <Ionicons name="close" size={24} color="white" />
               </TouchableOpacity>
-              
+
               <View style={styles.fullScreenMapContainer}>
                 <SearchableMapExample
                   onConfirmLocation={handleLocationConfirmed}

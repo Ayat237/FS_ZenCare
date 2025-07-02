@@ -1,18 +1,28 @@
-import React from 'react';
-import { View, Text, Modal, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { GENDER_OPTIONS } from '../constants';
-import Colors from '@theme/colors';
+import React from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { GENDER_OPTIONS } from "../constants";
+import Colors from "@theme/colors";
 
 interface GenderSelectionModalProps {
   visible: boolean;
   onClose: () => void;
   onSelect: (gender: string) => void;
+  selectedGender?: string;
 }
 
 const GenderSelectionModal: React.FC<GenderSelectionModalProps> = ({
   visible,
   onClose,
   onSelect,
+  selectedGender,
 }) => {
   return (
     <Modal
@@ -26,23 +36,42 @@ const GenderSelectionModal: React.FC<GenderSelectionModalProps> = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Gender</Text>
             <TouchableOpacity onPress={onClose}>
-              <Text style={styles.fontSize20}>✕</Text>
+              <Ionicons name="close" size={24} color="#000" />
             </TouchableOpacity>
           </View>
+
           <FlatList
             data={GENDER_OPTIONS}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.genderItem}
+                style={[
+                  styles.genderItem,
+                  selectedGender === item.label && styles.selectedGender,
+                ]}
                 onPress={() => {
                   onSelect(item.label);
                   onClose();
                 }}
               >
-                <Text style={styles.genderLabel}>{item.label}</Text>
+                <Text
+                  style={[
+                    styles.genderLabel,
+                    selectedGender === item.label && styles.selectedGenderText,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+                {selectedGender === item.label && (
+                  <Ionicons
+                    name="checkmark"
+                    size={20}
+                    color={Colors.primary500}
+                  />
+                )}
               </TouchableOpacity>
             )}
+            style={styles.genderList}
           />
         </View>
       </View>
@@ -53,38 +82,53 @@ const GenderSelectionModal: React.FC<GenderSelectionModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    backgroundColor: "white",
+    borderRadius: 10,
+    width: "100%",
+    maxHeight: "80%",
+    padding: 20,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+    color: Colors.primary500,
   },
-  fontSize20: {
-    fontSize: 20,
+  genderList: {
+    maxHeight: 300,
   },
   genderItem: {
-    padding: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
+  },
+  selectedGender: {
+    backgroundColor: Colors.primary100,
   },
   genderLabel: {
     fontSize: 16,
-    color: '#333',
+  },
+  selectedGenderText: {
+    fontWeight: "bold",
+    color: Colors.primary500,
   },
 });
 

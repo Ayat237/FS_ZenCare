@@ -8,6 +8,7 @@ import chatReducer from "./chat/chatSlice";
 
 // Import the injectStore function to avoid circular dependency
 import { injectStore } from "@/services/api/apiClient";
+import { injectAuthStore } from "@/services/api/auth";
 
 const persistConfig = {
   key: "root",
@@ -29,18 +30,19 @@ const store = configureStore({
       serializableCheck: {
         // Ignore Redux Persist actions and chat-related actions
         ignoredActions: [
-          "persist/PERSIST", 
+          "persist/PERSIST",
           "persist/REHYDRATE",
           "chat/fetchMessages/fulfilled",
-          "chat/sendMessage/fulfilled"
+          "chat/sendMessage/fulfilled",
         ],
         // Ignore paths that might contain non-serializable values
-        ignoredPaths: ['chat.messages']
-      }
+        ignoredPaths: ["chat.messages"],
+      },
     }),
-})
+});
 
 injectStore(store);
+injectAuthStore(store);
 
 export const persistor = persistStore(store);
 

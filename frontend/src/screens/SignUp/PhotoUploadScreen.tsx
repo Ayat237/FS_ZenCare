@@ -70,43 +70,130 @@ const PhotoUploadScreen: React.FC = () => {
       formData.append("confirmedPassword", userData.confirmedPassword);
       formData.append("firstName", userData.firstName);
       formData.append("lastName", userData.lastName);
-      formData.append("role", role);
       formData.append("mobilePhone", userData.mobilePhone);
       formData.append("gender", userData.gender);
-      formData.append("birthDate", userData.birthDate);
-      
-      // Add doctor-specific data if role is doctor
-      if (role === "doctor" && userData.doctorData) {
-        const doctorData = userData.doctorData;
-        
-        formData.append("specialty", doctorData.specialty);
-        formData.append("yearsOfExperience", doctorData.yearsOfExperience.toString());
-        
-        // Add education data
-        formData.append("education", JSON.stringify(doctorData.education));
-        
-        // Add certifications
-        formData.append("certifications", JSON.stringify(doctorData.certifications));
-        
-        // Add hospital affiliations
-        formData.append("hospitalAffiliations", JSON.stringify(doctorData.hospitalAffiliations));
-        
-        // Add clinic branches
-        formData.append("clinicBranches", JSON.stringify(doctorData.clinicBranches));
-        
-        // Add verification document if available
-        if (doctorData.verificationId) {
-          const verificationUri = doctorData.verificationId;
-          const filename = verificationUri.split("/").pop() || `verification-${Date.now()}`;
-          const isPdf = doctorData.verificationDocumentType?.includes('pdf');
-          const type = isPdf ? 'application/pdf' : doctorData.verificationDocumentType || 'application/octet-stream';
-          
-          formData.append("verificationDocument", {
-            uri: verificationUri,
-            name: doctorData.verificationDocumentName || filename,
-            type,
-          } as unknown as File);
+
+      // Only add birthDate for patient registration
+      if (role !== "doctor") {
+        formData.append("birthDate", userData.birthDate);
+      }
+
+      // Handle role differently for doctors vs patients
+      if (role === "doctor") {
+        // Doctor registration - role should be an array
+        formData.append("role", JSON.stringify(["doctor"]));
+
+        if (userData.doctorData) {
+          const doctorData = userData.doctorData;
+
+          formData.append("specialty", doctorData.specialty);
+          formData.append(
+            "yearsOfExperience",
+            doctorData.yearsOfExperience.toString()
+          );
+
+          // Add education data
+          formData.append("education", JSON.stringify(doctorData.education));
+
+          // Add certifications (ensure it's always an array)
+          formData.append(
+            "certifications",
+            JSON.stringify(doctorData.certifications || [])
+          );
+
+          // Add hospital affiliations (backend expects "hospitalAffiliation" not "hospitalAffiliations")
+          // Filter out empty hospital affiliations
+          let validHospitalAffiliations =
+            doctorData.hospitalAffiliations?.filter(
+              (hospital) => hospital.name && hospital.name.trim() !== ""
+            ) || [];
+
+          // If no valid hospital affiliations, provide a default one (backend requires at least 1)
+          if (validHospitalAffiliations.length === 0) {
+            validHospitalAffiliations = [
+              {
+                name: "To be updated",
+              },
+            ];
+          }
+
+          formData.append(
+            "hospitalAffiliation",
+            JSON.stringify(validHospitalAffiliations)
+          );
+
+          // Add clinic branches - filter out incomplete ones or provide defaults
+          let validClinicBranches =
+            doctorData.clinicBranches?.filter(
+              (clinic) =>
+                clinic.address?.street &&
+                clinic.address?.street.trim() !== "" &&
+                clinic.address?.city &&
+                clinic.address?.city.trim() !== "" &&
+                clinic.address?.country &&
+                clinic.address?.country.trim() !== "" &&
+                clinic.phoneNumber &&
+                clinic.phoneNumber.trim() !== ""
+            ) || [];
+
+          // If no valid clinic branches, provide a default one (backend requires at least 1)
+          if (validClinicBranches.length === 0) {
+            validClinicBranches = [
+              {
+                address: {
+                  street: "To be updated",
+                  city: "To be updated",
+                  country: "Egypt",
+                  neighborhood: "To be updated",
+                  coordinates: {
+                    longitude: 31.2357, // Default Cairo coordinates
+                    latitude: 30.0444,
+                  },
+                },
+                phoneNumber: userData.mobilePhone || "To be updated",
+              },
+            ];
+          } else {
+            // Ensure all clinic branches have required fields
+            validClinicBranches = validClinicBranches.map((clinic) => ({
+              ...clinic,
+              address: {
+                ...clinic.address,
+                neighborhood: clinic.address.neighborhood || "To be updated",
+                coordinates: clinic.address.coordinates || {
+                  longitude: 31.2357, // Default Cairo coordinates
+                  latitude: 30.0444,
+                },
+              },
+            }));
+          }
+
+          formData.append(
+            "clinicBranches",
+            JSON.stringify(validClinicBranches)
+          );
+
+          // Add verification document if available
+          if (doctorData.verificationId) {
+            const verificationUri = doctorData.verificationId;
+            const filename =
+              verificationUri.split("/").pop() || `verification-${Date.now()}`;
+            const isPdf = doctorData.verificationDocumentType?.includes("pdf");
+            const type = isPdf
+              ? "application/pdf"
+              : doctorData.verificationDocumentType ||
+                "application/octet-stream";
+
+            formData.append("verificationId", {
+              uri: verificationUri,
+              name: doctorData.verificationDocumentName || filename,
+              type,
+            } as unknown as File);
+          }
         }
+      } else {
+        // Patient registration - role as string
+        formData.append("role", role);
       }
 
       // Add profile image if selected
@@ -123,12 +210,26 @@ const PhotoUploadScreen: React.FC = () => {
         } as unknown as File);
       }
 
-      // Send data to API
-      const response = await authService.signupFormData(formData);
-      const { emailToken } = response;
-      setEmailToken(emailToken);
-      setShowSuccess(true);
-      // Don't navigate immediately, let the SuccessOverlay handle navigation
+      // Send data to appropriate API endpoint
+      let response;
+      if (role === "doctor") {
+        response = await authService.signupDoctorFormData(formData);
+        // For doctors, extract emailToken and go to email verification
+        console.log("Doctor registration response:", response);
+        const emailToken = response?.data?.emailToken || response?.emailToken;
+        console.log("Extracted emailToken:", emailToken);
+        navigation.navigate("EmailVerification", {
+          emailToken,
+          userRole: "doctor",
+          email: userData.email,
+        });
+      } else {
+        response = await authService.signupFormData(formData);
+        // For patients, show success popup
+        const { emailToken } = response;
+        setEmailToken(emailToken);
+        setShowSuccess(true);
+      }
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -146,7 +247,7 @@ const PhotoUploadScreen: React.FC = () => {
 
   const handleContinue = () => {
     if (role === "doctor") {
-      navigation.navigate("Login");
+      navigation.navigate("RegistrationSubmitted");
     } else {
       navigation.navigate("EmailVerification", { emailToken });
     }
@@ -220,9 +321,11 @@ const PhotoUploadScreen: React.FC = () => {
       <SuccessOverlay
         visible={showSuccess}
         title="Registration Successful!"
-        message={role === "doctor" 
-          ? "Thank you for registering as a doctor. An administrator will verify your account before you can log in. Please check your email for further instructions."
-          : "We have sent you a verification code by email"}
+        message={
+          role === "doctor"
+            ? "Thank you for registering as a doctor. An administrator will verify your account before you can log in. Please check your email for further instructions."
+            : "We have sent you a verification code by email"
+        }
         onContinue={handleContinue}
       />
       <LoadingOverlay visible={isLoading} />
