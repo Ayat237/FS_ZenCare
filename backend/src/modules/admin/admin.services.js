@@ -7,6 +7,7 @@ import { UserModel } from "../../../database/models/user.model.js";
 import { DoctorModel } from "../../../database/models/doctor.model.js";
 import database from "../../../database/databaseConnection.js";
 import mongoose from "mongoose";
+import { decrypt } from "./utils/decryption.utils.js";
 
 const userModel = new UserModel(database);
 const doctorModel = new DoctorModel(database);
@@ -47,7 +48,6 @@ export const adminLoginService = async (email, password) => {
     data: { token },
   };
 };
-
 export const getPendingDoctorsService = async () => {
   // Support both isAdminApproved: false and missing field
   const pendingDoctors = await doctorModel.find(
@@ -64,23 +64,45 @@ export const getPendingDoctorsService = async () => {
         clinicBranches: 1,
         profileImage: 1,
       },
-      populate: {
-        path: "user",
-        select: {
-          isVerified: 1,
-        },
-      },
     }
   );
+
+  // Get and decrypt verification IDs for each doctor
+  const doctorsWithVerification = await Promise.all(
+    pendingDoctors.map(async (doctor) => {
+      const redisKey = `verification:${doctor._id}`;
+      const filePath = await redisClient.GET(redisKey);
+      console.log(filePath);
+      let verificationId = null;
+      if (filePath && fs.existsSync(filePath)) {
+        const encryptedData = JSON.parse(fs.readFileSync(filePath));
+        const decrypted = decrypt(encryptedData.data, encryptedData.iv, doctor.user.toString());
+        
+        // Convert decrypted buffer to base64 string for frontend display
+        verificationId = decrypted.toString('base64');
+      }
+
+      return {
+        ...doctor.toObject(),
+        verificationId: {
+          data: verificationId, // base64 string that can be displayed as image in frontend
+          contentType: 'image/jpeg' // assuming JPEG format, adjust if needed
+        }
+      };
+    })
+  );
+
   return {
     status: 200,
     success: true,
-    message: "Pending doctors retrieved successfully",
-    data: { doctors: pendingDoctors },
+    message: "Pending doctors retrieved successfully", 
+    data: {
+      doctors: doctorsWithVerification
+    },
   };
 };
 
-export const verifyDoctorService = async (doctorId) => {
+export const verifyDoctorService = async (doctorId, isAdminApproved) => {
   let session;
   try {
     session = await mongoose.startSession();
@@ -104,7 +126,7 @@ export const verifyDoctorService = async (doctorId) => {
       );
     }
 
-    doctor.isAdminApproved = true;
+    doctor.isAdminApproved = isAdminApproved;
     await doctorModel.save(doctor, { session });
 
     // Delete verification data from Redis

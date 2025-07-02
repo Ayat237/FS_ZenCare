@@ -34,7 +34,8 @@ export const getPendingDoctors = async (req, res, next) => {
 export const verifyDoctor = async (req, res, next) => {
   try {
     const { doctorId } = req.params;
-    const result = await verifyDoctorService(doctorId);
+    const { isAdminApproved } = req.body;
+    const result = await verifyDoctorService(doctorId, isAdminApproved);
     res.status(result.status).json({
       success: result.success,
       message: result.message,

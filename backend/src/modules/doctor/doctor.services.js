@@ -35,6 +35,9 @@ if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
   fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 }
 
+
+// Admin login
+
 // API 1: Register New Doctor User (user does not exist)
 export const registerNewDoctorUserService = async (
   userData,
@@ -203,14 +206,14 @@ export const registerNewDoctorUserService = async (
     }
 
     const successMessage = emailSentSuccessfully
-      ? "Doctor registered successfully. Please verify with the OTP sent to your email."
-      : "Doctor registered successfully. Please contact support for email verification as the verification email could not be sent.";
+      ? "Please verify with the OTP sent to your email. wait for admin approval during the next 24 hours to get your account verified."
+      : "Resend the verification email, or please contact support for email verification as the verification email could not be sent.";
 
     return {
       status: 201,
       success: true,
       message: successMessage,
-      data: { user: userObject,  emailToken },
+      data: { emailToken },
     };
   } catch (error) {
     if (session && !transactionCommitted) {
@@ -255,6 +258,16 @@ export const addDoctorRoleToExistingUserService = async (
         400,
         "Validation Error",
         "Unverified user"
+      );
+    }
+
+    // Validate verification ID is required
+    if (!files || !files.verificationId || files.verificationId.length === 0) {
+      throw new ErrorHandlerClass(
+        "Verification ID is required for doctor registration",
+        400,
+        "Validation Error",
+        "Verification ID missing"
       );
     }
 
@@ -349,8 +362,8 @@ export const addDoctorRoleToExistingUserService = async (
     return {
       status: 201,
       success: true,
-      message: "Doctor role added to existing user.",
-      data: { user: existingUser, doctor: doctorObject, verificationData },
+      message: "wait for admin approval during the next 24 hours to get your account verified, and re-login  ",
+      data: { doctorId: doctorObject._id },
     };
   } catch (error) {
     if (session) {
@@ -368,5 +381,3 @@ export const addDoctorRoleToExistingUserService = async (
     throw error;
   }
 };
-
-// Admin login
