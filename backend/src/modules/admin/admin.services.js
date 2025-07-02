@@ -31,9 +31,14 @@ export const adminLoginService = async (email, password) => {
     );
   }
   const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    {
+      userId: user._id,
+      userName: user.userName,
+      role: user.role,
+      activeRole: user.activeRole,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "24h" }
   );
   return {
     status: 200,
@@ -58,6 +63,12 @@ export const getPendingDoctorsService = async () => {
         specialty: 1,
         clinicBranches: 1,
         profileImage: 1,
+      },
+      populate: {
+        path: "user",
+        select: {
+          isVerified: 1,
+        },
       },
     }
   );

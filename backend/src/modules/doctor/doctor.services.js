@@ -184,14 +184,14 @@ export const registerNewDoctorUserService = async (
 
       // Read the uploaded file and encrypt it
       const fileBuffer = fs.readFileSync(uploadResult.path);
-      const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
+      const { encryptedData, iv } = encrypt(fileBuffer, userObject._id.toString());
 
       // Save encrypted data to local server
       fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
 
       // Store reference in Redis for 48 hours
       await redisClient.SET(
-        `verification:${doctor._id}`,
+        `verification:${doctorObject._id}`,
         filePath,
         172800 // 48 hours expiry
       );
@@ -209,9 +209,8 @@ export const registerNewDoctorUserService = async (
     return {
       status: 201,
       success: true,
-      message:
-        "Doctor registered successfully. Please verify with the OTP sent to your email.",
-      data: { user, doctor, emailToken, verificationData },
+      message: successMessage,
+      data: { user: userObject,  emailToken },
     };
   } catch (error) {
     if (session && !transactionCommitted) {

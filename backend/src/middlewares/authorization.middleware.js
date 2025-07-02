@@ -4,7 +4,7 @@ export const authorization = (allowedRules) => {
   return async (req, res, next) => {
     try {
       const user = req.authUser; // logedin user
-      if (!allowedRules.includes(user.role)) {
+      if (!user.role.includes(allowedRules)) {
         return next (new ErrorHandlerClass(
           "Unauthorized Access",
           403,

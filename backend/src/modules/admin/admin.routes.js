@@ -16,7 +16,7 @@ adminRouter.post("/login",
 adminRouter.get(
   "/pending-doctors",
   authenticattion(),
-  authorization(possibleRoles.ADMIN),
+  authorization('admin'),
   errorHandling(adminController.getPendingDoctors)
 );
 adminRouter.patch(
