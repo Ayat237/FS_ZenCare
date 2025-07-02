@@ -21,6 +21,7 @@ import { ErrorHandlerClass, capitalizeName } from "../../utils/index.js";
 import redisClient from "../../utils/redis.utils.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import { encrypt } from "./utils/encryption.utils.js";
+import bcrypt from "bcryptjs";
 
 const addressModel = new AddressModel(database);
 const doctorModel = new DoctorModel(database);
@@ -34,33 +35,26 @@ if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
   fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 }
 
-export const registerDoctorService = async (userData, doctorData, files) => {
+// API 1: Register New Doctor User (user does not exist)
+export const registerNewDoctorUserService = async (
+  userData,
+  doctorData,
+  files
+) => {
   let session;
   let transactionCommitted = false;
   try {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    // Validate user role
-    if (!userData.role || !userData.role.includes(possibleRoles.DOCTOR)) {
+    // Check for existing user by email
+    const existingUser = await userModel.findByEmail(userData.email);
+    if (existingUser) {
       throw new ErrorHandlerClass(
-        "User must have doctor role to register as a doctor",
-        400,
-        "Validation Error",
-        "Invalid role"
-      );
-    }
-
-    // Check for existing user by username
-    const existingUserByUsername = await User.findOne({
-      userName: userData.userName,
-    });
-    if (existingUserByUsername) {
-      throw new ErrorHandlerClass(
-        "User with this userName already exists",
+        "User already exists with this email",
         409,
         "Duplicate Error",
-        "Username already taken"
+        "User already exists"
       );
     }
 
@@ -74,25 +68,11 @@ export const registerDoctorService = async (userData, doctorData, files) => {
       );
     }
 
-    // Parallelize independent operations
-    const [existingUserByEmail, otp] = await Promise.all([
-      User.findOne({ email: userData.email }),
-      crypto.randomInt(100000, 999999).toString(),
-    ]);
-
-    if (existingUserByEmail) {
-      throw new ErrorHandlerClass(
-        "User with this email already exists",
-        409,
-        "Duplicate Error",
-        "Email already registered"
-      );
-    }
-
-    // Store OTP in Redis
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
 
-    // Handle profile image (upload to Cloudinary)
+    // Handle profile image (default or uploaded)
     let profileImageObject = {
       URL: { secure_url: null, public_id: null },
       customId: null,
@@ -100,7 +80,6 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     const customId = `${userData.firstName}_${nanoid(4)}`;
 
     if (!files || !files.profileImage) {
-      // Use default image if no profile image provided
       const defaultImage = getDefaultImageByGender(doctorData.gender);
       profileImageObject = {
         URL: {
@@ -110,7 +89,6 @@ export const registerDoctorService = async (userData, doctorData, files) => {
         customId,
       };
     } else {
-      // Upload profile image to Cloudinary
       const { secure_url, public_id } = await uploadFile({
         file: files.profileImage[0].path,
         folder: `${process.env.UPLOAD_FILE}/Doctor_Profile_Image/${customId}`,
@@ -122,45 +100,44 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     userData.firstName = capitalizeName(userData.firstName);
     userData.lastName = capitalizeName(userData.lastName);
 
-    // Create Addresses for clinic branches
-    const addressPromises = doctorData.clinicBranches.map(async (branch) => {
-      const address = new Address(branch.address);
-      await addressModel.save(address, { session });
-      return {
-        address: address._id,
-        phoneNumber: branch.phoneNumber,
-      };
+    // Create address for clinic branch
+    const addressObject = new Address({
+      displayName: doctorData.addressLabel,
+      coordinates: doctorData.coordinates,
     });
+    await addressModel.save(addressObject, { session });
+    const clinicBranches = {
+      address: addressObject._id,
+      phoneNumber: doctorData.clinicPhoneNumber,
+    };
 
-    const clinicBranches = await Promise.all(addressPromises);
-
-    // Create User first
-    const user = new User({
+    // Create user document
+    const userObject = new User({
       ...userData,
+      role: [possibleRoles.DOCTOR],
+      activeRole: possibleRoles.DOCTOR,
       isVerified: false,
       provider: Provider.LOCAL,
-      activeRole: systemRoles.DOCTOR,
     });
-    await userModel.save(user, { session });
+    await userModel.save(userObject, { session });
 
-    // Create Doctor with user reference
-    const doctor = new Doctor({
-      user: user._id,
-      specialty: doctorData.specialty,
-      hospitalAffiliation: doctorData.hospitalAffiliation,
+    // Create doctor document
+    const doctorObject = new Doctor({
+      ...doctorData,
+      user: userObject._id,
       clinicBranches,
       profileImage: profileImageObject,
-      gender: doctorData.gender,
-      yearsOfExperience: doctorData.yearsOfExperience,
-      education: doctorData.education,
-      certifications: doctorData.certifications,
       rating: { average: 0, count: 0 },
     });
-    await doctorModel.save(doctor, { session });
+    await doctorModel.save(doctorObject, { session });
 
-    // Update user with doctor reference
-    user.doctorID = doctor._id;
-    await userModel.save(user, { session });
+    // Link doctor to address
+    addressObject.doctorID = doctorObject._id;
+    await addressModel.save(addressObject, { session });
+
+    // Link doctor to user
+    userObject.doctorID = doctorObject._id;
+    await userModel.save(userObject, { session });
 
     await session.commitTransaction();
     session.endSession();
@@ -172,26 +149,24 @@ export const registerDoctorService = async (userData, doctorData, files) => {
       process.env.EMAIL_SECRET
     );
 
-    // Send verification email (after transaction commit)
-    let emailSentSuccessfully = false;
-    try {
-      const isEmailSent = await sendEmailService({
-        to: userData.email,
-        subject: "Action Required: Verify Your Email Address",
-        htmlMessage: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #007BFF;">Email Verification Code</h2>
-            <p>Hello ${userData.fullName || "Doctor"},</p>
-            <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
-            <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
-            <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
-            <p>If you did not initiate this request, please ignore this message.</p>
-            <br/>
-            <p>Best regards,</p>
-            <p><strong>The zenCareTeam</strong></p>
-          </div>
-        `,
-      });
+    // Send verification email
+    const isEmailSent = await sendEmailService({
+      to: userData.email,
+      subject: "Action Required: Verify Your Email Address",
+      htmlMessage: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #007BFF;">Email Verification Code</h2>
+          <p>Hello ${userData.fullName || "Doctor"},</p>
+          <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
+          <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
+          <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
+          <p>If you did not initiate this request, please ignore this message.</p>
+          <br/>
+          <p>Best regards,</p>
+          <p><strong>The zenCareTeam</strong></p>
+        </div>
+      `,
+    });
 
       emailSentSuccessfully = !isEmailSent.rejected.length;
     } catch (emailError) {
@@ -202,32 +177,27 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     // Handle verification ID image (store locally encrypted)
     let verificationData = null;
     if (files && files.verificationId) {
-      try {
-        const uploadResult = files.verificationId[0]; // Multer already processed it
-        const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
-
-        // Read the uploaded file and encrypt it
-        const fileBuffer = fs.readFileSync(uploadResult.path);
-        const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
-
-        // Save encrypted data to local server
-        fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
-
-        // Store reference in Redis for 48 hours
-        await redisClient.SET(
-          `verification:${doctor._id}`,
-          filePath,
-          172800 // 48 hours expiry
-        );
-
-        // Clean up the original uploaded file
-        fs.unlinkSync(uploadResult.path);
-
-        verificationData = { filePath, filename: uploadResult.filename };
-      } catch (fileError) {
-        console.error("File processing failed:", fileError);
-        // Don't throw error - registration was successful, just file processing failed
-      }
+      const uploadResult = files.verificationId[0]; // Multer already processed it
+      const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+      
+      // Read the uploaded file and encrypt it
+      const fileBuffer = fs.readFileSync(uploadResult.path);
+      const { encryptedData, iv } = encrypt(fileBuffer, user._id.toString());
+      
+      // Save encrypted data to local server
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+      
+      // Store reference in Redis for 48 hours
+      await redisClient.SET(
+        `verification:${doctor._id}`,
+        filePath,
+        172800 // 48 hours expiry
+      );
+      
+      // Clean up the original uploaded file
+      fs.unlinkSync(uploadResult.path);
+      
+      verificationData = { filePath, filename: uploadResult.filename };
     }
 
     const successMessage = emailSentSuccessfully
@@ -237,7 +207,8 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     return {
       status: 201,
       success: true,
-      message: successMessage,
+      message:
+        "Doctor registered successfully. Please verify with the OTP sent to your email.",
       data: { user, doctor, emailToken, verificationData },
     };
   } catch (error) {
@@ -247,11 +218,9 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     }
     // Clean up uploaded files on error
     if (files) {
-      // Clean up verification file if it exists
       if (files.verificationId && fs.existsSync(files.verificationId[0].path)) {
         fs.unlinkSync(files.verificationId[0].path);
       }
-      // Clean up profile image if it exists
       if (files.profileImage && fs.existsSync(files.profileImage[0].path)) {
         fs.unlinkSync(files.profileImage[0].path);
       }
@@ -259,3 +228,144 @@ export const registerDoctorService = async (userData, doctorData, files) => {
     throw error;
   }
 };
+
+// API 2: Add Doctor Role to Existing User (user exists, verified, not already a doctor)
+export const addDoctorRoleToExistingUserService = async (
+  existingUser,
+  doctorData,
+  files
+) => {
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    if (existingUser.role.includes(possibleRoles.DOCTOR)) {
+      throw new ErrorHandlerClass(
+        "User already registered with this email as a doctor",
+        409,
+        "Duplicate Error",
+        "Doctor role already exists"
+      );
+    }
+    if (!existingUser.isVerified) {
+      throw new ErrorHandlerClass(
+        "User must be verified before adding a new role",
+        400,
+        "Validation Error",
+        "Unverified user"
+      );
+    }
+
+    // Handle profile image (default or uploaded)
+    let profileImageObject = {
+      URL: { secure_url: null, public_id: null },
+      customId: null,
+    };
+    const customId = `${existingUser.firstName}_${nanoid(4)}`;
+
+    if (!files || !files.profileImage) {
+      const defaultImage = getDefaultImageByGender(doctorData.gender);
+      profileImageObject = {
+        URL: {
+          secure_url: defaultImage.secure_url,
+          public_id: defaultImage.public_id,
+        },
+        customId,
+      };
+    } else {
+      const { secure_url, public_id } = await uploadFile({
+        file: files.profileImage[0].path,
+        folder: `${process.env.UPLOAD_FILE}/Doctor_Profile_Image/${customId}`,
+      });
+      profileImageObject = { URL: { secure_url, public_id }, customId };
+    }
+
+    // Create address for clinic branch
+    const addressObject = new Address({
+      displayName: doctorData.addressLabel,
+      coordinates: doctorData.coordinates,
+    });
+    await addressModel.save(addressObject, { session });
+    const clinicBranches = {
+      address: addressObject._id,
+      phoneNumber: doctorData.clinicPhoneNumber,
+    };
+
+    // Only update user roles and link doctorID
+    if (!existingUser.role.includes(possibleRoles.DOCTOR)) {
+      existingUser.role.push(possibleRoles.DOCTOR);
+    }
+    existingUser.activeRole = possibleRoles.DOCTOR;
+
+    // Create doctor document
+    const doctorObject = new Doctor({
+      ...doctorData,
+      user: existingUser._id,
+      clinicBranches,
+      profileImage: profileImageObject,
+      rating: { average: 0, count: 0 },
+    });
+    await doctorModel.save(doctorObject, { session });
+
+    // Link doctor to address
+    addressObject.doctorID = doctorObject._id;
+    await addressModel.save(addressObject, { session });
+
+    // Link doctor to user (do not update other user fields)
+    existingUser.doctorID = doctorObject._id;
+    await userModel.save(existingUser, { session });
+
+    // Handle verification ID image (store locally encrypted)
+    let verificationData = null;
+    if (files && files.verificationId) {
+      const uploadResult = files.verificationId[0];
+      const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+
+      const fileBuffer = fs.readFileSync(uploadResult.path);
+      const { encryptedData, iv } = encrypt(
+        fileBuffer,
+        existingUser._id.toString()
+      );
+
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+
+      await redisClient.SET(
+        `verification:${doctorObject._id}`,
+        filePath,
+        172800 // 48 hours expiry
+      );
+
+      // Clean up the original uploaded file
+      fs.unlinkSync(uploadResult.path);
+
+      verificationData = { filePath, filename: uploadResult.filename };
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      status: 201,
+      success: true,
+      message: "Doctor role added to existing user.",
+      data: { user: existingUser, doctor: doctorObject, verificationData },
+    };
+  } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+    if (files) {
+      if (files.verificationId && fs.existsSync(files.verificationId[0].path)) {
+        fs.unlinkSync(files.verificationId[0].path);
+      }
+      if (files.profileImage && fs.existsSync(files.profileImage[0].path)) {
+        fs.unlinkSync(files.profileImage[0].path);
+      }
+    }
+    throw error;
+  }
+};
+
+// Admin login

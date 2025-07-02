@@ -48,5 +48,8 @@ class IDatabase {
   async findByEmail(email) {
     throw new Error("Method 'findByEmail' must be implemented");
   }
+  async findByEmailOrUserName(email, userName) {
+    throw new Error("Method 'findByEmailOrUserName' must be implemented");
+  }
 }
 export default IDatabase;

@@ -38,7 +38,7 @@ app.use("/address", router.addressRouter);
 app.use("/doctor", router.doctorRouter);
 app.use("/slots", router.slotRoutes);
 app.use("/appointments", router.appointmentRouter);
-//app.use('/admin', router.adminRouter);
+app.use("/admin", router.adminRouter);
 
 const client = createClient();
 

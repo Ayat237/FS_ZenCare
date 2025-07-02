@@ -12,196 +12,257 @@ import {
 import database from "../../../database/databaseConnection.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import {
+  Address,
+  AddressModel,
   Patient,
   PatientModel,
   User,
   UserModel,
 } from "../../../database/models/index.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { nanoid } from "nanoid";
+
 import redisClient from "../../utils/redis.utils.js";
 import cloudinaryConfig from "../../config/cloudinary.config.js";
+import { addPatientRoleToExistingUserService, registerNewPatientUserService } from "./patient.service.js";
 
 const userModel = new UserModel(database);
 const patientModel = new PatientModel(database);
 
-export const registerPatient = async (req, res, next) => {
-  const {
-    firstName,
-    lastName,
-    userName,
-    email,
-    password,
-    confirmedPassword,
-    mobilePhone,
-    role,
-    gender,
-    birthDate,
-  } = req.body;
-  const userData = {
-    firstName,
-    lastName,
-    userName,
-    email,
-    password,
-    confirmedPassword,
-    mobilePhone,
-    role,
-  };
-  const patientData = { gender, birthDate };
+// export const registerPatient = async (req, res, next) => {
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       userName,
+//       email,
+//       password,
+//       confirmedPassword,
+//       mobilePhone,
+//       role,
+//       gender,
+//       birthDate,
+//       address,
+//       coordinates,
+//     } = req.body;
 
-  // Validate user role
-  if (!userData.role || !userData.role.includes(possibleRoles.PATIENT)) {
-    logger.error("User must have patient role to register as a patient");
-    return next(
-      new ErrorHandlerClass(
-        "User must have patient role to register as a patient",
-        400,
-        "Validation Error",
-        "Invalid role"
-      )
-    );
-  }
+//     // Prepare user and patient data
+//     const userData = {
+//       firstName: capitalizeName(firstName),
+//       lastName: capitalizeName(lastName),
+//       userName,
+//       email,
+//       password,
+//       confirmedPassword,
+//       mobilePhone,
+//       role,
+//     };
+//     const patientData = { gender, birthDate, address, coordinates };
 
-  // 2. Check for existing user
-  const existingUserByUsername = await userModel.findOne({
-    userName: userData.userName,
-  });
-  if (existingUserByUsername) {
-    return next(
-      new ErrorHandlerClass(
-        "User with this userName already exists",
-        409,
-        "Duplicate Error",
-        "Username already taken"
-      )
-    );
-  }
+//     // Parallelize independent operations
+//     const [existingUser, otp] = await Promise.all([
+//       userModel.findByEmail(userData.email),
+//       crypto.randomInt(100000, 999999).toString(),
+//     ]);
 
-  // 3. Validate password match
-  if (userData.password !== userData.confirmedPassword) {
-    throw new ErrorHandlerClass(
-      "Passwords do not match",
-      400,
-      "Validation Error",
-      "Password mismatch"
-    );
-  }
+//     // Handle profile image (default or uploaded)
+//     let profileImageObject = {
+//       URL: { secure_url: null, public_id: null },
+//       customId: null,
+//     };
+//     const customId = firstName + nanoid(4);
 
-  // Parallelize independent operations
-  const [existingUserByEmail, otp] = await Promise.all([
-    userModel.findByEmail(userData.email),
-    crypto.randomInt(100000, 999999).toString(),
-  ]);
+//     if (!req.file) {
+//       const defaultImage = getDefaultImageByGender(gender);
+//       profileImageObject = {
+//         URL: {
+//           secure_url: defaultImage.secure_url,
+//           public_id: defaultImage.public_id,
+//         },
+//         customId,
+//       };
+//     } else {
+//       const { secure_url, public_id } = await uploadFile({
+//         file: req.file.path,
+//         folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
+//       });
+//       profileImageObject = {
+//         URL: { secure_url, public_id },
+//         customId,
+//       };
+//     }
 
-  if (existingUserByEmail) {
-    return next(
-      new ErrorHandlerClass(
-        "User with this email already exists",
-        409,
-        "Duplicate Error",
-        "Email already registered"
-      )
-    );
-  }
+//     // --- CASE 1: User exists ---
+//     if (existingUser) {
+//       if (existingUser.role.includes(possibleRoles.PATIENT)) {
+//         throw new ErrorHandlerClass(
+//           "User already registered with this email as a patient",
+//           409,
+//           "Duplicate Error",
+//           "Patient role already exists"
+//         );
+//       }
+//       if (!existingUser.isVerified) {
+//         throw new ErrorHandlerClass(
+//           "User must be verified before adding a new role",
+//           400,
+//           "Validation Error",
+//           "Unverified user"
+//         );
+//       }
+//       // Add patient role and create patient document
+//       existingUser.role.push(possibleRoles.PATIENT);
+//       existingUser.activeRole = possibleRoles.PATIENT;
 
-  // store otp to redis
-  await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
+//       // Create patient document
+//       const patientObject = new Patient({
+//         ...patientData,
+//         profileImage: profileImageObject,
+//       });
+//       await patientModel.save(patientObject);
 
-  // Handle profile image (default or uploaded)
-  let profileImageObject = {
-    URL: {
-      secure_url: null,
-      public_id: null,
-    },
-    customId: null,
-  };
+//       const addressObject = new Address({
+//         displayName: address,
+//         coordinates: coordinates,
+//         patientID: patientObject._id,
+//       });
+//       await addressModel.save(addressObject);
 
-  const customId = userData.firstName + nanoid(4); // Generate customId once for consistency
+//       // Link patient to user
+//       existingUser.patientID = patientObject._id;
+//       await userModel.save(existingUser);
 
-  if (!req.file) {
-    // If no file is uploaded, set a default image based on gender
-    const defaultImage = getDefaultImageByGender(patientData.gender);
-    profileImageObject = {
-      
-      URL: {
-        secure_url: defaultImage.secure_url,
-        public_id: defaultImage.public_id,
-      },
-      customId: customId,
+//       return res.status(201).json({
+//         success: true,
+//         message: "Patient role added to existing user.",
+//         data: { user: existingUser, patient: patientObject },
+//       });
+//     }
+
+//     // 3. Validate password match
+//     if (userData.password !== userData.confirmedPassword) {
+//       throw new ErrorHandlerClass(
+//         "Passwords do not match",
+//         400,
+//         "Validation Error",
+//         "Password mismatch"
+//       );
+//     }
+
+//     // store otp to redis
+//     await redisClient.SET(`otp:${userData.userName}`, otp, 10 * 60);
+
+//     // Create patient document
+//     const patientObject = new Patient({
+//       birthDate: birthDate,
+//       gender: gender,
+//       profileImage: profileImageObject,
+//     });
+
+//     const addressObject = new Address({
+//       displayName: address,
+//       coordinates: coordinates,
+//       patientID: patientObject._id,
+//     });
+
+//     // Create user document
+//     const userObject = new User({
+//       ...userData,
+//       role: [possibleRoles.PATIENT],
+//       activeRole: possibleRoles.PATIENT,
+//       isVerified: false,
+//       provider: Provider.LOCAL,
+//       patientID: patientObject._id,
+//     });
+
+//     // Save both documents
+//     await userModel.save(userObject);
+//     await patientModel.save(patientObject);
+//     await addressModel.save(addressObject);
+
+//     const emailToken = jwt.sign(
+//       {
+//         email: userData.email,
+//       },
+//       process.env.EMAIL_SECRET
+//     );
+
+//     // Send verification email
+//     const isEmailSent = await sendEmailService({
+//       to: userData.email,
+//       subject: "Action Required: Verify Your Email with OTP",
+//       htmlMessage: `
+//         <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+//           <h2 style="color: #007BFF;">Patient Registration – Email Verification</h2>
+//           <p>Hello ${userData.fullName || "User"},</p>
+//           <p>To complete your patient registration, please use the following One-Time Password (OTP):</p>
+//           <p style="font-size: 20px; font-weight: bold; color: #000;">${otp}</p>
+//           <p>This OTP is valid for <strong>10 minutes</strong>.</p>
+//           <p><strong>Important:</strong> For your security, do not share this code with anyone.</p>
+//           <p>If you did not request this, please ignore this message.</p>
+//           <br />
+//           <p>Thank you,</p>
+//           <p><strong>ZenCare</strong></p>
+//         </div>
+//       `,
+//     });
+
+//     if (isEmailSent.rejected.length) {
+//       logger.error("Failed to send verification email", isEmailSent.rejected);
+//       return next(
+//         new ErrorHandlerClass(
+//           "Failed to send verification email",
+//           500,
+//           "Server Error",
+//           "Error in sending email"
+//         )
+//       );
+//     }
+
+//     res.status(201).json({
+//       success: true,
+//       message:
+//         "Patient registered successfully. Please verify with the OTP sent to your email.",
+//       emailToken,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
+// Register a new patient (new user)
+export const registerNewPatientUser = async (req, res, next) => {
+  try {
+    const {
+      firstName, lastName, userName, email, password, confirmedPassword,
+      mobilePhone, role, gender, birthDate, address, coordinates
+    } = req.body;
+
+    const userData = {
+      firstName, lastName, userName, email, password, confirmedPassword, mobilePhone, role
     };
-  } else {
-    // Upload image to Cloudinary
-    const { secure_url, public_id } = await uploadFile({
-      file: req.file.path,
-      folder: `${process.env.UPLOAD_FILE}/Patient_Profile_Image/${customId}`,
-    });
+    const patientData = { gender, birthDate, address, coordinates };
 
-    profileImageObject = {
-      URL: {
-        secure_url,
-        public_id,
-      },
-      customId: customId,
-    };
+    const result = await registerNewPatientUserService(userData, patientData, req.file);
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
   }
+};
 
-  //capitalize each first name
-  userData.firstName = capitalizeName(userData.firstName);
-  userData.lastName = capitalizeName(userData.lastName);
-
-  // Create patient first
-  const patientObject = new Patient({
-    ...patientData,
-    profileImage: profileImageObject,
-  });
-
-  // Create user with patient reference
-  const userObject = new User({
-    ...userData,
-    isVerified: false,
-    provider: Provider.LOCAL,
-    patientID: patientObject._id,
-  });
-
-  // Save both documents
-  await userModel.save(userObject);
-  await patientModel.save(patientObject);
-
-  const emailToken = jwt.sign(
-    {
-      email: userData.email,
-    },
-    process.env.EMAIL_SECRET
-  );
-
-  // Send verification email
-  const isEmailSent = await sendEmailService({
-    to: userData.email,
-    subject: "Verify Your Account with OTP",
-    htmlMessage: `<h3>Your OTP for patient registration is: <strong>${otp}</strong></h3>
-       <p>It expires in 10 minutes.</p>`,
-  });
-  if (isEmailSent.rejected.length) {
-    logger.error("Failed to send verification email", error);
-    return next(
-      new ErrorHandlerClass(
-        "Failed to send verification email",
-        500,
-        "Server Error",
-        "Error in sending email"
-      )
-    );
+// Add patient role to existing user
+export const addPatientRoleToExistingUser = async (req, res, next) => {
+  try {
+    const { email, gender, birthDate, address, coordinates } = req.body;
+    const existingUser = await userModel.findByEmail(email);
+    if (!existingUser) {
+      return next(new ErrorHandlerClass("User not found", 404, "Not Found", "User does not exist"));
+    }
+    const patientData = { gender, birthDate, address, coordinates };
+    const result = await addPatientRoleToExistingUserService(existingUser, patientData, req.file);
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
   }
-
-  res.status(201).json({
-    success: true,
-    message:
-      "Patient registered successfully. Please verify with the OTP sent to your email.",
-    emailToken,
-  });
 };
 
 
@@ -279,7 +340,9 @@ export const editProfileImage = async (req, res, next) => {
     // 2. Delete the old profile image from Cloudinary if it exists
     if (
       patient.profileImage?.URL?.secure_url &&
-      ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(patient.profileImage.URL.public_id)
+      ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(
+        patient.profileImage.URL.public_id
+      )
     ) {
       try {
         // const urlParts = patient.profileImage.URL.secure_url.split("/upload/");
@@ -341,7 +404,7 @@ export const editProfileImage = async (req, res, next) => {
       URL: { public_id, secure_url },
       customId: patientCustomId,
     };
-  }else {
+  } else {
     // Case 2: No file uploaded, no update to profileImage
     return res.status(200).json({
       success: true,
@@ -389,7 +452,9 @@ export const removeProfileImage = async (req, res, next) => {
   // If removeImage is true, set the default image
   if (
     patient.profileImage?.URL?.secure_url &&
-    ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(patient.profileImage.URL.public_id)
+    ![Images.PATIENT_MALE, Images.PATIENT_FEMALE, Images.OTHER].includes(
+      patient.profileImage.URL.public_id
+    )
   ) {
     try {
       await cloudinaryConfig().uploader.destroy(
@@ -434,7 +499,10 @@ export const removeProfileImage = async (req, res, next) => {
   );
   res.status(200).json({
     success: true,
-    message:"Patient profile image removed successfully",
+    message: "Patient profile image removed successfully",
     data: updatedPatient,
   });
 };
+
+
+
