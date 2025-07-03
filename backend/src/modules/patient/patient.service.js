@@ -27,10 +27,10 @@ export const registerNewPatientUserService = async (userData, patientData, file)
       );
     }
     // Check for existing patient by userName
-    const existingPatient = await patientModel.findOne({ userName: userData.userName });
+    const existingPatient = await userModel.findOne({ userName: userData.userName });
     if (existingPatient) {
       throw new ErrorHandlerClass(
-        "Patient already exists with this userName",
+        "Patient already exists with this userName, please choose another userName",
         409,
         "Duplicate Error",
         "Patient already exists"
