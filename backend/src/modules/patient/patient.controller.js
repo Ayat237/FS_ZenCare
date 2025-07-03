@@ -22,27 +22,49 @@ import {
 
 import redisClient from "../../utils/redis.utils.js";
 import cloudinaryConfig from "../../config/cloudinary.config.js";
-import { addPatientRoleToExistingUserService, registerNewPatientUserService } from "./patient.service.js";
+import {
+  addPatientRoleToExistingUserService,
+  registerNewPatientUserService,
+} from "./patient.service.js";
 
 const userModel = new UserModel(database);
 const patientModel = new PatientModel(database);
-
-
 
 // Register a new patient (new user)
 export const registerNewPatientUser = async (req, res, next) => {
   try {
     const {
-      firstName, lastName, userName, email, password, confirmedPassword,
-      mobilePhone, role, gender, birthDate, address, coordinates
+      firstName,
+      lastName,
+      userName,
+      email,
+      password,
+      confirmedPassword,
+      mobilePhone,
+      role,
+      gender,
+      birthDate,
+      address,
+      coordinates,
     } = req.body;
 
     const userData = {
-      firstName, lastName, userName, email, password, confirmedPassword, mobilePhone, role
+      firstName,
+      lastName,
+      userName,
+      email,
+      password,
+      confirmedPassword,
+      mobilePhone,
+      role,
     };
     const patientData = { gender, birthDate, address, coordinates };
 
-    const result = await registerNewPatientUserService(userData, patientData, req.file);
+    const result = await registerNewPatientUserService(
+      userData,
+      patientData,
+      req.file
+    );
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -54,18 +76,28 @@ export const addPatientRoleToExistingUser = async (req, res, next) => {
   try {
     const { email, gender, birthDate, address, coordinates } = req.body;
     const existingUser = await userModel.findByEmail(email);
+    console.log(existingUser);
     if (!existingUser) {
-      return next(new ErrorHandlerClass("User not found", 404, "Not Found", "User does not exist"));
+      return next(
+        new ErrorHandlerClass(
+          "User with this email not found",
+          404,
+          "Not Found",
+          "User does not exist"
+        )
+      );
     }
     const patientData = { gender, birthDate, address, coordinates };
-    const result = await addPatientRoleToExistingUserService(existingUser, patientData, req.file);
+    const result = await addPatientRoleToExistingUserService(
+      existingUser,
+      patientData,
+      req.file
+    );
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
   }
 };
-
-
 
 export const deletePatientAccount = async (req, res, next) => {
   const user = req.authUser;
@@ -303,6 +335,3 @@ export const removeProfileImage = async (req, res, next) => {
     data: updatedPatient,
   });
 };
-
-
-

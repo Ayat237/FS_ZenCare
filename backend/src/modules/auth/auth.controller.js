@@ -90,7 +90,7 @@ export const login = async (req, res, next) => {
     ? possibleRoles.PATIENT
     : possibleRoles.DOCTOR;
   const selectedId = hasPatientRole ? user.patientID : user.doctorID;
-  logger.info(selectedId);
+
   await completeLogin(user, selectedRole, selectedId, res);
 };
 
@@ -174,7 +174,6 @@ export const verifyEmailOTP = async (req, res, next) => {
       populate: "patientID doctorID",
     }
   );
-  console.log("user", user);
 
   if (!user) {
     return next(
@@ -199,21 +198,7 @@ export const verifyEmailOTP = async (req, res, next) => {
     );
   }
 
-  // Generate JWT access token
-  const accessToken = jwt.sign(
-    {
-      userId: user._id,
-      userName: user.userName,
-      role: user.activeRole,
-      activeRole: user.activeRole,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "24h" }
-  );
-
-  // 6. Generate refresh token (long-lived)
-  const refreshToken = crypto.randomBytes(32).toString("hex");
-
+  // Update user verification status
   await userModel.updateById(
     {
       _id: user._id,
@@ -221,16 +206,41 @@ export const verifyEmailOTP = async (req, res, next) => {
     },
     {
       isVerified: true,
+      activeRole: user.role[0]
     },
     { new: true }
   );
+
+  await redisClient.DEL(`otp:${user.userName}`);
+
+  // If user is registering as doctor
+  if (user.role[0] === possibleRoles.DOCTOR) {
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully. Please wait for admin verification within 24 hours. You will receive a confirmation email.",
+    });
+  }
+
+  // For non-doctor roles (e.g. patient)
+  const accessToken = jwt.sign(
+    {
+      userId: user._id,
+      userName: user.userName,
+      role: user.role[0],
+      activeRole: user.role[0],
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "24h" }
+  );
+
+  const refreshToken = crypto.randomBytes(32).toString("hex");
 
   await redisClient.SET(
     `refreshToken:${user.userName}`,
     refreshToken,
     7 * 24 * 60 * 60
   );
-  await redisClient.DEL(`otp:${user.userName}`);
+
   res.status(200).json({
     success: true,
     message: `Email : ${user.email} verified successfully.`,
@@ -243,8 +253,8 @@ export const verifyEmailOTP = async (req, res, next) => {
         lastName: user.lastName,
         userName: user.userName,
         email: user.email,
-        role: user.role,
-        activeRole: user.activeRole,
+        role: user.role[0],
+        activeRole: user.role[0],
         profileImage:
           user?.patientID?.profileImage?.URL?.secure_url ||
           user?.doctorID?.profileImage?.URL?.secure_url,

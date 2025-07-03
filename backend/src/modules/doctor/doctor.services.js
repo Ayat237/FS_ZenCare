@@ -161,14 +161,14 @@ export const registerNewDoctorUserService = async (
         htmlMessage: `
           <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
             <h2 style="color: #007BFF;">Email Verification Code</h2>
-            <p>Hello ${userData.fullName || "Doctor"},</p>
+            <p>Hello ${userData.firstName || "Doctor"},</p>
             <p>Thank you for registering on our platform. To complete your registration, please use the following One-Time Password (OTP):</p>
             <p style="font-size: 18px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
             <p>This code is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
             <p>If you did not initiate this request, please ignore this message.</p>
             <br/>
             <p>Best regards,</p>
-            <p><strong>The zenCareTeam</strong></p>
+            <p><strong>zenCare</strong></p>
           </div>
         `,
       });
