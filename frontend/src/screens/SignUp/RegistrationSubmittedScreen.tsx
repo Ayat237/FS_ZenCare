@@ -34,7 +34,7 @@ const RegistrationSubmittedScreen: React.FC = () => {
           removeClippedSubviews={false}
         >
           <View style={styles.headerContainer}>
-            <BackButton />
+            {/* Removed back button for better UI flow */}
           </View>
 
           <AuthHeader

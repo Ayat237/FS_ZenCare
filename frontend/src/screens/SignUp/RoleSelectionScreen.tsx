@@ -1,8 +1,16 @@
 import React, { useState } from "react";
-import { View, StyleSheet, SafeAreaView, ScrollView, Text } from "react-native";
+import {
+  View,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/types/navigation";
+import { Ionicons } from "@expo/vector-icons";
 import Colors from "@theme/colors";
 import BackButton from "@components/layout/BackButton";
 import AuthHeader from "@components/Auth/AuthHeader";
@@ -12,13 +20,13 @@ import AuthFooter from "@components/Auth/AuthFooter";
 import patientIcon from "@assets/images/patient-icon.png";
 import doctorIcon from "@assets/images/doctor-icon.png";
 
-
 const RoleSelectionScreen: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedRole, setSelectedRole] = useState<"patient" | "doctor" | null>(
     null
   );
+  const [isExistingUser, setIsExistingUser] = useState(false);
 
   const handleRoleSelection = (role: "patient" | "doctor") => {
     setSelectedRole(role);
@@ -26,7 +34,10 @@ const RoleSelectionScreen: React.FC = () => {
 
   const handleNext = () => {
     if (selectedRole) {
-      navigation.navigate("SignUpDetails", { role: selectedRole });
+      navigation.navigate("SignUpDetails", {
+        role: selectedRole,
+        isExistingUser,
+      });
     }
   };
 
@@ -62,6 +73,27 @@ const RoleSelectionScreen: React.FC = () => {
                 label="Doctor"
                 onPress={() => handleRoleSelection("doctor")}
               />
+
+              {selectedRole && (
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setIsExistingUser(!isExistingUser)}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isExistingUser && styles.checkboxChecked,
+                    ]}
+                  >
+                    {isExistingUser && (
+                      <Ionicons name="checkmark" size={16} color="white" />
+                    )}
+                  </View>
+                  <Text style={styles.checkboxLabel}>
+                    I already have an account with a different role
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <AuthButton
               title="Next"
@@ -119,6 +151,32 @@ const styles = StyleSheet.create({
     color: Colors.primary400,
     textAlign: "center",
     marginBottom: 18,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: Colors.primary400,
+    borderRadius: 4,
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary500,
+    borderColor: Colors.primary500,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text600,
+    lineHeight: 20,
   },
 });
 

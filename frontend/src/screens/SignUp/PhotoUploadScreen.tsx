@@ -28,15 +28,17 @@ const PhotoUploadScreen: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<PhotoUploadRouteProp>();
-  const { role, userData } = route.params;
-  // console.log("Role:", role);
-  // console.log("User Data:", userData);
+  const { role, userData, isExistingUser = false } = route.params;
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailToken, setEmailToken] = useState<string | null>(null);
 
   const handleUpload = async () => {
     try {
+      console.log("Starting image upload from library...");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -44,194 +46,782 @@ const PhotoUploadScreen: React.FC = () => {
         quality: 1,
       });
 
-      if (!result.canceled) {
+      console.log(
+        "Image picker result:",
+        result.canceled ? "Canceled" : "Image selected"
+      );
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        console.log("Setting selected image:", result.assets[0].uri);
         setSelectedImage(result.assets[0].uri);
+        // Force UI refresh after image selection
+        setTimeout(() => {
+          console.log("Selected image state after update:", !!selectedImage);
+        }, 100);
       }
     } catch (error) {
       console.log("Error picking image:", error);
     }
   };
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [emailToken, setEmailToken] = useState<string | null>(null);
+  // Helper function to create a valid file object for FormData
+  const createFileObject = (uri: string, name?: string, type?: string): any => {
+    if (!uri) {
+      console.warn("Empty URI provided to createFileObject");
+      return null;
+    }
+
+    try {
+      // Extract file extension
+      const uriParts = uri.split(".");
+      const fileType =
+        uriParts.length > 1
+          ? uriParts[uriParts.length - 1].toLowerCase()
+          : "jpg";
+
+      // Default name if not provided, ensure it has an extension
+      const fileName = name || `file-${Date.now()}.${fileType}`;
+
+      // Make sure fileName has an extension
+      const hasExtension = fileName.includes(".");
+      const finalName = hasExtension ? fileName : `${fileName}.${fileType}`;
+
+      // Determine MIME type based on file extension if not provided
+      let mimeType = type || "application/octet-stream"; // default fallback
+      if (!type) {
+        if (["jpg", "jpeg"].includes(fileType)) {
+          mimeType = "image/jpeg";
+        } else if (fileType === "png") {
+          mimeType = "image/png";
+        } else if (fileType === "gif") {
+          mimeType = "image/gif";
+        } else if (fileType === "pdf") {
+          mimeType = "application/pdf";
+        } else if (fileType === "webp") {
+          mimeType = "image/webp";
+        }
+      }
+
+      console.log(`Creating file object: ${finalName} (${mimeType})`);
+      return {
+        uri: uri,
+        name: finalName,
+        type: mimeType,
+      };
+    } catch (error) {
+      console.error("Error in createFileObject:", error);
+      // Return a default image object as fallback
+      return {
+        uri: uri,
+        name: `fallback-${Date.now()}.jpg`,
+        type: "image/jpeg",
+      };
+    }
+  };
+
+  // Format clinic branches to match the backend expected structure
+  const formatClinicBranches = (branches: any[], mobilePhone: string) => {
+    if (!branches || branches.length === 0) {
+      return [
+        {
+          address: {
+            displayName: "Default Address",
+            coordinates: {
+              latitude: 30.0444,
+              longitude: 31.2357,
+            },
+          },
+          phoneNumber: mobilePhone || "To be updated",
+        },
+      ];
+    }
+
+    return branches.map((clinic: any) => ({
+      address: {
+        displayName: clinic.address?.displayName || "Selected Location",
+        coordinates: {
+          latitude: clinic.address?.coordinates?.latitude || 30.0444,
+          longitude: clinic.address?.coordinates?.longitude || 31.2357,
+        },
+      },
+      phoneNumber: clinic.phoneNumber || mobilePhone || "To be updated",
+    }));
+  };
+
+  // Utility function to safely append data to FormData, avoiding undefined values
+  const safeAppend = (formData: FormData, key: string, value: any) => {
+    // Skip undefined/null values
+    if (value === undefined || value === null) {
+      console.log(`Skipping undefined/null value for key: ${key}`);
+      return;
+    }
+
+    // Convert non-string primitives to strings
+    if (
+      typeof value !== "string" &&
+      !(value instanceof Blob) &&
+      typeof value !== "object"
+    ) {
+      value = String(value);
+    }
+
+    // Handle objects by JSON stringifying them
+    if (typeof value === "object" && !(value instanceof Blob)) {
+      value = JSON.stringify(value);
+    }
+
+    console.log(
+      `Appending to FormData - ${key}: ${
+        typeof value === "object" ? "Object/File" : value
+      }`
+    );
+    formData.append(key, value);
+  };
 
   const handleRegistration = async (withPhoto: boolean) => {
+    // Prevent multiple simultaneous registration attempts
+    if (isLoading) {
+      console.log("Registration already in progress, ignoring duplicate call");
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log("Starting registration with data:", {
+        role,
+        isExistingUser,
+        hasPhoto: withPhoto && !!selectedImage,
+        email: userData.email,
+      });
+
+      // Special handling for doctor verification ID
+      const handleVerificationId = (
+        verificationUri: string,
+        docType?: string,
+        docName?: string
+      ) => {
+        if (!verificationUri) {
+          console.error(
+            "⛔ No verification URI provided, skipping verification ID"
+          );
+          return null;
+        }
+
+        console.log("Processing verification document:", {
+          uri: verificationUri,
+          type: docType || "Detecting from extension...",
+          name: docName || "Unknown document name",
+        });
+
+        try {
+          const fileObj = createFileObject(verificationUri, docName, docType);
+          console.log("Created verification file object:", fileObj);
+          return fileObj;
+        } catch (error) {
+          console.error(
+            "Error creating file object for verification ID:",
+            error
+          );
+          return null;
+        }
+      };
+
+      // Add this function to help create more detailed debug logging
+      const logVerificationDetails = (fileObject: any) => {
+        try {
+          // Check if we have a valid file object
+          if (!fileObject || typeof fileObject !== "object") {
+            console.error("Invalid file object for verification:", fileObject);
+            return;
+          }
+
+          // Log essential file properties
+          console.log("VERIFICATION FILE DETAILS:");
+          console.log(`- URI: ${fileObject.uri || "MISSING"}`);
+          console.log(`- Name: ${fileObject.name || "MISSING"}`);
+          console.log(`- Type: ${fileObject.type || "MISSING"}`);
+          console.log(
+            `- Object type: ${Object.prototype.toString.call(fileObject)}`
+          );
+
+          // Create React Native FormData compatible object
+          const fileForFormData = {
+            uri: fileObject.uri,
+            type: fileObject.type || "application/octet-stream",
+            name: fileObject.name || "document.jpg",
+          };
+
+          console.log(
+            "Properly formatted file object for FormData:",
+            fileForFormData
+          );
+          return fileForFormData;
+        } catch (error) {
+          console.error("Error in logVerificationDetails:", error);
+          return null;
+        }
+      };
+
       const formData = new FormData();
 
-      // Add user data to FormData
-      formData.append("userName", userData.userName);
-      formData.append("email", userData.email);
-      formData.append("password", userData.password);
-      formData.append("confirmedPassword", userData.confirmedPassword);
-      formData.append("firstName", userData.firstName);
-      formData.append("lastName", userData.lastName);
-      formData.append("mobilePhone", userData.mobilePhone);
-      formData.append("gender", userData.gender);
+      // Log registration type
+      console.log(
+        `Starting ${
+          isExistingUser ? "existing" : "new"
+        } user registration as ${role}`
+      );
+      console.log(
+        "Registration data:",
+        JSON.stringify({
+          email: userData.email,
+          gender: userData.gender,
+          role: role,
+          isExistingUser: isExistingUser,
+          hasPhoto: withPhoto && !!selectedImage,
+        })
+      );
 
-      // Only add birthDate for patient registration
-      if (role !== "doctor") {
-        formData.append("birthDate", userData.birthDate);
-      }
+      if (isExistingUser) {
+        // For existing users, only send minimal required fields
+        safeAppend(formData, "email", userData.email);
 
-      // Handle role differently for doctors vs patients
-      if (role === "doctor") {
-        // Doctor registration - role should be an array
-        formData.append("role", JSON.stringify(["doctor"]));
+        // Only include gender if it's defined
+        if (userData.gender) {
+          safeAppend(formData, "gender", userData.gender);
+        }
 
-        if (userData.doctorData) {
-          const doctorData = userData.doctorData;
+        if (role === "doctor") {
+          // For existing user becoming doctor
+          if (userData.doctorData) {
+            const doctorData = userData.doctorData;
+            safeAppend(formData, "specialty", doctorData.specialty);
+            safeAppend(
+              formData,
+              "yearsOfExperience",
+              doctorData.yearsOfExperience
+                ? doctorData.yearsOfExperience.toString()
+                : "1"
+            );
 
-          formData.append("specialty", doctorData.specialty);
-          formData.append(
-            "yearsOfExperience",
-            doctorData.yearsOfExperience.toString()
-          );
+            // Ensure education is a valid array and properly stringified
+            const education = doctorData.education || [];
+            safeAppend(formData, "education", JSON.stringify(education));
 
-          // Add education data
-          formData.append("education", JSON.stringify(doctorData.education));
+            // Ensure certifications is a valid array
+            const certifications = doctorData.certifications || [];
+            safeAppend(
+              formData,
+              "certifications",
+              JSON.stringify(certifications)
+            );
 
-          // Add certifications (ensure it's always an array)
-          formData.append(
-            "certifications",
-            JSON.stringify(doctorData.certifications || [])
-          );
+            let validHospitalAffiliations =
+              doctorData.hospitalAffiliations?.filter(
+                (hospital: any) => hospital.name && hospital.name.trim() !== ""
+              ) || [];
+            if (validHospitalAffiliations.length === 0) {
+              validHospitalAffiliations = [{ name: "To be updated" }];
+            }
+            safeAppend(
+              formData,
+              "hospitalAffiliation",
+              JSON.stringify(validHospitalAffiliations)
+            );
 
-          // Add hospital affiliations (backend expects "hospitalAffiliation" not "hospitalAffiliations")
-          // Filter out empty hospital affiliations
-          let validHospitalAffiliations =
-            doctorData.hospitalAffiliations?.filter(
-              (hospital) => hospital.name && hospital.name.trim() !== ""
-            ) || [];
+            // Format clinic branches properly for backend
+            const clinicBranches = formatClinicBranches(
+              doctorData.clinicBranches || [],
+              userData.mobilePhone || "To be updated"
+            );
 
-          // If no valid hospital affiliations, provide a default one (backend requires at least 1)
-          if (validHospitalAffiliations.length === 0) {
-            validHospitalAffiliations = [
-              {
-                name: "To be updated",
-              },
-            ];
-          }
+            // Send clinicBranches as JSON string
+            safeAppend(
+              formData,
+              "clinicBranches",
+              JSON.stringify(clinicBranches)
+            );
 
-          formData.append(
-            "hospitalAffiliation",
-            JSON.stringify(validHospitalAffiliations)
-          );
+            if (doctorData.verificationId) {
+              const fileObject = handleVerificationId(
+                doctorData.verificationId,
+                doctorData.verificationDocumentType,
+                doctorData.verificationDocumentName
+              );
 
-          // Add clinic branches - filter out incomplete ones or provide defaults
-          let validClinicBranches =
-            doctorData.clinicBranches?.filter(
-              (clinic) =>
-                clinic.address?.street &&
-                clinic.address?.street.trim() !== "" &&
-                clinic.address?.city &&
-                clinic.address?.city.trim() !== "" &&
-                clinic.address?.country &&
-                clinic.address?.country.trim() !== "" &&
-                clinic.phoneNumber &&
-                clinic.phoneNumber.trim() !== ""
-            ) || [];
+              if (fileObject) {
+                // Create a proper object for FormData
+                console.log(
+                  "Appending to FormData - verificationId:",
+                  fileObject
+                );
 
-          // If no valid clinic branches, provide a default one (backend requires at least 1)
-          if (validClinicBranches.length === 0) {
-            validClinicBranches = [
-              {
-                address: {
-                  street: "To be updated",
-                  city: "To be updated",
-                  country: "Egypt",
-                  neighborhood: "To be updated",
-                  coordinates: {
-                    longitude: 31.2357, // Default Cairo coordinates
-                    latitude: 30.0444,
-                  },
-                },
-                phoneNumber: userData.mobilePhone || "To be updated",
-              },
-            ];
+                // IMPORTANT: The backend expects files.verificationId[0] to be a proper file
+                // For React Native, we need to structure the object correctly for the FormData
+                // The key name must exactly match what the backend multer middleware expects
+                try {
+                  formData.append("verificationId", {
+                    uri: fileObject.uri,
+                    type: fileObject.type,
+                    name: fileObject.name,
+                  } as any);
+
+                  console.log(
+                    "Added verification document to form data:",
+                    fileObject
+                  );
+                } catch (appendError) {
+                  console.error(
+                    "Error appending verification ID:",
+                    appendError
+                  );
+                }
+              }
+            }
           } else {
-            // Ensure all clinic branches have required fields
-            validClinicBranches = validClinicBranches.map((clinic) => ({
-              ...clinic,
-              address: {
-                ...clinic.address,
-                neighborhood: clinic.address.neighborhood || "To be updated",
-                coordinates: clinic.address.coordinates || {
-                  longitude: 31.2357, // Default Cairo coordinates
-                  latitude: 30.0444,
+            // Default values if no doctor data
+            safeAppend(
+              formData,
+              "clinicBranches",
+              JSON.stringify([
+                {
+                  address: {
+                    displayName: "Default Address",
+                    coordinates: {
+                      longitude: 31.2357,
+                      latitude: 30.0444,
+                    },
+                  },
+                  phoneNumber: userData.mobilePhone || "To be updated",
                 },
-              },
-            }));
+              ])
+            );
+          }
+        } else {
+          // For existing user becoming patient
+          if (userData.birthDate) {
+            safeAppend(formData, "birthDate", userData.birthDate);
+          } else {
+            // Provide a default birthDate if not present to avoid backend errors
+            safeAppend(
+              formData,
+              "birthDate",
+              new Date().toISOString().split("T")[0]
+            );
           }
 
-          formData.append(
-            "clinicBranches",
-            JSON.stringify(validClinicBranches)
-          );
+          if (userData.location) {
+            // Ensure coordinates are valid numbers before stringifying
+            const longitude = userData.location.longitude || 0;
+            const latitude = userData.location.latitude || 0;
 
-          // Add verification document if available
-          if (doctorData.verificationId) {
-            const verificationUri = doctorData.verificationId;
-            const filename =
-              verificationUri.split("/").pop() || `verification-${Date.now()}`;
-            const isPdf = doctorData.verificationDocumentType?.includes("pdf");
-            const type = isPdf
-              ? "application/pdf"
-              : doctorData.verificationDocumentType ||
-                "application/octet-stream";
+            safeAppend(
+              formData,
+              "coordinates",
+              JSON.stringify({
+                longitude,
+                latitude,
+              })
+            );
 
-            formData.append("verificationId", {
-              uri: verificationUri,
-              name: doctorData.verificationDocumentName || filename,
-              type,
-            } as unknown as File);
+            // Ensure we always have a displayName value
+            const displayName =
+              userData.location.displayName || "Selected location";
+            safeAppend(formData, "address", displayName);
+          } else {
+            // Provide default location data if missing
+            safeAppend(
+              formData,
+              "coordinates",
+              JSON.stringify({
+                longitude: 31.2357,
+                latitude: 30.0444,
+              })
+            );
+            safeAppend(formData, "address", "Default location");
           }
         }
       } else {
-        // Patient registration - role as string
-        formData.append("role", role);
-      }
+        // For new users, send all user data
+        safeAppend(formData, "userName", userData.userName || "");
+        safeAppend(formData, "email", userData.email);
+        safeAppend(formData, "password", userData.password || "");
+        safeAppend(
+          formData,
+          "confirmedPassword",
+          userData.confirmedPassword || ""
+        );
+        safeAppend(formData, "firstName", userData.firstName || "");
+        safeAppend(formData, "lastName", userData.lastName || "");
+        safeAppend(formData, "mobilePhone", userData.mobilePhone || "");
+        safeAppend(formData, "gender", userData.gender);
 
-      // Add profile image if selected
+        if (role === "doctor") {
+          // Doctor registration - role should be an array
+          safeAppend(formData, "role", JSON.stringify(["doctor"]));
+
+          if (userData.doctorData) {
+            const doctorData = userData.doctorData;
+            safeAppend(
+              formData,
+              "specialty",
+              doctorData.specialty || "General"
+            );
+            safeAppend(
+              formData,
+              "yearsOfExperience",
+              doctorData.yearsOfExperience
+                ? doctorData.yearsOfExperience.toString()
+                : "1"
+            );
+
+            // Ensure education is a valid array
+            const education = doctorData.education || [];
+            safeAppend(formData, "education", JSON.stringify(education));
+
+            // Ensure certifications is a valid array
+            const certifications = doctorData.certifications || [];
+            safeAppend(
+              formData,
+              "certifications",
+              JSON.stringify(certifications)
+            );
+
+            let validHospitalAffiliations =
+              doctorData.hospitalAffiliations?.filter(
+                (hospital: any) => hospital.name && hospital.name.trim() !== ""
+              ) || [];
+
+            if (validHospitalAffiliations.length === 0) {
+              validHospitalAffiliations = [{ name: "To be updated" }];
+            }
+
+            safeAppend(
+              formData,
+              "hospitalAffiliation",
+              JSON.stringify(validHospitalAffiliations)
+            );
+
+            // Format clinic branches properly for backend
+            const clinicBranches = formatClinicBranches(
+              doctorData.clinicBranches,
+              userData.mobilePhone
+            );
+
+            // Send clinicBranches as JSON string
+            safeAppend(
+              formData,
+              "clinicBranches",
+              JSON.stringify(clinicBranches)
+            );
+
+            if (doctorData.verificationId) {
+              console.log(
+                "Found verificationId in doctorData:",
+                doctorData.verificationId
+              );
+              const fileObject = handleVerificationId(
+                doctorData.verificationId,
+                doctorData.verificationDocumentType,
+                doctorData.verificationDocumentName
+              );
+
+              if (fileObject) {
+                console.log(
+                  "Appending to FormData - verificationId:",
+                  fileObject
+                );
+
+                // IMPORTANT: The backend expects files.verificationId[0] to be a proper file
+                // For React Native, we need to structure the object correctly for the FormData
+                try {
+                  formData.append("verificationId", {
+                    uri: fileObject.uri,
+                    type: fileObject.type,
+                    name: fileObject.name,
+                  } as any);
+
+                  console.log(
+                    "✅ Added verification document to form data:",
+                    fileObject
+                  );
+                } catch (appendError) {
+                  console.error(
+                    "Error appending verification ID:",
+                    appendError
+                  );
+                }
+              } else {
+                console.error(
+                  "❌ Failed to create verification document file object"
+                );
+              }
+            } else {
+              console.error("❌ No verificationId found in doctorData");
+            }
+          } else {
+            // Default values if no doctor data
+            safeAppend(
+              formData,
+              "clinicBranches",
+              JSON.stringify([
+                {
+                  address: {
+                    displayName: "Default Address",
+                    coordinates: {
+                      longitude: 31.2357,
+                      latitude: 30.0444,
+                    },
+                  },
+                  phoneNumber: userData.mobilePhone || "To be updated",
+                },
+              ])
+            );
+          }
+        } else {
+          // Patient registration
+          safeAppend(formData, "role", "patient");
+
+          if (userData.birthDate) {
+            safeAppend(formData, "birthDate", userData.birthDate);
+          } else {
+            // Provide a default birthDate if not present to avoid backend errors
+            safeAppend(
+              formData,
+              "birthDate",
+              new Date().toISOString().split("T")[0]
+            );
+          }
+
+          if (userData.location) {
+            // Ensure coordinates are valid numbers before stringifying
+            const longitude = userData.location.longitude || 0;
+            const latitude = userData.location.latitude || 0;
+
+            safeAppend(
+              formData,
+              "coordinates",
+              JSON.stringify({
+                longitude,
+                latitude,
+              })
+            );
+
+            // Ensure we always have a displayName value
+            const displayName =
+              userData.location.displayName || "Selected location";
+            safeAppend(formData, "address", displayName);
+          } else {
+            // Provide default location data if missing
+            safeAppend(
+              formData,
+              "coordinates",
+              JSON.stringify({
+                longitude: 31.2357,
+                latitude: 30.0444,
+              })
+            );
+            safeAppend(formData, "address", "Default location");
+          }
+        }
+      } // Add profile image if selected
       if (withPhoto && selectedImage) {
-        const imageUri = selectedImage;
-        const filename = imageUri.split("/").pop() || `image-${Date.now()}.jpg`;
-        const match = /\.([\w]+)$/.exec(filename) || [null, "jpeg"];
-        const type = match ? `image/${match[1]}` : "image/jpeg";
+        try {
+          console.log("Processing profile image from:", selectedImage);
 
-        formData.append("profileImage", {
-          uri: imageUri,
-          name: filename,
-          type,
-        } as unknown as File);
+          const fileObject = createFileObject(
+            selectedImage,
+            `profile-${Date.now()}.jpg`
+          );
+
+          if (fileObject) {
+            console.log(
+              `Adding profile image: ${fileObject.name} (${fileObject.type})`
+            );
+            safeAppend(formData, "profileImage", fileObject as any);
+            console.log("Added profile image to form data");
+          } else {
+            console.warn("Failed to create file object for profile image");
+          }
+        } catch (error) {
+          console.error("Error adding profile image to form data:", error);
+          // Continue with registration even if image handling fails
+        }
       }
 
-      // Send data to appropriate API endpoint
+      // Check if we have verification ID in FormData (for existing doctor registration)
+      if (role === "doctor" && isExistingUser) {
+        try {
+          const formDataEntries: [string, any][] = [];
+          // @ts-ignore - Access internal structure for debugging
+          if (formData._parts && Array.isArray(formData._parts)) {
+            // @ts-ignore
+            formDataEntries.push(...formData._parts);
+            const hasVerificationId = formDataEntries.some(
+              (entry) => entry[0] === "verificationId"
+            );
+
+            if (!hasVerificationId) {
+              console.error(
+                "❌ CRITICAL: verificationId is missing from FormData"
+              );
+              setError(
+                "Verification document is missing. Please go back and try again."
+              );
+              setIsLoading(false);
+              return;
+            } else {
+              console.log("✅ Verification ID is included in FormData");
+            }
+          }
+        } catch (e) {
+          console.error("Error checking FormData:", e);
+        }
+      }
+
       let response;
+      console.log(
+        `Sending registration request for ${role} (${
+          isExistingUser ? "existing" : "new"
+        } user)`
+      );
+
+      // Debug form data keys
+      try {
+        const formDataEntries: [string, any][] = [];
+        // @ts-ignore - Access internal structure for debugging
+        if (formData._parts && Array.isArray(formData._parts)) {
+          // @ts-ignore
+          formDataEntries.push(...formData._parts);
+
+          // Debug if verification ID is in form data
+          const hasVerificationId = formDataEntries.some(
+            (entry) => entry[0] === "verificationId"
+          );
+          console.log(
+            "Form data verification status:",
+            hasVerificationId ? "✅ INCLUDED" : "❌ MISSING"
+          );
+
+          // Check the type of verification ID value
+          const verificationEntry = formDataEntries.find(
+            (entry) => entry[0] === "verificationId"
+          );
+          if (verificationEntry) {
+            console.log(
+              "Verification ID value type:",
+              typeof verificationEntry[1],
+              Object.prototype.toString.call(verificationEntry[1])
+            );
+          }
+        }
+        console.log(
+          "Form data keys to be submitted:",
+          formDataEntries.map((entry) => entry[0])
+        );
+      } catch (e) {
+        console.log("Could not log form data keys:", e);
+      }
+
       if (role === "doctor") {
-        response = await authService.signupDoctorFormData(formData);
-        // For doctors, extract emailToken and go to email verification
-        console.log("Doctor registration response:", response);
-        const emailToken = response?.data?.emailToken || response?.emailToken;
-        console.log("Extracted emailToken:", emailToken);
-        navigation.navigate("EmailVerification", {
-          emailToken,
-          userRole: "doctor",
-          email: userData.email,
-        });
+        if (isExistingUser) {
+          response = await authService.signupExistingDoctorFormData(formData);
+        } else {
+          response = await authService.signupDoctorFormData(formData);
+        }
       } else {
-        response = await authService.signupFormData(formData);
-        // For patients, show success popup
-        const { emailToken } = response;
-        setEmailToken(emailToken);
-        setShowSuccess(true);
+        if (isExistingUser) {
+          response = await authService.signupExistingPatientFormData(formData);
+        } else {
+          response = await authService.signupPatientFormData(formData);
+        }
+      }
+
+      console.log("Registration response:", response);
+
+      if (response.success) {
+        if (isExistingUser) {
+          // For existing users, show success message and navigate to appropriate screen
+          setShowSuccess(true);
+          setTimeout(() => {
+            if (!showSuccess) return; // Prevent duplicate navigation
+            setShowSuccess(false);
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" }],
+            });
+          }, 2000);
+        } else {
+          // For new users, proceed to email verification
+          const emailToken = response.emailToken || response.data?.emailToken;
+          setEmailToken(emailToken);
+
+          setTimeout(() => {
+            if (isLoading) return; // Prevent duplicate navigation
+            navigation.navigate("EmailVerification", {
+              emailToken,
+              userRole: role,
+              email: userData.email,
+            });
+          }, 500);
+        }
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error("Registration error:", error);
+
+      // Extract the most useful error message
+      let errorMessage = "Registration failed. Please try again.";
+      if (error.message && typeof error.message === "string") {
+        console.error("Full error message:", error.message);
+
+        if (error.response?.data) {
+          console.error(
+            "Server error response data:",
+            JSON.stringify(error.response.data)
+          );
+        }
+
+        if (
+          error.message.includes("first argument must be of type string") ||
+          error.message.includes("undefined")
+        ) {
+          errorMessage =
+            "Missing required data. Please complete all required fields and try again.";
+          console.error(
+            "Likely FormData error with undefined values:",
+            error.message
+          );
+        } else if (error.message.includes("verification")) {
+          errorMessage = "Please upload a verification document and try again.";
+          console.error("Verification document error:", error.message);
+
+          // Try to get more information about the error
+          if (error.response?.data) {
+            console.error(
+              "Server verification error details:",
+              JSON.stringify(error.response.data)
+            );
+          }
+
+          // Log the verification document status
+          try {
+            // Note: formData is not in scope here, so we'll log what we can
+            console.error(
+              "Error occurred during verification document handling"
+            );
+          } catch (e) {
+            console.error("Could not check verification status:", e);
+          }
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+          console.error("Server error:", error.response.data);
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -241,100 +831,124 @@ const PhotoUploadScreen: React.FC = () => {
     handleRegistration(false);
   };
 
+  // Add a more visible console log for debugging the Done button
   const handleDone = () => {
+    console.log(
+      "✅ Done button pressed - continuing with registration and uploading selected image"
+    );
     handleRegistration(true);
   };
 
   const handleContinue = () => {
+    if (isLoading) return; // Prevent navigation during loading
+
     if (role === "doctor") {
       navigation.navigate("RegistrationSubmitted");
     } else {
-      navigation.navigate("EmailVerification", { emailToken });
+      setTimeout(() => {
+        navigation.navigate("EmailVerification", {
+          emailToken,
+          userRole: role,
+          email: userData.email,
+        });
+      }, 500);
     }
   };
 
+  const handleTryAnotherEmail = () => {
+    setError(null);
+    setShowSuccess(false);
+    setEmailToken(null);
+  };
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeAreaTop}>
-        <ScrollView
-          contentContainerStyle={styles.scrollViewContent}
-          keyboardShouldPersistTaps="always"
-          removeClippedSubviews={false}
-        >
-          <View style={styles.headerContainer}>
-            <BackButton />
-          </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.headerContainer}>
+          <BackButton />
+        </View>
 
-          <AuthHeader
-            title="Create your account"
-            subtitle="Join ZenCare – Your Personal Health Companion"
-          />
+        <AuthHeader
+          title={`${isExistingUser ? "Add" : "Upload"} your photo`}
+          subtitle={`${
+            isExistingUser ? "Add" : "Upload"
+          } a profile picture to personalize your account`}
+        />
 
-          <View style={styles.formOuterContainer}>
-            <View style={styles.formContainer}>
-              <View style={styles.photoContainer}>
-                <Image
-                  source={selectedImage ? { uri: selectedImage } : userIcon}
-                  style={styles.photoPlaceholder}
-                />
-              </View>
-
-              <Text style={styles.uploadText}>
-                Upload Photo from your phone
-              </Text>
-
-              <View style={styles.uploadContainer}>
-                <AuthButton
-                  title="Upload"
-                  onPress={handleUpload}
-                  buttonStyle={styles.uploadButton}
-                  textButtonStyle={styles.uploadButtonText}
-                />
-                <View style={styles.buttonSpacer} />
-                <AuthButton
-                  title="Skip"
-                  onPress={handleSkip}
-                  buttonStyle={styles.skipButton}
-                  textButtonStyle={styles.skipButtonText}
-                />
-              </View>
-
-              {selectedImage && (
-                <AuthButton
-                  title="Done"
-                  onPress={handleDone}
-                  buttonStyle={styles.doneButton}
-                />
-              )}
-            </View>
-
-            <AuthFooter
-              question="Need help?"
-              actionText="Visit our help center"
-              onPress={() => {}}
-              style={styles.footerContainer}
+        <View style={styles.contentContainer}>
+          <View style={styles.imageContainer}>
+            <Image
+              source={selectedImage ? { uri: selectedImage } : userIcon}
+              style={styles.profileImage}
             />
           </View>
-        </ScrollView>
-      </SafeAreaView>
 
-      <SuccessOverlay
-        visible={showSuccess}
-        title="Registration Successful!"
-        message={
-          role === "doctor"
-            ? "Thank you for registering as a doctor. An administrator will verify your account before you can log in. Please check your email for further instructions."
-            : "We have sent you a verification code by email"
-        }
-        onContinue={handleContinue}
-      />
-      <LoadingOverlay visible={isLoading} />
-      <ErrorOverlay
-        visible={!!error}
-        message={error || ""}
-        onRetry={() => setError(null)}
-      />
-    </View>
+          <View style={styles.buttonContainer}>
+            {!selectedImage ? (
+              <AuthButton
+                title="Upload Photo"
+                onPress={handleUpload}
+                buttonStyle={styles.uploadButton}
+                textButtonStyle={styles.uploadButtonText}
+              />
+            ) : (
+              <AuthButton
+                title="Done"
+                onPress={handleDone}
+                buttonStyle={styles.doneButton}
+                textButtonStyle={styles.doneButtonText}
+              />
+            )}
+
+            <AuthButton
+              title={
+                isExistingUser
+                  ? "Complete Registration"
+                  : "Continue without Photo"
+              }
+              onPress={handleSkip}
+              buttonStyle={styles.skipButton}
+              textButtonStyle={styles.skipButtonText}
+            />
+          </View>
+
+          <AuthFooter
+            question={
+              isExistingUser
+                ? "Already have both roles?"
+                : "Already have an account?"
+            }
+            actionText="Sign In"
+            onPress={() => navigation.navigate("Login")}
+          />
+        </View>
+      </ScrollView>
+
+      {isLoading && <LoadingOverlay visible={true} />}
+
+      {error && (
+        <ErrorOverlay
+          visible={true}
+          message={error}
+          onRetry={() => setError(null)}
+        />
+      )}
+
+      {showSuccess && (
+        <SuccessOverlay
+          visible={true}
+          title="Success!"
+          message={
+            isExistingUser
+              ? `${
+                  role === "doctor" ? "Doctor" : "Patient"
+                } role added successfully!`
+              : "Account created successfully!"
+          }
+          onContinue={handleContinue}
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
@@ -343,83 +957,67 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.primary500,
   },
-  safeAreaTop: {
-    flex: 1,
-    marginTop: 50,
-  },
-  scrollViewContent: {
+  scrollContainer: {
     flexGrow: 1,
   },
   headerContainer: {
     flexDirection: "row",
     justifyContent: "flex-start",
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
-  formOuterContainer: {
+  contentContainer: {
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 32,
     paddingTop: 48,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-  },
-  formContainer: {
-    gap: 20,
     alignItems: "center",
   },
-  photoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
+  imageContainer: {
+    marginBottom: 40,
   },
-  photoPlaceholder: {
+  profileImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
+    borderColor: Colors.primary100,
+  },
+  buttonContainer: {
     width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  uploadContainer: {
-    width: "80%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: 16,
+    marginBottom: 40,
   },
   uploadButton: {
     backgroundColor: Colors.primary500,
-    width: 100,
   },
   uploadButtonText: {
-    color: "white",
-    fontFamily: "open-sans-bold",
+    color: "#fff",
   },
   skipButton: {
-    backgroundColor: "white",
-    color: Colors.primary500,
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderColor: Colors.primary500,
-    width: 100,
   },
   skipButtonText: {
     color: Colors.primary500,
-    fontFamily: "open-sans-bold",
-  },
-  buttonSpacer: {
-    width: 16,
-  },
-  uploadText: {
-    fontSize: 16,
-    fontFamily: "open-sans",
-    marginTop: 16,
-    color: Colors.primary600,
   },
   doneButton: {
-    width: "80%",
+    backgroundColor: Colors.primary500,
+    paddingVertical: 15,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  footerContainer: {
-    marginTop: "auto",
-    marginBottom: 32,
+  doneButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
 

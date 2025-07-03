@@ -125,7 +125,6 @@ export const registerNewDoctorUserService = async (
       }
     }
 
-
     // Prepare pending doctor data for Redis
 
     const pendingDoctorData = {
@@ -210,7 +209,32 @@ export const registerNewDoctorUserService = async (
         );
       }
       const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+
+      // Validate that the file path exists and is readable
+      if (!fs.existsSync(uploadResult.path)) {
+        throw new ErrorHandlerClass(
+          "Verification ID file not found at upload path.",
+          400,
+          "File Error",
+          "File not found"
+        );
+      }
+
       const fileBuffer = fs.readFileSync(uploadResult.path);
+
+      // Validate that we have a valid file buffer
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new ErrorHandlerClass(
+          "Verification ID file is empty or corrupted.",
+          400,
+          "File Error",
+          "Empty file buffer"
+        );
+      }
+
+      console.log(
+        `Processing verification file - Size: ${fileBuffer.length} bytes`
+      );
 
       // Read the uploaded file and encrypt it
       const { encryptedData, iv } = encrypt(fileBuffer, userData.userName);
@@ -292,7 +316,7 @@ export const addDoctorRoleToExistingUserService = async (
     const customId = `${existingUser.firstName}_${nanoid(4)}`;
 
     if (!files || !files.profileImage) {
-      const defaultImage = getDefaultImageByGender(userData.gender);
+      const defaultImage = getDefaultImageByGender(existingUser.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,
@@ -326,7 +350,7 @@ export const addDoctorRoleToExistingUserService = async (
     }
 
     // Validate clinic branches
-    clinicBranchesInput.forEach(branch => {
+    clinicBranchesInput.forEach((branch) => {
       if (!branch.address || !branch.address.coordinates) {
         throw new ErrorHandlerClass(
           "Each clinic branch must have an address with coordinates",
@@ -354,23 +378,84 @@ export const addDoctorRoleToExistingUserService = async (
         user: existingUser._id,
         rating: { average: 0, count: 0 },
         verification: { isVerified: false },
-        isAdminApproved: false
+        isAdminApproved: false,
       },
-      profileImageObject
+      profileImageObject,
     };
 
     await redisClient.SET(
       `pendingDoctor:${existingUser._id}`,
       JSON.stringify(pendingDoctorData),
       172800 // 48 hours expiry
-    );
-
-    // Handle verification ID image (store locally encrypted)
+    ); // Handle verification ID image (store locally encrypted)
     if (files && files.verificationId) {
-      const uploadResult = files.verificationId[0];
-      const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+      console.log("Starting verification ID processing...");
+      console.log("Files object:", JSON.stringify(files, null, 2));
+      console.log("Verification ID files count:", files.verificationId.length);
 
+      const uploadResult = files.verificationId[0];
+      console.log(
+        "Upload result object:",
+        JSON.stringify(uploadResult, null, 2)
+      );
+
+      // Validate file upload result
+      if (!uploadResult || !uploadResult.path) {
+        console.error("Invalid upload result - missing path");
+        throw new ErrorHandlerClass(
+          "Verification ID file upload failed or path missing.",
+          400,
+          "File Error",
+          "Invalid upload result"
+        );
+      }
+
+      console.log("Upload result path:", uploadResult.path);
+      console.log("Upload result filename:", uploadResult.filename);
+
+      const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+      console.log("Target file path:", filePath);
+
+      // Validate that the file path exists and is readable
+      if (!fs.existsSync(uploadResult.path)) {
+        console.error("Source file does not exist:", uploadResult.path);
+        throw new ErrorHandlerClass(
+          "Verification ID file not found at upload path.",
+          400,
+          "File Error",
+          "File not found"
+        );
+      }
+
+      console.log("Reading file buffer from:", uploadResult.path);
       const fileBuffer = fs.readFileSync(uploadResult.path);
+      console.log("File buffer type:", typeof fileBuffer);
+      console.log("File buffer constructor:", fileBuffer.constructor.name);
+      console.log(
+        "File buffer length:",
+        fileBuffer ? fileBuffer.length : "null/undefined"
+      );
+
+      // Validate that we have a valid file buffer
+      if (!fileBuffer || fileBuffer.length === 0) {
+        console.error("File buffer is empty or invalid");
+        throw new ErrorHandlerClass(
+          "Verification ID file is empty or corrupted.",
+          400,
+          "File Error",
+          "Empty file buffer"
+        );
+      }
+
+      console.log(
+        `Processing existing user verification file - Size: ${fileBuffer.length} bytes`
+      );
+
+      console.log("About to call encrypt function with:");
+      console.log("- Buffer type:", typeof fileBuffer);
+      console.log("- Buffer is Buffer?", Buffer.isBuffer(fileBuffer));
+      console.log("- User ID:", existingUser._id.toString());
+
       const { encryptedData, iv } = encrypt(
         fileBuffer,
         existingUser._id.toString()
@@ -394,10 +479,10 @@ export const addDoctorRoleToExistingUserService = async (
     return {
       status: 201,
       success: true,
-      message: "Wait for admin approval during the next 24 hours to get your account verified",
-      data: { userId: existingUser._id }
+      message:
+        "Wait for admin approval during the next 24 hours to get your account verified",
+      data: { userId: existingUser._id },
     };
-
   } catch (error) {
     if (session) {
       await session.abortTransaction();

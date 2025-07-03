@@ -59,6 +59,13 @@ const EmailVerificationScreen: React.FC = () => {
 
         // For doctors, just show success and navigate to registration submitted
         setShowVerified(true);
+
+        // Auto-navigate to RegistrationSubmittedScreen after a short delay
+        setTimeout(() => {
+          setShowVerified(false);
+          navigation.navigate("RegistrationSubmitted");
+        }, 1500);
+
         return;
       } else {
         // Patient verification

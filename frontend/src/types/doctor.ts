@@ -35,15 +35,10 @@ export interface ClinicBranch {
 }
 
 export interface Address {
-  street: string;
-  city: string;
-  country: string;
-  buildingNumber?: number;
-  buildingName?: string;
-  neighborhood?: string;
+  displayName: string;
   coordinates: {
-    longitude: number;
     latitude: number;
+    longitude: number;
   };
 }
 
@@ -53,7 +48,7 @@ export interface DoctorAppointment {
   patientId: string;
   date: string;
   time: string;
-  status: 'scheduled' | 'completed' | 'cancelled';
-  type: 'virtual' | 'in-person';
+  status: "scheduled" | "completed" | "cancelled";
+  type: "virtual" | "in-person";
   notes?: string;
 }

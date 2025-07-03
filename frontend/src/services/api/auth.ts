@@ -1,4 +1,6 @@
 import apiClient from "./apiClient";
+import { dummyDoctor } from "../../mockData/doctors";
+import { dummyAdmin } from "../../mockData/admins";
 // Import store reference function instead of direct import to avoid circular dependency
 import { injectStore } from "./apiClient";
 
@@ -43,9 +45,6 @@ export interface ResetPasswordData {
 export const authService = {
   login: async (credentials: LoginCredentials) => {
     try {
-      // Import the dummy doctor data for local authentication
-      const { dummyDoctor } = await import("../../mockData/doctors.js");
-
       // Check if the credentials match the dummy doctor account
       if (
         credentials.email === dummyDoctor.email &&
@@ -62,7 +61,23 @@ export const authService = {
         };
       }
 
-      // If not a doctor login, proceed with regular API call
+      // Check if the credentials match the dummy admin account
+      if (
+        credentials.email === dummyAdmin.email &&
+        credentials.password === dummyAdmin.password
+      ) {
+        console.log("Admin login successful");
+        // Return mock admin data with dummy tokens
+        return {
+          user: {
+            ...dummyAdmin,
+            token: "dummy-admin-token",
+            refreshToken: "dummy-admin-refresh-token",
+          },
+        };
+      }
+
+      // If not a doctor or admin login, proceed with regular API call
       const response = await apiClient.post("/auth/login", credentials);
       const { data } = response.data; // Access nested data structure
       if (!data || !data.user) {
@@ -106,18 +121,88 @@ export const authService = {
 
   signupDoctorFormData: async (data: FormData) => {
     try {
-      const response = await apiClient.post("/doctor/register", data, {
+      console.log("Submitting doctor registration...");
+      const response = await apiClient.post("/doctor/register-new", data, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
       return response.data;
     } catch (error: any) {
-      console.log("error:", error.response);
+      console.log(
+        "Doctor registration error:",
+        error.response?.data || error.message
+      );
       const errorMessage =
         error.response?.data?.error ||
         error.message ||
         "Doctor registration failed";
+      throw new Error(errorMessage);
+    }
+  },
+
+  signupExistingDoctorFormData: async (data: FormData) => {
+    try {
+      console.log("Submitting existing user doctor registration...");
+      const response = await apiClient.post("/doctor/register-existing", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.log(
+        "Existing user doctor registration error:",
+        error.response?.data || error.message
+      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Doctor registration failed";
+      throw new Error(errorMessage);
+    }
+  },
+
+  signupPatientFormData: async (data: FormData) => {
+    try {
+      console.log("Submitting patient registration...");
+      const response = await apiClient.post("/patient/register-new", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.log(
+        "Patient registration error:",
+        error.response?.data || error.message
+      );
+      const errorMessage =
+        error.response?.data?.error || error.message || "Registration failed";
+      throw new Error(errorMessage);
+    }
+  },
+
+  signupExistingPatientFormData: async (data: FormData) => {
+    try {
+      console.log("Submitting existing user patient registration...");
+      const response = await apiClient.post(
+        "/patient/register-existing",
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.log(
+        "Existing user patient registration error:",
+        error.response?.data || error.message
+      );
+      const errorMessage =
+        error.response?.data?.error || error.message || "Registration failed";
       throw new Error(errorMessage);
     }
   },
@@ -282,11 +367,11 @@ export const authService = {
     emailToken: string;
   }) => {
     try {
-      const response = await apiClient.patch(
-        "/doctor/verify-email",
+      const response = await apiClient.post(
+        "/auth/verify-email-otp",
         {
           otp: data.otp,
-          email: data.email,
+          
         },
         {
           headers: {

@@ -34,6 +34,10 @@ const slotSchema = new Schema(
       enum: Object.values(AppointmentType),
       required: true,
     },
+    price: {
+      type: Number,
+      required: true,
+    },
   },
   {
     timestamps: true, // This will add createdAt and updatedAt fields

@@ -62,9 +62,14 @@ const LoginScreen: React.FC = () => {
   React.useEffect(() => {
     if (user) {
       // Check user role for navigation
-      if (user.activeRole === 'doctor') {
+      if (user.activeRole === "doctor") {
         // Navigate to DoctorDrawerNavigation
         navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
+      } else if (user.role.includes("admin")) {
+        // Navigate to AdminDrawerNavigation
+        navigation.navigate("AdminDrawer", {
+          screen: "AdminDoctorVerification",
+        });
       } else {
         // Navigate to patient DrawerNavigation with MainTabs as the initial screen
         navigation.navigate("Drawer", { screen: "MainTabs" });
