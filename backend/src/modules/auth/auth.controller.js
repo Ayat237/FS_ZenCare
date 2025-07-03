@@ -3,6 +3,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import database from "../../../database/databaseConnection.js";
 import {
+  AddressModel,
   Patient,
   PatientModel,
   User,
@@ -24,18 +25,19 @@ import { nanoid } from "nanoid";
 
 const userModel = new UserModel(database);
 const patientModel = new PatientModel(database);
+const addressModel = new AddressModel(database);
 
 export const login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await userModel.findByEmail(email);
+  const user = await userModel.findOne({ email , isVerified: true }, { populate: "patientID doctorID" });
   if (!user) {
     return next(
       new ErrorHandlerClass(
-        "User not found",
+        "You are not found or not verified, please verify your email first to login",
         400,
         "Valiation error",
-        "Error in login user found"
+        "Error in login user found or not verified"
       )
     );
   }
@@ -77,8 +79,16 @@ export const login = async (req, res, next) => {
       message: "Multiple roles detected. Please select a role.",
       data: {
         roles: [
-          { role: possibleRoles.PATIENT, id: user.patientID },
-          { role: possibleRoles.DOCTOR, id: user.doctorID },
+          {
+            role: possibleRoles.PATIENT,
+            image: user?.patientID?.profileImage?.URL?.secure_url || null,
+            id: user.patientID._id,
+          },
+          {
+            role: possibleRoles.DOCTOR,
+            image: user?.doctorID?.profileImage?.URL?.secure_url || null,
+            id: user.doctorID._id,
+          },
         ],
         userId: user._id,
       },
@@ -206,7 +216,7 @@ export const verifyEmailOTP = async (req, res, next) => {
     },
     {
       isVerified: true,
-      activeRole: user.role[0]
+      activeRole: user.role[0],
     },
     { new: true }
   );
@@ -217,7 +227,8 @@ export const verifyEmailOTP = async (req, res, next) => {
   if (user.role[0] === possibleRoles.DOCTOR) {
     return res.status(200).json({
       success: true,
-      message: "Email verified successfully. Please wait for admin verification within 24 hours. You will receive a confirmation email.",
+      message:
+        "Email verified successfully. Please wait for admin verification within 24 hours. You will receive a confirmation email.",
     });
   }
 
@@ -309,10 +320,23 @@ export const resendOtp = async (req, res, next) => {
   // Send verification email
   const isEmailSent = await sendEmailService({
     to: user.email,
-    subject: "Verify Your Account with OTP",
-    htmlMessage: `<h3>Your OTP for patient registration is: <strong>${newOtp}</strong></h3>
-       <p>It expires in 5 minutes.</p>`,
+    subject: "Action Required: Verify Your Email Address",
+    htmlMessage: `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #007BFF;">Email Verification - ${user.role[0]}</h2>
+      <p>Hello ${user.firstName || "User"},</p>
+      <p>Thank you for registering. To verify your account, please use the following One-Time Password (OTP):</p>
+      <p style="font-size: 20px; font-weight: bold; color: #000; margin: 15px 0;">${newOtp}</p>
+      <p>This OTP will expire in <strong>10 minutes</strong>.</p>
+      <p style="color: #cc0000;"><strong>Important:</strong> Do not share this code with anyone for security reasons.</p>
+      <p>If you didn't request this, you can safely ignore this message.</p>
+      <br />
+      <p>Best regards,</p>
+      <p><strong>zenCare</strong></p>
+    </div>
+  `,
   });
+
   if (isEmailSent.rejected.length) {
     logger.error("Failed to send verification email", error);
     return next(
@@ -355,6 +379,7 @@ export const forgetPassword = async (req, res, next) => {
 
   // 4. Store OTP in Redis
   await redisClient.SET(`otp:${user.userName}`, otp, otpExpiry);
+  console.log("otp", user.userName);
 
   const emailToken = jwt.sign(
     {
@@ -376,7 +401,7 @@ export const forgetPassword = async (req, res, next) => {
       <p>This code will expire in <strong>10 minutes</strong>. If you did not request this, please ignore this email or contact our support team immediately.</p>
       <br/>
       <p>Best regards,</p>
-      <p><strong>The [YourAppName] Support Team</strong></p>
+      <p><strong>zenCare</strong></p>
     </div>
   `,
   });
@@ -574,7 +599,7 @@ export const resendOtpPassword = async (req, res, next) => {
     subject: "Action Required: Verify Your Email Address",
     htmlMessage: `
       <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
-        <h2 style="color: #007BFF;">Email Verification – Patient Registration</h2>
+        <h2 style="color: #007BFF;">Email Verification - ${user.role[0]}</h2>
         <p>Hello ${user.fullName || "User"},</p>
         <p>Thank you for registering as a patient on our platform. Please use the One-Time Password (OTP) below to verify your email address:</p>
         <p style="font-size: 20px; font-weight: bold; color: #000; margin: 15px 0;">${newOtp}</p>
@@ -586,7 +611,7 @@ export const resendOtpPassword = async (req, res, next) => {
       </div>
     `,
   });
-  
+
   if (isEmailSent.rejected.length) {
     logger.error("Failed to send verification email", error);
     return next(
@@ -642,41 +667,41 @@ export const logout = async (req, res, next) => {
 export const getLoggedInProfile = async (req, res, next) => {
   const user = req.authUser;
 
+  if (!user.isVerified) {
+    return res.status(403).json({
+      success: false,
+      message: "User is not verified, please verify your email",
+    });
+  }
+
   // Determine profile image based on active role
   let profileImage = null;
   if (user.activeRole === possibleRoles.PATIENT && user.patientID) {
-    const patient = user.patientID.toObject(); // Already populated
+    const patient = user.patientID.toObject ? user.patientID.toObject() : user.patientID;
     profileImage = patient?.profileImage?.URL?.secure_url;
-    // Return user profile
+    const address = await addressModel.findById(patient._id);
+    // Return user profile with all patient data up to address
     res.status(200).json({
       success: true,
       message: "User profile retrieved successfully",
       data: {
-        Name: user.firstName + " " + user.lastName,
-        userName: user.userName,
-        email: user.email,
-        role: user.role,
-        mobilePhone: user.mobilePhone,
-        gender: user.gender,
-        age: patient.age,
-        activeRole: user.activeRole,
-        profileImage,
+        ...user.toObject(),
+        address: address,
+     //   profileImage,
       },
     });
   } else if (user.activeRole === possibleRoles.DOCTOR && user.doctorID) {
-    const doctor = user.doctorID; // Already populated
+    const doctor = user.doctorID.toObject ? user.doctorID.toObject() : user.doctorID;
     profileImage = doctor?.profileImage?.URL?.secure_url;
+    // Return user profile with all doctor data
     return res.status(200).json({
       success: true,
       message: "User profile retrieved successfully",
       data: {
-        Name: user.firstName + " " + user.lastName,
-        userName: user.userName,
-        email: user.email,
-        role: user.role,
-        mobilePhone: user.mobilePhone,
-        gender: user.gender,
-        activeRole: user.activeRole,
+        ...user.toObject(),
+        doctor: {
+          ...doctor,
+        },
         profileImage,
       },
     });

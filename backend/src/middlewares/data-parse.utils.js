@@ -7,6 +7,7 @@ export const parseCoordinatesFromFormData = (req, res, next) => {
     console.error("Invalid coordinates JSON:", error.message);
     req.body.coordinates = {}; // fallback so Joi validation fails correctly
   }
+  console.log("Coordinates parsed successfully", req.body.coordinates);
   next();
 };
 
@@ -33,6 +34,7 @@ export const parseDoctorFormData = (req, res, next) => {
   safeParseArray("education");
   safeParseArray("certifications");
   safeParseArray("hospitalAffiliation");
+  safeParseArray("clinicBranches");
   safeParseArray("role");
 
   next();

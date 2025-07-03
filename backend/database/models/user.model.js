@@ -2,6 +2,7 @@ import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
 import { logger, Provider, systemRoles } from "../../src/utils/index.js";
 import { hashSync } from "bcryptjs";
+import { Gender } from "../../src/utils/enums.utils.js";
 
 const userSchema = new Schema(
   {
@@ -68,6 +69,12 @@ const userSchema = new Schema(
       unique: true,
       sparse: true,
     }, // sparse allows null values to be non-unique
+    gender: {
+      type: String,
+      enum: Object.values(Gender),
+      default: Gender.OTHER,
+      required: true,
+    },
   },
   { timestamps: true }
 );

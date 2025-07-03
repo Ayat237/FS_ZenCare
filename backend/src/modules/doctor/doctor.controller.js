@@ -10,6 +10,7 @@ import redisClient from "../../utils/redis.utils.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import { uploadFile } from "../../utils/cloudinary.utils.js";
 
+
 const userModel = new UserModel(database);
 
 /**
@@ -47,6 +48,7 @@ export const registerDoctor = async (req, res, next) => {
       confirmedPassword,
       mobilePhone,
       role,
+      gender,
     };
 
     const doctorData = {
@@ -55,7 +57,6 @@ export const registerDoctor = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      gender,
       addressLabel,
       clinicPhoneNumber,
       coordinates,
@@ -480,9 +481,7 @@ export const registerNewDoctorUser = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      addressLabel,
-      clinicPhoneNumber,
-      coordinates,
+      clinicBranches,
       gender,
     } = req.body;
 
@@ -495,6 +494,7 @@ export const registerNewDoctorUser = async (req, res, next) => {
       confirmedPassword,
       mobilePhone,
       role,
+      gender,
     };
 
     const doctorData = {
@@ -503,10 +503,7 @@ export const registerNewDoctorUser = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      gender,
-      addressLabel,
-      clinicPhoneNumber,
-      coordinates,
+      clinicBranches,
     };
 
     const result = await registerNewDoctorUserService(userData, doctorData, req.files);
@@ -533,10 +530,7 @@ export const addDoctorRoleToExistingUser = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      addressLabel,
-      clinicPhoneNumber,
-      coordinates,
-      gender,
+      clinicBranches,
       email,
     } = req.body;
 
@@ -558,10 +552,7 @@ export const addDoctorRoleToExistingUser = async (req, res, next) => {
       education,
       certifications,
       hospitalAffiliation,
-      gender,
-      addressLabel,
-      clinicPhoneNumber,
-      coordinates,
+      clinicBranches,
     };
 
     const result = await addDoctorRoleToExistingUserService(existingUser, doctorData, req.files);

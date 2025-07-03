@@ -26,6 +26,16 @@ export const registerNewPatientUserService = async (userData, patientData, file)
         "User already exists"
       );
     }
+    // Check for existing patient by userName
+    const existingPatient = await patientModel.findOne({ userName: userData.userName });
+    if (existingPatient) {
+      throw new ErrorHandlerClass(
+        "Patient already exists with this userName",
+        409,
+        "Duplicate Error",
+        "Patient already exists"
+      );
+    }
 
     // Validate password match
     if (userData.password !== userData.confirmedPassword) {
@@ -49,7 +59,7 @@ export const registerNewPatientUserService = async (userData, patientData, file)
     const customId = userData.firstName + nanoid(4);
 
     if (!file) {
-      const defaultImage = getDefaultImageByGender(patientData.gender);
+      const defaultImage = getDefaultImageByGender(userData.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,
@@ -169,7 +179,7 @@ export const addPatientRoleToExistingUserService = async (existingUser, patientD
     const customId = existingUser.firstName + nanoid(4);
 
     if (!file) {
-      const defaultImage = getDefaultImageByGender(patientData.gender);
+      const defaultImage = getDefaultImageByGender(userData.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,

@@ -35,7 +35,6 @@ if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
   fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 }
 
-
 // Admin login
 
 // API 1: Register New Doctor User (user does not exist)
@@ -60,7 +59,16 @@ export const registerNewDoctorUserService = async (
         "User already exists"
       );
     }
-
+    // Check for existing doctor by userName
+    const existingDoctor = await doctorModel.findOne({ userName: userData.userName });
+    if (existingDoctor) {
+      throw new ErrorHandlerClass(
+        "Doctor already exists with this userName",
+        409,
+        "Duplicate Error",
+        "Doctor already exists"
+      );
+    }
     // Validate password match
     if (userData.password !== userData.confirmedPassword) {
       throw new ErrorHandlerClass(
@@ -83,7 +91,7 @@ export const registerNewDoctorUserService = async (
     const customId = `${userData.firstName}_${nanoid(4)}`;
 
     if (!files || !files.profileImage) {
-      const defaultImage = getDefaultImageByGender(doctorData.gender);
+      const defaultImage = getDefaultImageByGender(userData.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,
@@ -98,21 +106,56 @@ export const registerNewDoctorUserService = async (
       });
       profileImageObject = { URL: { secure_url, public_id }, customId };
     }
+    // Parse and validate clinicBranches
+    let clinicBranchesInput = [];
+    if (Array.isArray(doctorData.clinicBranches)) {
+      clinicBranchesInput = doctorData.clinicBranches;
+    } else if (typeof doctorData.clinicBranches === 'string') {
+      try {
+        clinicBranchesInput = JSON.parse(doctorData.clinicBranches);
+      } catch (e) {
+        throw new ErrorHandlerClass(
+          'clinicBranches must be a valid JSON array',
+          400,
+          'Validation Error',
+          'Invalid clinicBranches format'
+        );
+      }
+    }
+
+    // Create Addresses for clinic branches
+    const clinicBranches = await Promise.all(
+      (clinicBranchesInput || []).map(async (branch) => {
+        if (!branch.address || !branch.address.coordinates) {
+          throw new ErrorHandlerClass(
+            'Each clinic branch must have an address with coordinates',
+            400,
+            'Validation Error',
+            'Missing address or coordinates in clinic branch'
+          );
+        }
+        const { longitude, latitude } = branch.address.coordinates;
+        if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+          throw new ErrorHandlerClass(
+            'Coordinates must include valid longitude and latitude',
+            400,
+            'Validation Error',
+            'Invalid coordinates in clinic branch address'
+          );
+        }
+        const address = new Address({
+          ...branch.address,
+          coordinates: { longitude, latitude },
+          doctorId: null, // will update after doctor is created
+        });
+        await addressModel.save(address, { session });
+        return { address: address._id, phoneNumber: branch.phoneNumber };
+      })
+    );
 
     // Capitalize names
     userData.firstName = capitalizeName(userData.firstName);
     userData.lastName = capitalizeName(userData.lastName);
-
-    // Create address for clinic branch
-    const addressObject = new Address({
-      displayName: doctorData.addressLabel,
-      coordinates: doctorData.coordinates,
-    });
-    await addressModel.save(addressObject, { session });
-    const clinicBranches = {
-      address: addressObject._id,
-      phoneNumber: doctorData.clinicPhoneNumber,
-    };
 
     // Create user document
     const userObject = new User({
@@ -127,19 +170,25 @@ export const registerNewDoctorUserService = async (
     // Create doctor document
     const doctorObject = new Doctor({
       ...doctorData,
-      user: userObject._id,
       clinicBranches,
+      user: userObject._id,
       profileImage: profileImageObject,
       rating: { average: 0, count: 0 },
     });
     await doctorModel.save(doctorObject, { session });
-
     // Link doctor to address
-    addressObject.doctorID = doctorObject._id;
-    await addressModel.save(addressObject, { session });
+    await Promise.all(
+      clinicBranches.map(async (branch) => {
+        await addressModel.updateById(
+          { _id: branch.address },
+          { doctorId: doctorObject._id },
+          { session }
+        );
+      })
+    );
 
     // Link doctor to user
-    userObject.doctorID = doctorObject._id;
+    userObject.doctorID= doctorObject._id;
     await userModel.save(userObject, { session });
 
     await session.commitTransaction();
@@ -187,7 +236,10 @@ export const registerNewDoctorUserService = async (
 
       // Read the uploaded file and encrypt it
       const fileBuffer = fs.readFileSync(uploadResult.path);
-      const { encryptedData, iv } = encrypt(fileBuffer, userObject._id.toString());
+      const { encryptedData, iv } = encrypt(
+        fileBuffer,
+        userObject._id.toString()
+      );
 
       // Save encrypted data to local server
       fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
@@ -279,7 +331,7 @@ export const addDoctorRoleToExistingUserService = async (
     const customId = `${existingUser.firstName}_${nanoid(4)}`;
 
     if (!files || !files.profileImage) {
-      const defaultImage = getDefaultImageByGender(doctorData.gender);
+      const defaultImage = getDefaultImageByGender(userData.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,
@@ -295,16 +347,52 @@ export const addDoctorRoleToExistingUserService = async (
       profileImageObject = { URL: { secure_url, public_id }, customId };
     }
 
-    // Create address for clinic branch
-    const addressObject = new Address({
-      displayName: doctorData.addressLabel,
-      coordinates: doctorData.coordinates,
-    });
-    await addressModel.save(addressObject, { session });
-    const clinicBranches = {
-      address: addressObject._id,
-      phoneNumber: doctorData.clinicPhoneNumber,
-    };
+    // Parse and validate clinicBranches
+    let clinicBranchesInput = [];
+    if (Array.isArray(doctorData.clinicBranches)) {
+      clinicBranchesInput = doctorData.clinicBranches;
+    } else if (typeof doctorData.clinicBranches === 'string') {
+      try {
+        clinicBranchesInput = JSON.parse(doctorData.clinicBranches);
+      } catch (e) {
+        throw new ErrorHandlerClass(
+          'clinicBranches must be a valid JSON array',
+          400,
+          'Validation Error',
+          'Invalid clinicBranches format'
+        );
+      }
+    }
+
+    // Create Addresses for clinic branches
+    const clinicBranches = await Promise.all(
+      (clinicBranchesInput || []).map(async (branch) => {
+        if (!branch.address || !branch.address.coordinates) {
+          throw new ErrorHandlerClass(
+            'Each clinic branch must have an address with coordinates',
+            400,
+            'Validation Error',
+            'Missing address or coordinates in clinic branch'
+          );
+        }
+        const { longitude, latitude } = branch.address.coordinates;
+        if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+          throw new ErrorHandlerClass(
+            'Coordinates must include valid longitude and latitude',
+            400,
+            'Validation Error',
+            'Invalid coordinates in clinic branch address'
+          );
+        }
+        const address = new Address({
+          ...branch.address,
+          coordinates: { longitude, latitude },
+          doctorId: null, // will update after doctor is created
+        });
+        await addressModel.save(address, { session });
+        return { address: address._id, phoneNumber: branch.phoneNumber };
+      })
+    );
 
     // Only update user roles and link doctorID
     if (!existingUser.role.includes(possibleRoles.DOCTOR)) {
@@ -315,16 +403,23 @@ export const addDoctorRoleToExistingUserService = async (
     // Create doctor document
     const doctorObject = new Doctor({
       ...doctorData,
-      user: existingUser._id,
       clinicBranches,
+      user: existingUser._id,
       profileImage: profileImageObject,
       rating: { average: 0, count: 0 },
     });
     await doctorModel.save(doctorObject, { session });
 
-    // Link doctor to address
-    addressObject.doctorID = doctorObject._id;
-    await addressModel.save(addressObject, { session });
+    // Update doctorId in addresses
+    await Promise.all(
+      clinicBranches.map(async (branch) => {
+        await addressModel.updateById(
+          { _id: branch.address },
+          { doctorId: doctorObject._id },
+          { session }
+        );
+      })
+    );
 
     // Link doctor to user (do not update other user fields)
     existingUser.doctorID = doctorObject._id;
@@ -362,7 +457,8 @@ export const addDoctorRoleToExistingUserService = async (
     return {
       status: 201,
       success: true,
-      message: "wait for admin approval during the next 24 hours to get your account verified, and re-login  ",
+      message:
+        "wait for admin approval during the next 24 hours to get your account verified, and re-login  ",
       data: { doctorId: doctorObject._id },
     };
   } catch (error) {

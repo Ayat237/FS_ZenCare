@@ -57,8 +57,9 @@ export const registerNewPatientUser = async (req, res, next) => {
       confirmedPassword,
       mobilePhone,
       role,
+      gender,
     };
-    const patientData = { gender, birthDate, address, coordinates };
+    const patientData = { birthDate, address, coordinates };
 
     const result = await registerNewPatientUserService(
       userData,
@@ -314,7 +315,7 @@ export const removeProfileImage = async (req, res, next) => {
   }
 
   // Set the default image based on gender
-  const defaultImage = getDefaultImageByGender(patient.gender);
+  const defaultImage = getDefaultImageByGender(user.gender);
   updateData.profileImage = {
     URL: {
       secure_url: defaultImage.secure_url, // Shared default secure_url

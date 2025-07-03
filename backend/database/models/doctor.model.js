@@ -1,6 +1,6 @@
 import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
-import { Gender, Specialties } from "../../src/utils/enums.utils.js";
+import { Specialties } from "../../src/utils/enums.utils.js";
 
 const doctorSchema = new Schema(
   {
@@ -54,12 +54,6 @@ const doctorSchema = new Schema(
         required: false,
         unique: true,
       },
-    },
-    gender: {
-      type: String,
-      enum: Object.values(Gender),
-      default: Gender.OTHER,
-      required: true,
     },
     yearsOfExperience: {
       type: Number,

@@ -66,6 +66,7 @@ export const completeLogin = async (user, selectedRole, selectedId, res) => {
         userName: user.userName,
         email: user.email,
         mobilePhone: user.mobilePhone,
+        gender: user.gender,
         role: selectedRole,
         activeRole: selectedRole,
         profileImage,

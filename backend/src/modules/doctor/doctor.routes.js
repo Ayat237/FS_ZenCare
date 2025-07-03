@@ -3,10 +3,9 @@ import * as doctorController from "./doctor.controller.js";
 import { errorHandling } from "../../middlewares/error-hanling.middleware.js";
 import { validation } from "../../middlewares/validation.middleware.js";
 import * as validate from "./doctor.validation.js";
-import { authenticattion, parseCoordinatesFromFormData, parseDoctorFormData } from "../../middlewares/index.js";
+import { parseCoordinatesFromFormData, parseDoctorFormData } from "../../middlewares/data-parse.utils.js";
 import { multerMiddleware } from "../../middlewares/multer.middleware.js";
 import extensions from "../../utils/file-extenstions.utils.js";
-import { doctorRegisterNewSchema, doctorRegisterExistingSchema } from "./doctor.validation.js";
 
 const doctorRouter = Router();
 
@@ -26,7 +25,7 @@ doctorRouter.post(
   ]),
   parseDoctorFormData,
   parseCoordinatesFromFormData,
-  errorHandling(validation(doctorRegisterNewSchema)),
+  errorHandling(validation(validate.doctorRegisterNewSchema)),
   errorHandling(doctorController.registerNewDoctorUser)
 );
 
@@ -39,7 +38,7 @@ doctorRouter.post(
   ]),
   parseDoctorFormData,
   parseCoordinatesFromFormData,
-  errorHandling(validation(doctorRegisterExistingSchema)),
+  errorHandling(validation(validate.doctorRegisterExistingSchema)),
   errorHandling(doctorController.addDoctorRoleToExistingUser)
 );
 
