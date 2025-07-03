@@ -9,6 +9,7 @@ import database from "../../../database/databaseConnection.js";
 import redisClient from "../../utils/redis.utils.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import { uploadFile } from "../../utils/cloudinary.utils.js";
+import { Doctor } from "../../../database/models/doctor.model.js";
 
 
 const userModel = new UserModel(database);
@@ -213,50 +214,76 @@ export const adminApproveDoctor = async (req, res, next) => {
     const { doctorId } = req.params;
     const { isVerified } = req.body;
 
-    // This would typically be handled by admin service
-    // For now, we'll create a simple implementation
-    const doctor = await database.models.Doctor.findById(doctorId).populate("user");
-    
-    if (!doctor) {
+    // Find the user by doctorId (doctorId is actually userId in this new flow)
+    const user = await userModel.findById(doctorId);
+    if (!user) {
       return next(
         new ErrorHandlerClass(
-          "Doctor not found",
+          "User not found for doctor approval",
           404,
           "Not Found Error",
-          "Doctor not found"
+          "User not found"
         )
       );
     }
 
-    // Update doctor verification status
-    doctor.verification.isVerified = isVerified;
-    await doctor.save();
+    // Retrieve pending doctor data from Redis
+    const pendingDataStr = await redisClient.GET(`pendingDoctor:${user._id}`);
+    if (!pendingDataStr) {
+      return next(
+        new ErrorHandlerClass(
+          "No pending doctor data found for this user",
+          404,
+          "Not Found Error",
+          "No pending doctor data"
+        )
+      );
+    }
+    const pendingData = JSON.parse(pendingDataStr);
+    const { doctorData, profileImageObject } = pendingData;
+
+    // Create doctor document
+    const doctorObject = new Doctor({
+      ...doctorData,
+      user: user._id,
+      profileImage: profileImageObject,
+      rating: { average: 0, count: 0 },
+      verification: { isVerified: true },
+    });
+    await doctorObject.save();
+
+    // Link doctor to user
+    user.doctorID = doctorObject._id;
+    user.isVerified = true;
+    await user.save();
+
+    // Delete verificationId and pending doctor data from Redis
+    await redisClient.DEL(`pendingDoctor:${user._id}`);
+    await redisClient.DEL(`verification:${doctorObject._id}`);
 
     // Send email notification to doctor
-    if (isVerified && doctor.user) {
-      await sendEmailService({
-        to: doctor.user.email,
-        subject: "Doctor Verification Approved",
-        htmlMessage: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #28a745;">Verification Approved</h2>
-            <p>Hello ${doctor.user.firstName} ${doctor.user.lastName},</p>
-            <p>Your doctor verification has been approved. You can now login to your account and start using our platform.</p>
-            <p>Thank you for using our platform.</p>
-            <br/>
-            <p>Best regards,</p>
-            <p><strong>The zenCare Team</strong></p>
-          </div>
-        `,
-      });
-    }
+    await sendEmailService({
+      to: user.email,
+      subject: "Doctor Verification Approved",
+      htmlMessage: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #28a745;">Verification Approved</h2>
+          <p>Hello ${user.firstName} ${user.lastName},</p>
+          <p>Your doctor verification has been approved. You can now login to your account and start using our platform.</p>
+          <p>Thank you for using our platform.</p>
+          <br/>
+          <p>Best regards,</p>
+          <p><strong>The zenCare Team</strong></p>
+        </div>
+      `,
+    });
 
     res.status(200).json({
       success: true,
-      message: "Doctor verification status updated successfully",
+      message: "Doctor verification status updated successfully. Doctor can now login.",
       data: {
-        doctorId: doctor._id,
-        isVerified: doctor.verification.isVerified,
+        doctorId: doctorObject._id,
+        isVerified: true,
       },
     });
   } catch (error) {

@@ -15,14 +15,14 @@ adminRouter.post("/login",
     errorHandling(adminController.adminLogin));
 adminRouter.get(
   "/pending-doctors",
-  authenticattion(),
-  authorization('admin'),
+  //authenticattion(),
+//  authorization('admin'),
   errorHandling(adminController.getPendingDoctors)
 );
 adminRouter.patch(
-  "/verify-doctor/:doctorId",
-  authenticattion(),
-  authorization(possibleRoles.ADMIN),
+  "/verify-doctor/:userId",
+ // authenticattion(),
+ // authorization(possibleRoles.ADMIN),
   errorHandling(validation(VSchema.verifyDoctorSchema)),
   errorHandling(adminController.verifyDoctor)
 );

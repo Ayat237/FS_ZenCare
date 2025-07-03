@@ -16,5 +16,8 @@ export const verifyDoctorSchema = Joi.object({
   doctorId: generalRules.id.required().messages({
     "string.base": "Doctor ID must be a string",
     "any.required": "Doctor ID is required"
+  }),
+  isAdminApproved: Joi.boolean().required().messages({
+    "any.required": "Is Admin Approved is required"
   })
 }).unknown(true); 

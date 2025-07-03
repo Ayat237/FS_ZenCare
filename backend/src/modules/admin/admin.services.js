@@ -8,6 +8,9 @@ import { DoctorModel } from "../../../database/models/doctor.model.js";
 import database from "../../../database/databaseConnection.js";
 import mongoose from "mongoose";
 import { decrypt } from "./utils/decryption.utils.js";
+import { sendEmailService } from "../../services/sendEmail.service.js";
+import { Doctor } from "../../../database/models/doctor.model.js";
+import { Address } from "../../../database/models/address.model.js";
 
 const userModel = new UserModel(database);
 const doctorModel = new DoctorModel(database);
@@ -102,65 +105,153 @@ export const getPendingDoctorsService = async () => {
   };
 };
 
-export const verifyDoctorService = async (doctorId, isAdminApproved) => {
+export const verifyDoctorService = async (userId, isAdminApproved) => {
   let session;
   try {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    const doctor = await doctorModel.findById(doctorId).session(session);
-    if (!doctor) {
+    // Find the user by userId
+    const user = await userModel.findById(userId, { session });
+    if (!user) {
       throw new ErrorHandlerClass(
-        "Doctor not found, please check the doctor id",
+        "User not found for doctor approval",
         404,
-        "Not Found",
-        "Doctor not found"
+        "Not Found Error",
+        "User not found"
       );
     }
-    if (doctor.isAdminApproved) {
+
+    // If not approved, delete user or just doctor data
+    if (!isAdminApproved) {
+      // Delete verificationId and pending doctor data from Redis
+      const verificationKey = `verification:${user._id}`;
+      let filePath = null;
+      try {
+        filePath = await redisClient.GET(verificationKey);
+        await redisClient.DEL(verificationKey);
+      } catch (e) {
+        // Ignore if not found
+      }
+      await redisClient.DEL(`pendingDoctor:${user._id}`);
+      // Delete verificationId file from local server if it exists
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          console.error('Failed to delete verification file from local server', e);
+        }
+      }
+      // If user only has doctor role, delete user
+      if (user.role.length === 1 && user.role[0] === possibleRoles.DOCTOR) {
+        await userModel.deleteById(user._id);
+      } else {
+        // Remove doctor role and related fields
+        user.role = user.role.filter(r => r !== possibleRoles.DOCTOR);
+        user.activeRole = user.role.length ? user.role[0] : null;
+        user.doctorID = undefined;
+        await userModel.save(user, { session });
+      }
+      // Send rejection email
+      await sendEmailService({
+        to: user.email,
+        subject: "Doctor Verification Rejected",
+        htmlMessage: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #cc0000;">Verification Rejected</h2>
+            <p>Hello ${user.firstName} ${user.lastName},</p>
+            <p>Your doctor verification was <strong>not approved</strong> by the Ministry of Health. Your data has been removed from our system.</p>
+            <p>If you believe this is a mistake, please contact support or try registering again with correct information.</p>
+            <br/>
+            <p>Best regards,</p>
+            <p><strong>The zenCare Team</strong></p>
+          </div>
+        `,
+      });
+      await session.commitTransaction();
+      session.endSession();
+      return {
+        status: 200,
+        success: true,
+        message: "Doctor verification rejected and data removed.",
+        data: {},
+      };
+    }
+
+    // Retrieve pending doctor data from Redis
+    const pendingDataStr = await redisClient.GET(`pendingDoctor:${user._id}`);
+    if (!pendingDataStr) {
       throw new ErrorHandlerClass(
-        "Doctor already approved",
-        400,
-        "Validation Error",
-        "Already approved"
+        "No pending doctor data found for this user",
+        404,
+        "Not Found Error",
+        "No pending doctor data"
       );
     }
+    const pendingData = JSON.parse(pendingDataStr);
+    const { doctorData, profileImageObject } = pendingData;
 
-    doctor.isAdminApproved = isAdminApproved;
-    await doctorModel.save(doctor, { session });
+    // For each clinicBranch, create Address and get its _id
+    const clinicBranchesWithIds = await Promise.all(
+      (doctorData.clinicBranches || []).map(async (branch) => {
+        const addressDoc = new database.models.Address(branch.address);
+        await addressDoc.save({ session });
+        return { address: addressDoc._id, phoneNumber: branch.phoneNumber };
+      })
+    );
 
-    // Delete verification data from Redis
-    const redisKey = `verification:${doctorId}`;
+    // Create doctor document
+    const doctorObject = new Doctor({
+      ...doctorData,
+      clinicBranches: clinicBranchesWithIds,
+      user: user._id,
+      profileImage: profileImageObject,
+      rating: { average: 0, count: 0 },
+      verification: { isVerified: true },
+      isAdminApproved: isAdminApproved,
+    });
+    await doctorModel.save(doctorObject, { session });
+
+    // Link doctor to user
+    user.doctorID = doctorObject._id;
+    user.isVerified = true;
+    await userModel.save(user, { session });
+
+    // Delete verificationId and pending doctor data from Redis
+    const verificationKey = `verification:${user._id}`;
     let filePath = null;
     try {
-      filePath = await redisClient.GET(redisKey);
-      await redisClient.DEL(redisKey);
+      filePath = await redisClient.GET(verificationKey);
+      await redisClient.DEL(verificationKey);
     } catch (e) {
-      await session.abortTransaction();
-      session.endSession();
-      throw new ErrorHandlerClass(
-        "Failed to delete verification data from Redis",
-        500,
-        "Server Error",
-        "Redis deletion failed"
-      );
+      // Ignore if not found
     }
-
-    // Delete verificationId file from local server
+    await redisClient.DEL(`pendingDoctor:${user._id}`);
+    // Delete verificationId file from local server if it exists
     if (filePath && fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
       } catch (e) {
-        await session.abortTransaction();
-        session.endSession();
-        throw new ErrorHandlerClass(
-          "Failed to delete verification file from local server",
-          500,
-          "Server Error",
-          "File deletion failed"
-        );
+        console.error('Failed to delete verification file from local server', e);
       }
     }
+
+    // Send email notification to doctor
+    await sendEmailService({
+      to: user.email,
+      subject: "Doctor Verification Approved",
+      htmlMessage: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #28a745;">Verification Approved</h2>
+          <p>Hello ${user.firstName} ${user.lastName},</p>
+          <p>Your doctor verification has been approved. You can now login to your account and start using our platform.</p>
+          <p>Thank you for using our platform.</p>
+          <br/>
+          <p>Best regards,</p>
+          <p><strong>The zenCare Team</strong></p>
+        </div>
+      `,
+    });
 
     await session.commitTransaction();
     session.endSession();
@@ -168,8 +259,8 @@ export const verifyDoctorService = async (doctorId, isAdminApproved) => {
     return {
       status: 200,
       success: true,
-      message: "Doctor verified successfully",
-      data: { doctor },
+      message: "Doctor verified and saved successfully. Doctor can now login.",
+      data: { doctor: doctorObject },
     };
   } catch (error) {
     if (session) {
