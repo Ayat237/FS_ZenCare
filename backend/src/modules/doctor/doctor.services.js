@@ -125,7 +125,6 @@ export const registerNewDoctorUserService = async (
       }
     }
 
-
     // Prepare pending doctor data for Redis
 
     const pendingDoctorData = {
@@ -134,7 +133,6 @@ export const registerNewDoctorUserService = async (
         clinicBranches: clinicBranchesInput,
       },
       profileImageObject,
-      filesMeta: files, // Optionally store file info for admin review
     };
 
     // Capitalize names
@@ -213,10 +211,13 @@ export const registerNewDoctorUserService = async (
       const fileBuffer = fs.readFileSync(uploadResult.path);
 
       // Read the uploaded file and encrypt it
-      const { encryptedData, iv } = encrypt(fileBuffer, userData.userName);
+      const { encryptedData, iv } = encrypt(
+        fileBuffer,
+        userObject._id.toString()
+      );
 
       // Save encrypted data to local server
-      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv })); // Should be hex, not base64
 
       // Store reference in Redis for 48 hours
       await redisClient.SET(
@@ -326,7 +327,7 @@ export const addDoctorRoleToExistingUserService = async (
     }
 
     // Validate clinic branches
-    clinicBranchesInput.forEach(branch => {
+    clinicBranchesInput.forEach((branch) => {
       if (!branch.address || !branch.address.coordinates) {
         throw new ErrorHandlerClass(
           "Each clinic branch must have an address with coordinates",
@@ -354,9 +355,9 @@ export const addDoctorRoleToExistingUserService = async (
         user: existingUser._id,
         rating: { average: 0, count: 0 },
         verification: { isVerified: false },
-        isAdminApproved: false
+        isAdminApproved: false,
       },
-      profileImageObject
+      profileImageObject,
     };
 
     await redisClient.SET(
@@ -365,18 +366,29 @@ export const addDoctorRoleToExistingUserService = async (
       172800 // 48 hours expiry
     );
 
-    // Handle verification ID image (store locally encrypted)
-    if (files && files.verificationId) {
+    // Save verification ID image (store locally encrypted) if present
+    let verificationFilePath = null;
+    if (files && files.verificationId && files.verificationId.length > 0) {
       const uploadResult = files.verificationId[0];
+      if (!uploadResult.path) {
+        throw new ErrorHandlerClass(
+          "Verification ID file upload failed or path missing.",
+          400,
+          "Validation Error",
+          "Verification ID file missing"
+        );
+      }
       const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
-
       const fileBuffer = fs.readFileSync(uploadResult.path);
+
+      // Read the uploaded file and encrypt it
       const { encryptedData, iv } = encrypt(
         fileBuffer,
         existingUser._id.toString()
       );
 
-      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+      // Save encrypted data to local server
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv })); // Should be hex, not base64
 
       await redisClient.SET(
         `verification:${existingUser._id}`,
@@ -394,10 +406,10 @@ export const addDoctorRoleToExistingUserService = async (
     return {
       status: 201,
       success: true,
-      message: "Wait for admin approval during the next 24 hours to get your account verified",
-      data: { userId: existingUser._id }
+      message:
+        "Wait for admin approval during the next 24 hours to get your account verified",
+      data: { userId: existingUser._id },
     };
-
   } catch (error) {
     if (session) {
       await session.abortTransaction();

@@ -90,7 +90,7 @@ export const registerNewPatientUserService = async (userData, patientData, file)
     const addressObject = new Address({
       displayName: patientData.address,
       coordinates: patientData.coordinates,
-      patientID: patientObject._id,
+      patientId: patientObject._id,
     });
     await addressModel.save(addressObject);
 
@@ -210,7 +210,7 @@ export const addPatientRoleToExistingUserService = async (existingUser, patientD
     const addressObject = new Address({
       displayName: patientData.address,
       coordinates: patientData.coordinates,
-      patientID: patientObject._id,
+      patientId: patientObject._id,
     });
     await addressModel.save(addressObject);
 

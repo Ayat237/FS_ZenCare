@@ -12,6 +12,7 @@ import { sendEmailService } from "../../services/sendEmail.service.js";
 import { Doctor } from "../../../database/models/doctor.model.js";
 import { Address } from "../../../database/models/address.model.js";
 
+
 const userModel = new UserModel(database);
 const doctorModel = new DoctorModel(database);
 
@@ -19,13 +20,14 @@ export const adminLoginService = async (email, password) => {
   const user = await userModel.findOne({ email: email.toLowerCase() });
   if (!user || !user.role.includes(possibleRoles.ADMIN)) {
     throw new ErrorHandlerClass(
-      "Invalid email or password, please check your email and password and try again",
+      "You are not authorized to access this resource.",
       401,
       "Authentication Error",
-      "Invalid credentials"
+      "You are not authorized to access this resource."
     );
   }
   const isMatch = bcrypt.compareSync(password, user.password);
+  console.log(isMatch);
   if (!isMatch) {
     throw new ErrorHandlerClass(
       "Invalid email or password, please check your email and password",
@@ -51,46 +53,150 @@ export const adminLoginService = async (email, password) => {
     data: { token },
   };
 };
-export const getPendingDoctorsService = async () => {
-  // Support both isAdminApproved: false and missing field
-  const pendingDoctors = await doctorModel.find(
-    {
-      $or: [
-        { isAdminApproved: false },
-        { isAdminApproved: { $exists: false } },
-      ],
-    },
-    {
-      select: {
-        user: 1,
-        specialty: 1,
-        clinicBranches: 1,
-        profileImage: 1,
-      },
-    }
-  );
+// export const getPendingDoctorsService = async () => {
+//   // Get all pending doctor keys from Redis
+//   const keys = await redisClient.KEYS("pendingDoctor:*");
+//   const pendingDoctors = await Promise.all(
+//     keys.map(async (key) => {
+//       const userId = key.split(":")[1];
+//       console.log("userId:", userId);
+//       const pendingDataStr = await redisClient.GET(key);
+//       console.log("pendingDataStr:", pendingDataStr);
+//       if (!pendingDataStr) return null;
 
-  // Get and decrypt verification IDs for each doctor
-  const doctorsWithVerification = await Promise.all(
-    pendingDoctors.map(async (doctor) => {
-      const redisKey = `verification:${doctor._id}`;
-      const filePath = await redisClient.GET(redisKey);
-      console.log(filePath);
-      let verificationId = null;
-      if (filePath && fs.existsSync(filePath)) {
-        const encryptedData = JSON.parse(fs.readFileSync(filePath));
-        const decrypted = decrypt(encryptedData.data, encryptedData.iv, doctor.user.toString());
-        
-        // Convert decrypted buffer to base64 string for frontend display
-        verificationId = decrypted.toString('base64');
+//       let pendingData;
+//       try {
+//         pendingData = JSON.parse(pendingDataStr);
+//       } catch (parseError) {
+//         console.error("Failed to parse pendingDataStr for userId", userId, parseError);
+//         return null;
+//       }
+//       const { doctorData, profileImageObject } = pendingData || {};
+//       console.log("doctorData:", doctorData);
+
+//       // Try to get and decrypt verificationId
+//       let verificationIdBase64 = null;
+//       const verificationPath = await redisClient.GET(`verification:${userId}`);
+//       console.log("verificationPath:", verificationPath);
+//       if (verificationPath && fs.existsSync(verificationPath)) {
+//         try {
+//           const encryptedDataStr = fs.readFileSync(verificationPath, "utf8");
+//           console.log("encryptedDataStr:", encryptedDataStr);
+//           let encryptedData;
+//           try {
+//             encryptedData = JSON.parse(encryptedDataStr);
+//           } catch (jsonError) {
+//             console.error("Failed to parse encryptedData for userId", userId, jsonError);
+//             return null;
+//           }
+//           console.log("encryptedData:", encryptedData);
+
+//           const userName = doctorData?.userName;
+//           if (!userName) {
+//             console.error("userName missing in doctorData for userId", userId);
+//             return null;
+//           }
+//           console.log("userName:", userName);
+
+//           const dataBuffer = Buffer.from(encryptedData.data, "base64"); // Ensure data is Buffer from base64
+//           console.log("dataBuffer:", dataBuffer);
+
+//           const ivBuffer = Buffer.from(encryptedData.iv, "base64"); // Convert iv to Buffer
+//           console.log("ivBuffer:", ivBuffer);
+
+//           const decrypted = decrypt(dataBuffer, userName, ivBuffer); // Correct order: data, key, iv
+//           console.log("decrypted:", decrypted);
+
+//           verificationIdBase64 = Buffer.from(decrypted).toString("base64");
+//           console.log("verificationIdBase64:", verificationIdBase64);
+//         } catch (e) {
+//           console.error("Decryption failed for userId", userId, e);
+//           verificationIdBase64 = null;
+//         }
+//       }
+      
+//       return {
+//         userId,
+//         doctorData: doctorData || {},
+//         profileImageObject: profileImageObject || {},
+//         verificationId: verificationIdBase64,
+//       };
+//     })
+//   );
+ 
+ 
+ 
+//   return {
+//     status: 200,
+//     success: true,
+//     message: "Pending doctors retrieved successfully",
+//     data: {
+//       doctors: pendingDoctors.filter(Boolean),
+//     },
+//   };
+// };
+
+
+export const getPendingDoctorsService = async () => {
+  // Get all pending doctor keys from Redis
+  const keys = await redisClient.KEYS("pendingDoctor:*");
+  const pendingDoctors = await Promise.all(
+    keys.map(async (key) => {
+      const userId = key.split(":")[1];
+      console.log("userId:", userId);
+        const pendingDataStr = await redisClient.GET(key);
+      console.log("pendingDataStr:", pendingDataStr);
+      if (!pendingDataStr) return null;
+
+      let pendingData;
+      try {
+        pendingData = JSON.parse(pendingDataStr);
+      } catch (parseError) {
+        console.error("Failed to parse pendingDataStr for userId", userId, parseError);
+        return null;
+      }
+      const { doctorData, profileImageObject } = pendingData || {};
+      console.log("doctorData:", doctorData);
+
+      // Try to get and decrypt verificationId
+      let verificationIdBase64 = null;
+      const verificationPath = await redisClient.GET(`verification:${userId}`);
+      console.log("verificationPath:", verificationPath);
+      if (verificationPath && fs.existsSync(verificationPath)) {
+        try {
+          const encryptedDataStr = fs.readFileSync(verificationPath, "utf8");
+          console.log("encryptedDataStr:", encryptedDataStr);
+          let encryptedData;
+          try {
+            encryptedData = JSON.parse(encryptedDataStr);
+          } catch (jsonError) {
+            console.error("Failed to parse encryptedData for userId", userId, jsonError);
+            return null;
+          }
+          console.log("encryptedData:", encryptedData);
+
+
+          const dataBuffer = Buffer.from(encryptedData.data, "hex"); // Changed to hex
+          const ivBuffer = Buffer.from(encryptedData.iv, "hex"); // Changed to hex
+          console.log("dataBuffer:", dataBuffer);
+          console.log("ivBuffer:", ivBuffer);
+
+          const decrypted = decrypt(dataBuffer, ivBuffer, userId); // Use hex inputs
+          console.log("decrypted:", decrypted);
+
+          verificationIdBase64 = Buffer.from(decrypted).toString("base64");
+          console.log("verificationIdBase64:", verificationIdBase64);
+        } catch (e) {
+          console.error("Decryption failed for userId", userId, e);
+          verificationIdBase64 = null;
+        }
       }
 
       return {
-        ...doctor.toObject(),
-        verificationId: {
-          data: verificationId, // base64 string that can be displayed as image in frontend
-          contentType: 'image/jpeg' // assuming JPEG format, adjust if needed
-        }
+        userId,
+        doctorData: doctorData || {},
+        profileImageObject: profileImageObject || {},
+        verificationId: verificationIdBase64,
       };
     })
   );
@@ -98,9 +204,9 @@ export const getPendingDoctorsService = async () => {
   return {
     status: 200,
     success: true,
-    message: "Pending doctors retrieved successfully", 
+    message: "Pending doctors retrieved successfully",
     data: {
-      doctors: doctorsWithVerification
+      doctors: pendingDoctors.filter(Boolean),
     },
   };
 };
@@ -194,7 +300,7 @@ export const verifyDoctorService = async (userId, isAdminApproved) => {
     // For each clinicBranch, create Address and get its _id
     const clinicBranchesWithIds = await Promise.all(
       (doctorData.clinicBranches || []).map(async (branch) => {
-        const addressDoc = new database.models.Address(branch.address);
+        const addressDoc = new Address(branch.address);
         await addressDoc.save({ session });
         return { address: addressDoc._id, phoneNumber: branch.phoneNumber };
       })
