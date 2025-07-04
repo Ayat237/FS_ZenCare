@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import Colors from "@theme/colors";
 
-import logo from "@assets/images/logo.png";
+import logo from "@assets/images/zencare_logo.png";
 
 
 const SplashScreen: React.FC = () => {

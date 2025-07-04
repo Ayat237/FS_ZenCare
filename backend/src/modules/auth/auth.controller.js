@@ -30,7 +30,10 @@ const addressModel = new AddressModel(database);
 export const login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({ email , isVerified: true }, { populate: "patientID doctorID" });
+  const user = await userModel.findOne(
+    { email, isVerified: true },
+    { populate: "patientID doctorID" }
+  );
   if (!user) {
     return next(
       new ErrorHandlerClass(
@@ -58,6 +61,9 @@ export const login = async (req, res, next) => {
   // 5. Check for multiple roles
   const hasPatientRole =
     user.role.includes(possibleRoles.PATIENT) && user.patientID;
+  console.log("hasPatientRole", hasPatientRole);
+  console.log("user.doctorID", user.doctorID);
+  console.log("user.role", user.role);
   const hasDoctorRole =
     user.role.includes(possibleRoles.DOCTOR) && user.doctorID;
 
@@ -674,38 +680,66 @@ export const getLoggedInProfile = async (req, res, next) => {
     });
   }
 
-  // Determine profile image based on active role
+  // Initialize role-specific data
+  const roleData = {};
   let profileImage = null;
+
+  // Handle role-specific data based on activeRole
   if (user.activeRole === possibleRoles.PATIENT && user.patientID) {
-    const patient = user.patientID.toObject ? user.patientID.toObject() : user.patientID;
+    const patient = user.patientID.toObject
+      ? user.patientID.toObject()
+      : user.patientID;
     profileImage = patient?.profileImage?.URL?.secure_url;
-    const address = await addressModel.findById(patient._id);
-    // Return user profile with all patient data up to address
-    res.status(200).json({
-      success: true,
-      message: "User profile retrieved successfully",
-      data: {
-        ...user.toObject(),
-        address: address,
-     //   profileImage,
-      },
-    });
+    const address = await addressModel.findOne(
+      { patientId: patient._id },
+      { select: "displayName" }
+    );
+
+    roleData.patient = {
+      ...patient,
+      address: address || null,
+    };
   } else if (user.activeRole === possibleRoles.DOCTOR && user.doctorID) {
-    const doctor = user.doctorID.toObject ? user.doctorID.toObject() : user.doctorID;
+    const doctor = user.doctorID.toObject
+      ? user.doctorID.toObject()
+      : user.doctorID;
     profileImage = doctor?.profileImage?.URL?.secure_url;
-    // Return user profile with all doctor data
-    return res.status(200).json({
-      success: true,
-      message: "User profile retrieved successfully",
-      data: {
-        ...user.toObject(),
-        doctor: {
-          ...doctor,
-        },
-        profileImage,
-      },
-    });
-  }
+    // Fetch all addresses for each clinicBranch
+    let clinicBranchAddresses = [];
+    if (doctor.clinicBranches && Array.isArray(doctor.clinicBranches)) {
+      clinicBranchAddresses = await Promise.all(
+        doctor.clinicBranches.map(async (branch) => {
+          const address = await addressModel.findById(branch.address, {
+            select: "displayName",
+          });
+          return {
+            ...branch,
+            address: address || null,
+          };
+        })
+      );
+    }
+    roleData.doctor = {
+      ...doctor,
+      clinicBranches: clinicBranchAddresses,
+    };
+  } // Add more roles as needed (e.g., ADMIN, STAFF) with similar logic
+
+  // Construct response with user data and role-specific data
+  return res.status(200).json({
+    success: true,
+    message: "User profile retrieved successfully",
+    data: {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userName: user.userName,
+      email: user.email,
+      mobilePhone: user.mobilePhone,
+      gender: user.gender,
+      roleData, // Contains role-specific data based on activeRole
+      activeRole: user.activeRole,
+    },
+  });
 };
 
 /**

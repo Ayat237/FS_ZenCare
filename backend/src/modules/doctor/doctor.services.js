@@ -133,7 +133,6 @@ export const registerNewDoctorUserService = async (
         clinicBranches: clinicBranchesInput,
       },
       profileImageObject,
-      filesMeta: files, // Optionally store file info for admin review
     };
 
     // Capitalize names
@@ -237,10 +236,13 @@ export const registerNewDoctorUserService = async (
       );
 
       // Read the uploaded file and encrypt it
-      const { encryptedData, iv } = encrypt(fileBuffer, userData.userName);
+      const { encryptedData, iv } = encrypt(
+        fileBuffer,
+        userObject._id.toString()
+      );
 
       // Save encrypted data to local server
-      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv })); // Should be hex, not base64
 
       // Store reference in Redis for 48 hours
       await redisClient.SET(
@@ -387,81 +389,31 @@ export const addDoctorRoleToExistingUserService = async (
       `pendingDoctor:${existingUser._id}`,
       JSON.stringify(pendingDoctorData),
       172800 // 48 hours expiry
-    ); // Handle verification ID image (store locally encrypted)
-    if (files && files.verificationId) {
-      console.log("Starting verification ID processing...");
-      console.log("Files object:", JSON.stringify(files, null, 2));
-      console.log("Verification ID files count:", files.verificationId.length);
+    );
 
+    // Save verification ID image (store locally encrypted) if present
+    let verificationFilePath = null;
+    if (files && files.verificationId && files.verificationId.length > 0) {
       const uploadResult = files.verificationId[0];
-      console.log(
-        "Upload result object:",
-        JSON.stringify(uploadResult, null, 2)
-      );
-
-      // Validate file upload result
-      if (!uploadResult || !uploadResult.path) {
-        console.error("Invalid upload result - missing path");
+      if (!uploadResult.path) {
         throw new ErrorHandlerClass(
           "Verification ID file upload failed or path missing.",
           400,
-          "File Error",
-          "Invalid upload result"
+          "Validation Error",
+          "Verification ID file missing"
         );
       }
-
-      console.log("Upload result path:", uploadResult.path);
-      console.log("Upload result filename:", uploadResult.filename);
-
       const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
-      console.log("Target file path:", filePath);
-
-      // Validate that the file path exists and is readable
-      if (!fs.existsSync(uploadResult.path)) {
-        console.error("Source file does not exist:", uploadResult.path);
-        throw new ErrorHandlerClass(
-          "Verification ID file not found at upload path.",
-          400,
-          "File Error",
-          "File not found"
-        );
-      }
-
-      console.log("Reading file buffer from:", uploadResult.path);
       const fileBuffer = fs.readFileSync(uploadResult.path);
-      console.log("File buffer type:", typeof fileBuffer);
-      console.log("File buffer constructor:", fileBuffer.constructor.name);
-      console.log(
-        "File buffer length:",
-        fileBuffer ? fileBuffer.length : "null/undefined"
-      );
 
-      // Validate that we have a valid file buffer
-      if (!fileBuffer || fileBuffer.length === 0) {
-        console.error("File buffer is empty or invalid");
-        throw new ErrorHandlerClass(
-          "Verification ID file is empty or corrupted.",
-          400,
-          "File Error",
-          "Empty file buffer"
-        );
-      }
-
-      console.log(
-        `Processing existing user verification file - Size: ${fileBuffer.length} bytes`
-      );
-
-      console.log("About to call encrypt function with:");
-      console.log("- Buffer type:", typeof fileBuffer);
-      console.log("- Buffer is Buffer?", Buffer.isBuffer(fileBuffer));
-      console.log("- User ID:", existingUser._id.toString());
-
+      // Read the uploaded file and encrypt it
       const { encryptedData, iv } = encrypt(
         fileBuffer,
         existingUser._id.toString()
       );
 
-      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv }));
+      // Save encrypted data to local server
+      fs.writeFileSync(filePath, JSON.stringify({ data: encryptedData, iv })); // Should be hex, not base64
 
       await redisClient.SET(
         `verification:${existingUser._id}`,

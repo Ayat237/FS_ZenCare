@@ -11,11 +11,9 @@ export type RootStackParamList = {
   SignUp: undefined;
   SignUpDetails: {
     role: "patient" | "doctor";
-    isExistingUser?: boolean;
   };
   PhotoUpload: {
     role: "patient" | "doctor";
-    isExistingUser?: boolean;
     userData: {
       firstName: string;
       lastName: string;
@@ -26,11 +24,6 @@ export type RootStackParamList = {
       birthDate: string;
       password: string;
       confirmedPassword: string;
-      location?: {
-        longitude: number | null;
-        latitude: number | null;
-        displayName?: string;
-      };
       doctorData?: {
         specialty: string;
         yearsOfExperience: number | string;
@@ -45,7 +38,12 @@ export type RootStackParamList = {
         }>;
         clinicBranches: Array<{
           address: {
-            displayName: string;
+            street: string;
+            city: string;
+            country: string;
+            buildingNumber?: number;
+            buildingName?: string;
+            neighborhood?: string;
             coordinates: {
               longitude: number;
               latitude: number;
@@ -59,11 +57,8 @@ export type RootStackParamList = {
       };
     };
   };
-  RegistrationSubmitted: undefined;
   EmailVerification: {
     emailToken: string | null;
-    userRole?: "patient" | "doctor";
-    email?: string;
   };
   ResetPasswordEmail: undefined;
   ResetPasswordVerification: {
@@ -75,22 +70,12 @@ export type RootStackParamList = {
     emailToken: string;
   };
   MainTabs: undefined;
-  Drawer:
-    | {
-        screen?: keyof DrawerParamList;
-      }
-    | undefined;
-  DoctorDrawer:
-    | {
-        screen?: keyof DoctorDrawerParamList;
-      }
-    | undefined;
-  AdminDrawer:
-    | {
-        screen?: keyof AdminDrawerParamList;
-      }
-    | undefined;
-  AdminDoctorVerification: undefined;
+  Drawer: {
+    screen?: keyof DrawerParamList;
+  } | undefined;
+  DoctorDrawer: {
+    screen?: keyof DoctorDrawerParamList;
+  } | undefined;
   PDFViewerTest: undefined;
   LabResult: {
     filePath: string;
@@ -139,9 +124,7 @@ export type DoctorDrawerParamList = {
   PatientList: undefined;
   PatientMedicalHistory: { patientId: string };
   TelemedicineSessions: undefined;
-  DoctorTelemedicine:
-    | { session?: import("./telemedicine").TelemedicineSession }
-    | undefined;
+  DoctorTelemedicine: { session?: import('./telemedicine').TelemedicineSession } | undefined;
   DoctorNotifications: undefined;
   DoctorPayments: undefined;
   TelemedicineTest: undefined;
@@ -150,20 +133,6 @@ export type DoctorDrawerParamList = {
     filePath: string;
     title?: string;
   };
-};
-
-export type AdminDrawerParamList = {
-  AdminHome: undefined;
-  UserManagement: undefined;
-  DoctorManagement: undefined;
-  PatientManagement: undefined;
-  Reports: undefined;
-  Settings: undefined;
-  AdminNotifications: undefined;
-  AdminPayments: undefined;
-  AdminTelemedicine: undefined;
-  AdminLabResults: undefined;
-  AdminDoctorVerification: undefined;
 };
 
 // Define our own DrawerScreenProps type without importing from @react-navigation/drawer

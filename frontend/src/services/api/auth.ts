@@ -1,6 +1,5 @@
 import apiClient from "./apiClient";
 import { dummyDoctor } from "../../mockData/doctors";
-import { dummyAdmin } from "../../mockData/admins";
 // Import store reference function instead of direct import to avoid circular dependency
 import { injectStore } from "./apiClient";
 
@@ -61,23 +60,7 @@ export const authService = {
         };
       }
 
-      // Check if the credentials match the dummy admin account
-      if (
-        credentials.email === dummyAdmin.email &&
-        credentials.password === dummyAdmin.password
-      ) {
-        console.log("Admin login successful");
-        // Return mock admin data with dummy tokens
-        return {
-          user: {
-            ...dummyAdmin,
-            token: "dummy-admin-token",
-            refreshToken: "dummy-admin-refresh-token",
-          },
-        };
-      }
-
-      // If not a doctor or admin login, proceed with regular API call
+      // If not a doctor login, proceed with regular API call
       const response = await apiClient.post("/auth/login", credentials);
       const { data } = response.data; // Access nested data structure
       if (!data || !data.user) {
@@ -371,7 +354,6 @@ export const authService = {
         "/auth/verify-email-otp",
         {
           otp: data.otp,
-          
         },
         {
           headers: {

@@ -7,17 +7,14 @@ import LoginScreen from "@screens/LoginScreen";
 import RoleSelectionScreen from "@screens/SignUp/RoleSelectionScreen";
 import SignUpDetailsScreen from "@screens/SignUp/SignUpDetailsScreen";
 import PhotoUploadScreen from "@screens/SignUp/PhotoUploadScreen";
-import RegistrationSubmittedScreen from "@screens/SignUp/RegistrationSubmittedScreen";
 import EmailVerificationScreen from "@screens/EmailVerification/EmailVerificationScreen";
 import SplashScreen from "@screens/SplashScreen";
 import ResetPasswordEmailScreen from "@screens/ResetPassword/ResetPasswordEmailScreen";
 import ResetPasswordVerificationScreen from "@screens/ResetPassword/ResetPasswordVerificationScreen";
 import NewPasswordScreen from "@screens/ResetPassword/NewPasswordScreen";
-import { AdminDoctorVerificationScreen } from "@screens/Admin";
 import TabNavigation from "./TabNavigation";
 import DrawerNavigation from "./DrawerNavigation";
 import DoctorDrawerNavigation from "./DoctorDrawerNavigation";
-import AdminDrawerNavigation from "./AdminDrawerNavigation";
 import { RootStackParamList } from "@/types/navigation";
 
 // Create Stack Navigator with type safety
@@ -41,10 +38,6 @@ const AppNavigation: React.FC = () => {
         <Stack.Screen name="SignUpDetails" component={SignUpDetailsScreen} />
         <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
         <Stack.Screen
-          name="RegistrationSubmitted"
-          component={RegistrationSubmittedScreen}
-        />
-        <Stack.Screen
           name="EmailVerification"
           component={EmailVerificationScreen}
         />
@@ -59,22 +52,6 @@ const AppNavigation: React.FC = () => {
         <Stack.Screen name="NewPassword" component={NewPasswordScreen} />
         <Stack.Screen name="Drawer" component={DrawerNavigation} />
         <Stack.Screen name="DoctorDrawer" component={DoctorDrawerNavigation} />
-        <Stack.Screen name="AdminDrawer" component={AdminDrawerNavigation} />
-        <Stack.Screen
-          name="AdminDoctorVerification"
-          component={AdminDoctorVerificationScreen}
-          options={{
-            headerShown: true,
-            title: "Admin - Doctor Verification",
-            headerStyle: {
-              backgroundColor: "#007BFF",
-            },
-            headerTintColor: "#ffffff",
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-          }}
-        />
       </Stack.Navigator>
     </NavigationContainer>
   );
