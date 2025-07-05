@@ -1,5 +1,9 @@
 export interface PendingDoctor {
   userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string;
   doctorData: {
     specialty: string;
     yearsOfExperience: string;

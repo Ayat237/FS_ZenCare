@@ -8,11 +8,11 @@ import {
   Image,
   Platform,
   Alert,
-  SafeAreaView,
   ActivityIndicator,
   Modal,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";

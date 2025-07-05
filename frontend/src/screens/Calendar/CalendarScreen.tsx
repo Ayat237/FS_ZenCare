@@ -1,16 +1,16 @@
 import React, { useState, useRef, useMemo } from "react";
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
-  FlatList, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
   ScrollView,
   Animated,
   Dimensions,
-  StatusBar
+  StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import Colors from "@theme/colors";
 import { Card } from "@components/ui";
@@ -22,7 +22,7 @@ interface CalendarEvent {
   id: string;
   title: string;
   time: string;
-  type: 'appointment' | 'medication' | 'reminder';
+  type: "appointment" | "medication" | "reminder";
   details: string;
 }
 
@@ -30,7 +30,10 @@ interface CalendarEvent {
 const getTodayPlusDays = (days: number) => {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const today = getTodayPlusDays(0);
@@ -41,73 +44,73 @@ const nextWeek = getTodayPlusDays(7);
 const dummyEvents: { [date: string]: CalendarEvent[] } = {
   [today]: [
     {
-      id: '1',
-      title: 'Dr. Sarah Johnson',
-      time: '10:30 AM',
-      type: 'appointment',
-      details: 'Cardiology checkup - Annual heart examination',
+      id: "1",
+      title: "Dr. Sarah Johnson",
+      time: "10:30 AM",
+      type: "appointment",
+      details: "Cardiology checkup - Annual heart examination",
     },
     {
-      id: '2',
-      title: 'Take Medication',
-      time: '8:00 AM',
-      type: 'medication',
-      details: 'Amoxicillin 500mg - Take with food',
+      id: "2",
+      title: "Take Medication",
+      time: "8:00 AM",
+      type: "medication",
+      details: "Amoxicillin 500mg - Take with food",
     },
     {
-      id: '3',
-      title: 'Blood Pressure Check',
-      time: '7:00 PM',
-      type: 'reminder',
-      details: 'Record readings in health app',
+      id: "3",
+      title: "Blood Pressure Check",
+      time: "7:00 PM",
+      type: "reminder",
+      details: "Record readings in health app",
     },
   ],
   [tomorrow]: [
     {
-      id: '4',
-      title: 'Lab Test Results',
-      time: '2:00 PM',
-      type: 'reminder',
-      details: 'Check online portal for blood test results',
+      id: "4",
+      title: "Lab Test Results",
+      time: "2:00 PM",
+      type: "reminder",
+      details: "Check online portal for blood test results",
     },
     {
-      id: '5',
-      title: 'Take Medication',
-      time: '9:00 AM',
-      type: 'medication',
-      details: 'Lisinopril 10mg - Take on empty stomach',
+      id: "5",
+      title: "Take Medication",
+      time: "9:00 AM",
+      type: "medication",
+      details: "Lisinopril 10mg - Take on empty stomach",
     },
   ],
   [dayAfterTomorrow]: [
     {
-      id: '6',
-      title: 'Dr. Michael Chen',
-      time: '3:30 PM',
-      type: 'appointment',
-      details: 'Dermatology consultation - Skin rash follow-up',
+      id: "6",
+      title: "Dr. Michael Chen",
+      time: "3:30 PM",
+      type: "appointment",
+      details: "Dermatology consultation - Skin rash follow-up",
     },
     {
-      id: '7',
-      title: 'Physical Therapy',
-      time: '11:00 AM',
-      type: 'appointment',
-      details: 'Shoulder rehabilitation session',
+      id: "7",
+      title: "Physical Therapy",
+      time: "11:00 AM",
+      type: "appointment",
+      details: "Shoulder rehabilitation session",
     },
   ],
   [nextWeek]: [
     {
-      id: '8',
-      title: 'Dr. Emily Rodriguez',
-      time: '1:15 PM',
-      type: 'appointment',
-      details: 'Annual physical examination',
+      id: "8",
+      title: "Dr. Emily Rodriguez",
+      time: "1:15 PM",
+      type: "appointment",
+      details: "Annual physical examination",
     },
     {
-      id: '9',
-      title: 'Dental Cleaning',
-      time: '10:00 AM',
-      type: 'appointment',
-      details: 'Regular 6-month cleaning with Dr. Wilson',
+      id: "9",
+      title: "Dental Cleaning",
+      time: "10:00 AM",
+      type: "appointment",
+      details: "Regular 6-month cleaning with Dr. Wilson",
     },
   ],
 };
@@ -115,47 +118,50 @@ const dummyEvents: { [date: string]: CalendarEvent[] } = {
 // Helper function to get current date in YYYY-MM-DD format
 const getCurrentDate = () => {
   const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const EventItem = ({ item }: { item: CalendarEvent }) => {
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.97)).current;
   const expandAnim = useRef(new Animated.Value(0)).current;
-  
+
   const getIconName = () => {
     switch (item.type) {
-      case 'appointment':
-        return 'doctor';
-      case 'medication':
-        return 'pill';
-      case 'reminder':
-        return 'bell';
+      case "appointment":
+        return "doctor";
+      case "medication":
+        return "pill";
+      case "reminder":
+        return "bell";
       default:
-        return 'calendar';
+        return "calendar";
     }
   };
-  
+
   const getTypeColor = () => {
     switch (item.type) {
-      case 'appointment':
+      case "appointment":
         return Colors.primary300;
-      case 'medication':
-        return '#4CAF50';
-      case 'reminder':
-        return '#FF9800';
+      case "medication":
+        return "#4CAF50";
+      case "reminder":
+        return "#FF9800";
       default:
         return Colors.primary300;
     }
   };
-  
+
   const onPressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
   };
-  
+
   const onPressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -164,7 +170,7 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
       useNativeDriver: true,
     }).start();
   };
-  
+
   const toggleExpand = () => {
     setExpanded(!expanded);
     Animated.timing(expandAnim, {
@@ -173,10 +179,10 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
       useNativeDriver: false,
     }).start();
   };
-  
+
   const maxHeight = expandAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [80, 120]
+    outputRange: [80, 120],
   });
 
   return (
@@ -186,8 +192,15 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
       onPressOut={onPressOut}
       onPress={toggleExpand}
     >
-      <Animated.View style={[styles.eventCard, { transform: [{ scale: scaleAnim }] }]}>
-        <View style={[styles.eventTypeIndicator, { backgroundColor: getTypeColor() }]} />
+      <Animated.View
+        style={[styles.eventCard, { transform: [{ scale: scaleAnim }] }]}
+      >
+        <View
+          style={[
+            styles.eventTypeIndicator,
+            { backgroundColor: getTypeColor() },
+          ]}
+        />
         <View style={styles.eventContent}>
           <View style={[styles.eventIcon, { backgroundColor: getTypeColor() }]}>
             <Icon name={getIconName()} size={20} color="#FFF" />
@@ -195,15 +208,15 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
           <View style={styles.eventDetails}>
             <Text style={styles.eventTitle}>{item.title}</Text>
             <Text style={styles.eventTime}>{item.time}</Text>
-            <Text 
-              style={[styles.eventDescription, expanded && {marginBottom: 8}]}
+            <Text
+              style={[styles.eventDescription, expanded && { marginBottom: 8 }]}
               numberOfLines={expanded ? undefined : 1}
             >
               {item.details}
             </Text>
           </View>
         </View>
-        
+
         {expanded && (
           <View style={styles.eventActions}>
             <TouchableOpacity style={styles.actionButton}>
@@ -211,8 +224,16 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
               <Text style={styles.actionButtonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
-              <Icon name="trash-can-outline" size={16} color={Colors.error500} />
-              <Text style={[styles.actionButtonText, {color: Colors.error500}]}>Delete</Text>
+              <Icon
+                name="trash-can-outline"
+                size={16}
+                color={Colors.error500}
+              />
+              <Text
+                style={[styles.actionButtonText, { color: Colors.error500 }]}
+              >
+                Delete
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -222,21 +243,27 @@ const EventItem = ({ item }: { item: CalendarEvent }) => {
 };
 
 const CalendarScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedDate, setSelectedDate] = useState(getCurrentDate());
   const scrollViewRef = useRef<ScrollView>(null);
   const headerAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Format the selected date for display
   const formatDisplayDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   // Function to handle date selection
   const handleDateSelect = (date: string, index: number) => {
     setSelectedDate(date);
-    
+
     // Scroll to the selected date
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ x: index * 72, animated: true });
@@ -245,64 +272,86 @@ const CalendarScreen = () => {
 
   // Get available dates that have events
   const availableDates = Object.keys(dummyEvents);
-  
+
   // Get event count by type
   const getEventCountByType = () => {
     const events = dummyEvents[selectedDate] || [];
-    const appointmentCount = events.filter(e => e.type === 'appointment').length;
-    const medicationCount = events.filter(e => e.type === 'medication').length;
-    const reminderCount = events.filter(e => e.type === 'reminder').length;
-    
+    const appointmentCount = events.filter(
+      (e) => e.type === "appointment"
+    ).length;
+    const medicationCount = events.filter(
+      (e) => e.type === "medication"
+    ).length;
+    const reminderCount = events.filter((e) => e.type === "reminder").length;
+
     return { appointmentCount, medicationCount, reminderCount };
   };
-  
-  const { appointmentCount, medicationCount, reminderCount } = getEventCountByType();
+
+  const { appointmentCount, medicationCount, reminderCount } =
+    getEventCountByType();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFF" barStyle="dark-content" />
-      <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }] }]}>
+      <Animated.View
+        style={[styles.header, { transform: [{ translateY: headerAnim }] }]}
+      >
         <View style={styles.headerTop}>
           <Text style={styles.title}>Calendar</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.appointmentsButton}
-            onPress={() => navigation.navigate('Drawer', { screen: 'Appointments' })}
+            onPress={() =>
+              navigation.navigate("Drawer", { screen: "Appointments" })
+            }
           >
             <Text style={styles.appointmentsButtonText}>View All</Text>
             <Icon name="chevron-right" size={20} color={Colors.primary600} />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.eventSummary}>
           <TouchableOpacity style={styles.eventTypeCount}>
-            <View style={[styles.eventTypeIcon, { backgroundColor: Colors.primary300 }]}>
+            <View
+              style={[
+                styles.eventTypeIcon,
+                { backgroundColor: Colors.primary300 },
+              ]}
+            >
               <Icon name="doctor" size={14} color="#FFF" />
             </View>
-            <Text style={styles.eventTypeText}>{appointmentCount} Appointments</Text>
+            <Text style={styles.eventTypeText}>
+              {appointmentCount} Appointments
+            </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.eventTypeCount}>
-            <View style={[styles.eventTypeIcon, { backgroundColor: '#4CAF50' }]}>
+            <View
+              style={[styles.eventTypeIcon, { backgroundColor: "#4CAF50" }]}
+            >
               <Icon name="pill" size={14} color="#FFF" />
             </View>
-            <Text style={styles.eventTypeText}>{medicationCount} Medications</Text>
+            <Text style={styles.eventTypeText}>
+              {medicationCount} Medications
+            </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.eventTypeCount}>
-            <View style={[styles.eventTypeIcon, { backgroundColor: '#FF9800' }]}>
+            <View
+              style={[styles.eventTypeIcon, { backgroundColor: "#FF9800" }]}
+            >
               <Icon name="bell" size={14} color="#FFF" />
             </View>
             <Text style={styles.eventTypeText}>{reminderCount} Reminders</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
-      
+
       {/* Date selector */}
       <View style={styles.dateSelector}>
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
+          horizontal
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.dateSelectorContent}
           decelerationRate="fast"
           snapToInterval={72}
@@ -311,19 +360,42 @@ const CalendarScreen = () => {
             const isSelected = date === selectedDate;
             const dateObj = new Date(date);
             const day = dateObj.getDate();
-            const month = dateObj.toLocaleString('default', { month: 'short' });
-            const weekday = dateObj.toLocaleString('default', { weekday: 'short' });
+            const month = dateObj.toLocaleString("default", { month: "short" });
+            const weekday = dateObj.toLocaleString("default", {
+              weekday: "short",
+            });
             const isToday = date === today;
-            
+
             return (
-              <TouchableOpacity 
-                key={date} 
+              <TouchableOpacity
+                key={date}
                 style={[styles.dateItem, isSelected && styles.selectedDateItem]}
                 onPress={() => handleDateSelect(date, index)}
               >
-                <Text style={[styles.dateItemWeekday, isSelected && styles.selectedDateText]}>{weekday}</Text>
-                <Text style={[styles.dateItemDay, isSelected && styles.selectedDateText]}>{day}</Text>
-                <Text style={[styles.dateItemMonth, isSelected && styles.selectedDateText]}>{month}</Text>
+                <Text
+                  style={[
+                    styles.dateItemWeekday,
+                    isSelected && styles.selectedDateText,
+                  ]}
+                >
+                  {weekday}
+                </Text>
+                <Text
+                  style={[
+                    styles.dateItemDay,
+                    isSelected && styles.selectedDateText,
+                  ]}
+                >
+                  {day}
+                </Text>
+                <Text
+                  style={[
+                    styles.dateItemMonth,
+                    isSelected && styles.selectedDateText,
+                  ]}
+                >
+                  {month}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -332,9 +404,11 @@ const CalendarScreen = () => {
 
       <View style={styles.calendarPlaceholder}>
         <Text style={styles.dateText}>Schedule for</Text>
-        <Text style={styles.dateSubtext}>{formatDisplayDate(selectedDate)}</Text>
+        <Text style={styles.dateSubtext}>
+          {formatDisplayDate(selectedDate)}
+        </Text>
       </View>
-      
+
       <FlatList
         data={dummyEvents[selectedDate] || []}
         keyExtractor={(item) => item.id}
@@ -418,7 +492,7 @@ const styles = StyleSheet.create({
   dateSelectorContent: {
     paddingHorizontal: 16,
     paddingVertical: 0,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
   },
   dateItem: {
@@ -448,19 +522,19 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 2,
     textTransform: "uppercase",
-    textAlign: 'center',
+    textAlign: "center",
   },
   dateItemMonth: {
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: "center",
   },
   dateItemDay: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#374151",
-    textAlign: 'center',
+    textAlign: "center",
   },
   selectedDateText: {
     color: "#FFFFFF",

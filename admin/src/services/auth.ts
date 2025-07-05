@@ -1,5 +1,10 @@
-import apiClient from "./apiClient";
 import { LoginCredentials, AdminLoginResponse } from "@/types/auth";
+
+// Dummy credentials for development
+const DUMMY_ADMIN_CREDENTIALS = {
+  email: "zencare117@gmail.com",
+  password: "HealthMinistry!11zencare7",
+};
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AdminLoginResponse> {
@@ -9,29 +14,39 @@ export const authService = {
         password: "[HIDDEN]",
       });
 
-      const response = await apiClient.post("/admin/login", credentials);
-      console.log("🔍 ADMIN WEB: Login response:", response.data);
+      // Always use dummy credentials for this setup - no API calls
+      if (
+        credentials.email === DUMMY_ADMIN_CREDENTIALS.email &&
+        credentials.password === DUMMY_ADMIN_CREDENTIALS.password
+      ) {
+        const dummyToken = "dummy-admin-token-" + Date.now();
+        localStorage.setItem("adminToken", dummyToken);
+        console.log(
+          "🔍 ADMIN WEB: Dummy login successful, token stored:",
+          dummyToken
+        );
 
-      if (response.data.success && response.data.data?.token) {
-        const token = response.data.data.token;
-        localStorage.setItem("adminToken", token);
-        console.log("🔍 ADMIN WEB: Token stored successfully");
-        return response.data;
+        return {
+          success: true,
+          message: "Login successful (dummy mode)",
+          data: {
+            token: dummyToken,
+          },
+        };
+      } else {
+        throw new Error(
+          "Invalid credentials. Please use the correct admin credentials."
+        );
       }
-
-      throw new Error(
-        response.data.message || "Login failed - no token received"
-      );
     } catch (error: any) {
       console.error("🔍 ADMIN WEB: Login error:", error);
-      console.error("🔍 ADMIN WEB: Error response:", error.response?.data);
-      throw new Error(
-        error.response?.data?.message || error.message || "Login failed"
-      );
+      throw new Error(error.message || "Login failed");
     }
   },
 
   logout(): void {
+    console.log("🔍 ADMIN WEB: Logout called");
+    console.trace("🔍 ADMIN WEB: Logout call stack");
     localStorage.removeItem("adminToken");
     window.location.href = "/login";
   },
@@ -46,40 +61,30 @@ export const authService = {
   },
 
   isAuthenticated(): boolean {
-    const token = this.getToken();
-    console.log(
-      "🔍 ADMIN WEB: Checking authentication, token:",
-      token ? "EXISTS" : "NOT_FOUND"
-    );
-
-    if (!token) {
-      console.log("🔍 ADMIN WEB: No token found");
-      return false;
-    }
-
     try {
-      // Basic JWT structure validation (not signature verification)
-      const parts = token.split(".");
-      if (parts.length !== 3) {
-        console.log("🔍 ADMIN WEB: Invalid token structure");
-        localStorage.removeItem("adminToken");
+      const token = this.getToken();
+      console.log(
+        "🔍 ADMIN WEB: Checking authentication, token:",
+        token ? "EXISTS" : "NOT_FOUND"
+      );
+
+      if (!token) {
+        console.log("🔍 ADMIN WEB: No token found");
         return false;
       }
 
-      const payload = JSON.parse(atob(parts[1]));
-      const now = Date.now() / 1000;
-
-      if (payload.exp && payload.exp < now) {
-        console.log("🔍 ADMIN WEB: Token expired");
-        localStorage.removeItem("adminToken");
-        return false;
+      // For dummy mode, just check if it exists and starts with our dummy prefix
+      if (token.startsWith("dummy-admin-token-")) {
+        console.log("🔍 ADMIN WEB: Dummy token is valid");
+        return true;
       }
 
-      console.log("🔍 ADMIN WEB: Token is valid");
-      return true;
+      console.log(
+        "🔍 ADMIN WEB: Non-dummy token found, treating as invalid in dummy mode"
+      );
+      return false;
     } catch (error) {
-      console.error("🔍 ADMIN WEB: Error validating token:", error);
-      localStorage.removeItem("adminToken");
+      console.error("🔍 ADMIN WEB: Error checking authentication:", error);
       return false;
     }
   },

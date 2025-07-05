@@ -77,8 +77,9 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-primary-500 rounded-lg flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">🏥</span>
+          <div className="mx-auto h-16 w-16  rounded-lg flex items-center justify-center">
+            <span className="text-white text-6xl font-bold">🏥</span>
+            
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             ZenCare Admin Login
@@ -124,47 +125,7 @@ const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-4 p-3 bg-blue-50 rounded-md">
-            <p className="text-xs text-blue-600">
-              🔒 Test credentials pre-filled. Click "Sign In" to login as admin.
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Email: zencare117@gmail.com
-            </p>
-            <div className="mt-2 space-y-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  console.log(
-                    "🔍 DEBUG: Current token:",
-                    authService.getToken()
-                  );
-                  console.log(
-                    "🔍 DEBUG: Is authenticated:",
-                    authService.isAuthenticated()
-                  );
-                  console.log(
-                    "🔍 DEBUG: LocalStorage:",
-                    localStorage.getItem("adminToken")
-                  );
-                }}
-              >
-                Debug Auth Status
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  window.location.reload();
-                }}
-              >
-                Force Refresh
-              </Button>
-            </div>
-          </div>
+          
         </Card>
       </div>
     </div>

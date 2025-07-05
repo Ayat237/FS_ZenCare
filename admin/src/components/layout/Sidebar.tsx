@@ -21,6 +21,7 @@ const Sidebar: React.FC = () => {
             <NavLink
               key={item.name}
               to={item.href}
+              end={item.href === "/" || item.href === "/doctors"}
               className={({ isActive }) =>
                 cn(
                   "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",

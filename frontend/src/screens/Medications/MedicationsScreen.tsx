@@ -1,48 +1,48 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
-  FlatList, 
+import React, { useState, useMemo, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
   ScrollView,
   Modal,
   TextInput,
   Platform,
   KeyboardAvoidingView,
-  Animated
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Card } from '@components/ui';
-import Colors from '@theme/colors';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
+  Animated,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Card } from "@components/ui";
+import Colors from "@theme/colors";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: "#F5F7FA",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E9F0',
+    borderBottomColor: "#E5E9F0",
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.primary500,
   },
   addButton: {
@@ -50,32 +50,32 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
   categoryFilter: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E9F0',
+    borderBottomColor: "#E5E9F0",
   },
   categoryButton: {
     padding: 10,
     borderRadius: 20,
     marginRight: 12,
-    backgroundColor: '#F0F4F8',
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: "#F0F4F8",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     elevation: 1,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
@@ -86,75 +86,75 @@ const styles = StyleSheet.create({
   categoryText: {
     marginLeft: 8,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: Colors.primary600,
   },
   categoryTextActive: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   categoryIcon: {
     marginRight: 4,
   },
   medicationList: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: "#F5F7FA",
     paddingTop: 8,
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 32,
   },
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8D95A9',
-    textAlign: 'center',
+    color: "#8D95A9",
+    textAlign: "center",
   },
   card: {
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     padding: 0,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   cardHeaderLeft: {
     flex: 1,
   },
   cardHeaderRight: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D3748',
+    fontWeight: "bold",
+    color: "#2D3748",
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#718096',
+    color: "#718096",
     marginTop: 4,
   },
   status: {
     fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    fontWeight: "bold",
+    textTransform: "uppercase",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   statusContainer: {
     borderRadius: 12,
@@ -163,51 +163,51 @@ const styles = StyleSheet.create({
   },
   cardDetails: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: '#E5E9F0',
+    borderTopColor: "#E5E9F0",
   },
   detailRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 12,
   },
   detailLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#718096',
+    fontWeight: "600",
+    color: "#718096",
     width: 100,
   },
   detailValue: {
     fontSize: 14,
-    color: '#2D3748',
+    color: "#2D3748",
     flex: 1,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    maxHeight: '90%',
+    paddingBottom: Platform.OS === "ios" ? 40 : 20,
+    maxHeight: "90%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E9F0',
+    borderBottomColor: "#E5E9F0",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.primary500,
   },
   closeButton: {
@@ -218,63 +218,63 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4A5568',
+    fontWeight: "600",
+    color: "#4A5568",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F7FAFC',
+    backgroundColor: "#F7FAFC",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#2D3748',
+    color: "#2D3748",
   },
   pickerContainer: {
-    backgroundColor: '#F7FAFC',
+    backgroundColor: "#F7FAFC",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 8,
     marginBottom: 16,
   },
   datePickerButton: {
-    backgroundColor: '#F7FAFC',
+    backgroundColor: "#F7FAFC",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dateText: {
     fontSize: 16,
-    color: '#2D3748',
+    color: "#2D3748",
   },
   submitButton: {
     backgroundColor: Colors.primary300,
     borderRadius: 8,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   halfWidth: {
-    width: '48%',
+    width: "48%",
   },
   medicineTypeTag: {
-    backgroundColor: '#EBF8FF',
+    backgroundColor: "#EBF8FF",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -283,27 +283,27 @@ const styles = StyleSheet.create({
   medicineTypeText: {
     color: Colors.primary400,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   drugIdContainer: {
-    backgroundColor: '#F0FFF4',
+    backgroundColor: "#F0FFF4",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   drugIdText: {
-    color: '#38A169',
+    color: "#38A169",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   timingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 8,
   },
   timingText: {
     fontSize: 14,
-    color: '#4A5568',
+    color: "#4A5568",
     marginLeft: 4,
   },
   scrollViewContent: {
@@ -325,7 +325,7 @@ interface Medication {
   intakeInstructions: string;
   notes?: string;
   category?: string;
-  status?: 'active' | 'completed' | 'expired';
+  status?: "active" | "completed" | "expired";
 }
 
 const dummyMedications: Medication[] = [
@@ -343,7 +343,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "After eat",
     notes: "Take after breakfast",
     status: "active",
-    category: "vitamin"
+    category: "vitamin",
   },
   {
     id: "2",
@@ -359,7 +359,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "Before sleep",
     notes: "Take on empty stomach",
     status: "active",
-    category: "heart"
+    category: "heart",
   },
   {
     id: "3",
@@ -375,7 +375,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "With meal",
     notes: "Take with evening meal",
     status: "active",
-    category: "diabetes"
+    category: "diabetes",
   },
   {
     id: "4",
@@ -391,7 +391,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "With food",
     notes: "Take with food if stomach upset occurs",
     status: "completed",
-    category: "pain"
+    category: "pain",
   },
   {
     id: "5",
@@ -407,7 +407,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "Before sleep",
     notes: "Take at bedtime",
     status: "active",
-    category: "heart"
+    category: "heart",
   },
   {
     id: "6",
@@ -423,7 +423,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "Empty stomach",
     notes: "Take on empty stomach, 30-60 minutes before breakfast",
     status: "active",
-    category: "thyroid"
+    category: "thyroid",
   },
   {
     id: "7",
@@ -439,7 +439,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "Before breakfast",
     notes: "Take 30 minutes before breakfast",
     status: "active",
-    category: "digestive"
+    category: "digestive",
   },
   {
     id: "8",
@@ -455,7 +455,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "With or without food",
     notes: "Complete the full course even if feeling better",
     status: "expired",
-    category: "antibiotic"
+    category: "antibiotic",
   },
   {
     id: "9",
@@ -471,7 +471,7 @@ const dummyMedications: Medication[] = [
     intakeInstructions: "With or without food",
     notes: "Take for allergy symptoms",
     status: "active",
-    category: "allergy"
+    category: "allergy",
   },
 ];
 
@@ -482,20 +482,20 @@ const MedicationItem = ({ item }: { item: Medication }) => {
   // Get status color and background
   const getStatusStyle = () => {
     switch (item.status) {
-      case 'active':
-        return { color: '#FFFFFF', backgroundColor: '#4CAF50' }; // Green
-      case 'completed':
-        return { color: '#FFFFFF', backgroundColor: '#9E9E9E' }; // Grey
-      case 'expired':
-        return { color: '#FFFFFF', backgroundColor: '#F44336' }; // Red
+      case "active":
+        return { color: "#FFFFFF", backgroundColor: "#4CAF50" }; // Green
+      case "completed":
+        return { color: "#FFFFFF", backgroundColor: "#9E9E9E" }; // Grey
+      case "expired":
+        return { color: "#FFFFFF", backgroundColor: "#F44336" }; // Red
       default:
-        return { color: '#FFFFFF', backgroundColor: '#9E9E9E' }; // Grey
+        return { color: "#FFFFFF", backgroundColor: "#9E9E9E" }; // Grey
     }
   };
 
   // Format time from hour
   const formatTime = (hour: number) => {
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const formattedHour = hour % 12 || 12;
     return `${formattedHour} ${ampm}`;
   };
@@ -504,7 +504,7 @@ const MedicationItem = ({ item }: { item: Medication }) => {
   const toggleExpand = () => {
     const newExpanded = !expanded;
     setExpanded(newExpanded);
-    
+
     Animated.timing(animatedHeight, {
       toValue: newExpanded ? 1 : 0,
       duration: 300,
@@ -513,15 +513,13 @@ const MedicationItem = ({ item }: { item: Medication }) => {
   };
 
   return (
-    <Card
-      style={styles.card}
-      onPress={toggleExpand}
-      elevation={3}
-    >
+    <Card style={styles.card} onPress={toggleExpand} elevation={3}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           <Text style={styles.cardTitle}>{item.medicineName}</Text>
-          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 6}}>
+          <View
+            style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}
+          >
             <View style={styles.medicineTypeTag}>
               <Text style={styles.medicineTypeText}>{item.medicineType}</Text>
             </View>
@@ -537,7 +535,12 @@ const MedicationItem = ({ item }: { item: Medication }) => {
           </View>
         </View>
         <View style={styles.cardHeaderRight}>
-          <View style={[styles.statusContainer, { backgroundColor: getStatusStyle().backgroundColor }]}>
+          <View
+            style={[
+              styles.statusContainer,
+              { backgroundColor: getStatusStyle().backgroundColor },
+            ]}
+          >
             <Text style={[styles.status, { color: getStatusStyle().color }]}>
               {item.status?.toUpperCase()}
             </Text>
@@ -549,12 +552,16 @@ const MedicationItem = ({ item }: { item: Medication }) => {
         <View style={styles.cardDetails}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Dose:</Text>
-            <Text style={styles.detailValue}>{item.dose} {item.medicineType}</Text>
+            <Text style={styles.detailValue}>
+              {item.dose} {item.medicineType}
+            </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Frequency:</Text>
-            <Text style={styles.detailValue}>{item.frequency}, {item.timesPerDay} times per day</Text>
+            <Text style={styles.detailValue}>
+              {item.frequency}, {item.timesPerDay} times per day
+            </Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -569,13 +576,13 @@ const MedicationItem = ({ item }: { item: Medication }) => {
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Notes:</Text>
-            <Text style={styles.detailValue}>{item.notes || 'No notes'}</Text>
+            <Text style={styles.detailValue}>{item.notes || "No notes"}</Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Period:</Text>
             <Text style={styles.detailValue}>
-              {new Date(item.startDateTime).toLocaleDateString()} - 
+              {new Date(item.startDateTime).toLocaleDateString()} -
               {new Date(item.endDateTime).toLocaleDateString()}
             </Text>
           </View>
@@ -607,37 +614,51 @@ const MedicationsScreen = () => {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [medications, setMedications] = useState<Medication[]>(dummyMedications);
+  const [medications, setMedications] =
+    useState<Medication[]>(dummyMedications);
   const [formState, setFormState] = useState<MedicationFormState>({
-    medicineName: '',
-    medicineType: 'Pills',
-    drugId: '',
-    dose: '',
-    frequency: 'Daily',
-    timesPerDay: '1',
+    medicineName: "",
+    medicineType: "Pills",
+    drugId: "",
+    dose: "",
+    frequency: "Daily",
+    timesPerDay: "1",
     startHour: 8,
     startDateTime: new Date(),
     endDateTime: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-    intakeInstructions: '',
-    notes: ''
+    intakeInstructions: "",
+    notes: "",
   });
 
   // Define all available categories from medications
-  const allCategories = ['all', ...Array.from(new Set(medications.map(med => med.category || 'other')))];
+  const allCategories = [
+    "all",
+    ...Array.from(new Set(medications.map((med) => med.category || "other"))),
+  ];
 
   // Get icon name based on category
   const getCategoryIcon = (category: string) => {
-    switch(category) {
-      case 'all': return 'pill';
-      case 'vitamin': return 'pill'; // Changed from 'vitamin' to 'pill-multiple'
-      case 'heart': return 'heart';
-      case 'diabetes': return 'diabetes';
-      case 'pain': return 'bandage';
-      case 'thyroid': return 'medical-bag';
-      case 'digestive': return 'stomach';
-      case 'antibiotic': return 'bacteria';
-      case 'allergy': return 'weather-windy'; // Changed from 'weather-dust' to 'weather-windy'
-      default: return 'pill';
+    switch (category) {
+      case "all":
+        return "pill";
+      case "vitamin":
+        return "pill"; // Changed from 'vitamin' to 'pill-multiple'
+      case "heart":
+        return "heart";
+      case "diabetes":
+        return "diabetes";
+      case "pain":
+        return "bandage";
+      case "thyroid":
+        return "medical-bag";
+      case "digestive":
+        return "stomach";
+      case "antibiotic":
+        return "bacteria";
+      case "allergy":
+        return "weather-windy"; // Changed from 'weather-dust' to 'weather-windy'
+      default:
+        return "pill";
     }
   };
 
@@ -646,14 +667,14 @@ const MedicationsScreen = () => {
     if (selectedCategory === null) {
       return medications;
     }
-    return medications.filter(med => med.category === selectedCategory);
+    return medications.filter((med) => med.category === selectedCategory);
   }, [selectedCategory, medications]);
 
   // Handle form input changes
   const handleInputChange = (name: keyof MedicationFormState, value: any) => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -664,35 +685,41 @@ const MedicationsScreen = () => {
       id: (medications.length + 1).toString(),
       medicineName: formState.medicineName,
       medicineType: formState.medicineType,
-      drugId: formState.drugId || `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+      drugId:
+        formState.drugId ||
+        `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(
+          1000 + Math.random() * 9000
+        )}`,
       dose: parseInt(formState.dose) || 0,
       frequency: formState.frequency,
       timesPerDay: parseInt(formState.timesPerDay) || 1,
       startHour: formState.startHour,
-      startDateTime: formState.startDateTime.toISOString().split('T')[0],
-      endDateTime: formState.endDateTime.toISOString().split('T')[0],
+      startDateTime: formState.startDateTime.toISOString().split("T")[0],
+      endDateTime: formState.endDateTime.toISOString().split("T")[0],
       intakeInstructions: formState.intakeInstructions,
       notes: formState.notes,
-      status: 'active',
-      category: formState.medicineName.toLowerCase().includes('vitamin') ? 'vitamin' : 'other'
+      status: "active",
+      category: formState.medicineName.toLowerCase().includes("vitamin")
+        ? "vitamin"
+        : "other",
     };
 
     // Add new medication to the list
-    setMedications(prev => [newMedication, ...prev]);
+    setMedications((prev) => [newMedication, ...prev]);
 
     // Reset form and close modal
     setFormState({
-      medicineName: '',
-      medicineType: 'Pills',
-      drugId: '',
-      dose: '',
-      frequency: 'Daily',
-      timesPerDay: '1',
+      medicineName: "",
+      medicineType: "Pills",
+      drugId: "",
+      dose: "",
+      frequency: "Daily",
+      timesPerDay: "1",
       startHour: 8,
       startDateTime: new Date(),
       endDateTime: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-      intakeInstructions: '',
-      notes: ''
+      intakeInstructions: "",
+      notes: "",
     });
     setModalVisible(false);
   };
@@ -706,7 +733,7 @@ const MedicationsScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Medications</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => setModalVisible(true)}
         >
@@ -716,24 +743,32 @@ const MedicationsScreen = () => {
 
       <View style={styles.categoryFilter}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {allCategories.map(category => (
+          {allCategories.map((category) => (
             <TouchableOpacity
               key={category}
               style={[
                 styles.categoryButton,
-                selectedCategory === (category === 'all' ? null : category) && styles.categoryButtonActive
+                selectedCategory === (category === "all" ? null : category) &&
+                  styles.categoryButtonActive,
               ]}
-              onPress={() => setSelectedCategory(category === 'all' ? null : category)}
+              onPress={() =>
+                setSelectedCategory(category === "all" ? null : category)
+              }
             >
               <Icon
                 name={getCategoryIcon(category)}
                 size={18}
-                color={selectedCategory === (category === 'all' ? null : category) ? '#FFFFFF' : Colors.primary500}
+                color={
+                  selectedCategory === (category === "all" ? null : category)
+                    ? "#FFFFFF"
+                    : Colors.primary500
+                }
               />
-              <Text 
+              <Text
                 style={[
                   styles.categoryText,
-                  selectedCategory === (category === 'all' ? null : category) && styles.categoryTextActive
+                  selectedCategory === (category === "all" ? null : category) &&
+                    styles.categoryTextActive,
                 ]}
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -762,14 +797,14 @@ const MedicationsScreen = () => {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Medication</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
@@ -777,14 +812,19 @@ const MedicationsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollViewContent}
+            >
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Medicine Name</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="Enter medicine name"
                   value={formState.medicineName}
-                  onChangeText={(text) => handleInputChange('medicineName', text)}
+                  onChangeText={(text) =>
+                    handleInputChange("medicineName", text)
+                  }
                 />
               </View>
 
@@ -794,7 +834,9 @@ const MedicationsScreen = () => {
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formState.medicineType}
-                      onValueChange={(value:any) => handleInputChange('medicineType', value)}
+                      onValueChange={(value: any) =>
+                        handleInputChange("medicineType", value)
+                      }
                     >
                       <Picker.Item label="Pills" value="Pills" />
                       <Picker.Item label="Tablets" value="Tablets" />
@@ -814,7 +856,7 @@ const MedicationsScreen = () => {
                     style={styles.input}
                     placeholder="Enter drug ID"
                     value={formState.drugId}
-                    onChangeText={(text) => handleInputChange('drugId', text)}
+                    onChangeText={(text) => handleInputChange("drugId", text)}
                   />
                 </View>
               </View>
@@ -827,7 +869,7 @@ const MedicationsScreen = () => {
                     placeholder="Enter dose amount"
                     keyboardType="numeric"
                     value={formState.dose}
-                    onChangeText={(text) => handleInputChange('dose', text)}
+                    onChangeText={(text) => handleInputChange("dose", text)}
                   />
                 </View>
 
@@ -836,14 +878,22 @@ const MedicationsScreen = () => {
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formState.frequency}
-                      onValueChange={(value:any) => handleInputChange('frequency', value)}
+                      onValueChange={(value: any) =>
+                        handleInputChange("frequency", value)
+                      }
                     >
                       <Picker.Item label="Daily" value="Daily" />
                       <Picker.Item label="Weekly" value="Weekly" />
                       <Picker.Item label="Monthly" value="Monthly" />
                       <Picker.Item label="As needed" value="As needed" />
-                      <Picker.Item label="Every 8 hours" value="Every 8 hours" />
-                      <Picker.Item label="Every 12 hours" value="Every 12 hours" />
+                      <Picker.Item
+                        label="Every 8 hours"
+                        value="Every 8 hours"
+                      />
+                      <Picker.Item
+                        label="Every 12 hours"
+                        value="Every 12 hours"
+                      />
                     </Picker>
                   </View>
                 </View>
@@ -855,7 +905,9 @@ const MedicationsScreen = () => {
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formState.timesPerDay}
-                      onValueChange={(value:any) => handleInputChange('timesPerDay', value)}
+                      onValueChange={(value: any) =>
+                        handleInputChange("timesPerDay", value)
+                      }
                     >
                       <Picker.Item label="1" value="1" />
                       <Picker.Item label="2" value="2" />
@@ -867,25 +919,31 @@ const MedicationsScreen = () => {
 
                 <View style={[styles.formGroup, styles.halfWidth]}>
                   <Text style={styles.label}>Start Hour</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.datePickerButton}
                     onPress={() => setShowTimePicker(true)}
                   >
                     <Text style={styles.dateText}>
-                      {formState.startHour % 12 || 12}:00 {formState.startHour >= 12 ? 'PM' : 'AM'}
+                      {formState.startHour % 12 || 12}:00{" "}
+                      {formState.startHour >= 12 ? "PM" : "AM"}
                     </Text>
                     <Icon name="clock-outline" size={20} color="#718096" />
                   </TouchableOpacity>
                   {showTimePicker && (
                     <DateTimePicker
-                      value={new Date(new Date().setHours(formState.startHour, 0, 0))}
+                      value={
+                        new Date(new Date().setHours(formState.startHour, 0, 0))
+                      }
                       mode="time"
                       is24Hour={false}
                       display="default"
                       onChange={(event, selectedDate) => {
                         setShowTimePicker(false);
                         if (selectedDate) {
-                          handleInputChange('startHour', selectedDate.getHours());
+                          handleInputChange(
+                            "startHour",
+                            selectedDate.getHours()
+                          );
                         }
                       }}
                     />
@@ -896,11 +954,13 @@ const MedicationsScreen = () => {
               <View style={styles.row}>
                 <View style={[styles.formGroup, styles.halfWidth]}>
                   <Text style={styles.label}>Start Date</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.datePickerButton}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Text style={styles.dateText}>{formatDate(formState.startDateTime)}</Text>
+                    <Text style={styles.dateText}>
+                      {formatDate(formState.startDateTime)}
+                    </Text>
                     <Icon name="calendar" size={20} color="#718096" />
                   </TouchableOpacity>
                   {showStartDatePicker && (
@@ -911,7 +971,7 @@ const MedicationsScreen = () => {
                       onChange={(event, selectedDate) => {
                         setShowStartDatePicker(false);
                         if (selectedDate) {
-                          handleInputChange('startDateTime', selectedDate);
+                          handleInputChange("startDateTime", selectedDate);
                         }
                       }}
                     />
@@ -920,11 +980,13 @@ const MedicationsScreen = () => {
 
                 <View style={[styles.formGroup, styles.halfWidth]}>
                   <Text style={styles.label}>End Date</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.datePickerButton}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Text style={styles.dateText}>{formatDate(formState.endDateTime)}</Text>
+                    <Text style={styles.dateText}>
+                      {formatDate(formState.endDateTime)}
+                    </Text>
                     <Icon name="calendar" size={20} color="#718096" />
                   </TouchableOpacity>
                   {showEndDatePicker && (
@@ -935,7 +997,7 @@ const MedicationsScreen = () => {
                       onChange={(event, selectedDate) => {
                         setShowEndDatePicker(false);
                         if (selectedDate) {
-                          handleInputChange('endDateTime', selectedDate);
+                          handleInputChange("endDateTime", selectedDate);
                         }
                       }}
                     />
@@ -949,23 +1011,28 @@ const MedicationsScreen = () => {
                   style={styles.input}
                   placeholder="E.g., After eat, Before sleep"
                   value={formState.intakeInstructions}
-                  onChangeText={(text) => handleInputChange('intakeInstructions', text)}
+                  onChangeText={(text) =>
+                    handleInputChange("intakeInstructions", text)
+                  }
                 />
               </View>
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Notes (Optional)</Text>
                 <TextInput
-                  style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                  style={[
+                    styles.input,
+                    { height: 80, textAlignVertical: "top" },
+                  ]}
                   placeholder="Add any additional notes"
                   multiline
                   numberOfLines={3}
                   value={formState.notes}
-                  onChangeText={(text) => handleInputChange('notes', text)}
+                  onChangeText={(text) => handleInputChange("notes", text)}
                 />
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.submitButton}
                 onPress={handleSubmit}
               >
@@ -978,6 +1045,5 @@ const MedicationsScreen = () => {
     </SafeAreaView>
   );
 };
-
 
 export default MedicationsScreen;

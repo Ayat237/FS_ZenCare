@@ -3,12 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Image,
   ScrollView,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
@@ -51,7 +51,7 @@ const DoctorHomeScreen: React.FC = () => {
       icon: "clock-outline",
       color: "#FF9800",
     },
-    { title: "This Week", value: "42", icon: "chart-line", color: "#9C27B0" },
+    
   ];
 
   const quickActions = [
