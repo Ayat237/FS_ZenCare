@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   slotsSection: {
-    marginTop: 10, // Changed from negative margin to positive margin
+    marginTop: -485, // Changed from negative margin to positive margin
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   slotsContainer: {
-   
+    
     maxHeight: 700, // Limit height to prevent taking too much space
     paddingVertical: 2, // Minimal padding
     // marginTop: -8, // Reduced margin for better spacing
