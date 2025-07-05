@@ -51,7 +51,7 @@ const Slot = mongoose.models.Slot || model("Slot", slotSchema);
 
 class SlotModel extends BaseModel {
   constructor(database) {
-    super(database, "Slot");
+    super(database, "slot");
   }
 }
 

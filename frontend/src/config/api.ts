@@ -9,7 +9,7 @@
 // Main API service configuration
 export const API_CONFIG = {
   // Default development URL (local development)
-  DEV_URL: "http://192.168.1.9:4000",
+  DEV_URL: "http://192.168.1.10:4000",
   // Alternative development URL (different network)
   ALT_DEV_URL: "http://192.168.187.46:4000",
   // Staging URL (for testing before production)

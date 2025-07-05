@@ -9,7 +9,6 @@ import {
   Image,
   Animated,
   TextInput,
-  ScrollView,
   StatusBar,
   Dimensions,
   SectionList,
@@ -85,9 +84,27 @@ const dummyDoctors: Doctor[] = [
     image: require("@/assets/images/doctor1.png"),
     rating: 4.8,
     availableSlots: [
-      { id: "s1", date: "2025-07-01", startTime: "10:00", endTime: "10:30", type: "telemedicine" },
-      { id: "s2", date: "2025-07-01", startTime: "11:00", endTime: "11:30", type: "telemedicine" },
-      { id: "s3", date: "2025-07-02", startTime: "14:00", endTime: "14:30", type: "in-person" },
+      {
+        id: "s1",
+        date: "2025-07-01",
+        startTime: "10:00",
+        endTime: "10:30",
+        type: "telemedicine",
+      },
+      {
+        id: "s2",
+        date: "2025-07-01",
+        startTime: "11:00",
+        endTime: "11:30",
+        type: "telemedicine",
+      },
+      {
+        id: "s3",
+        date: "2025-07-02",
+        startTime: "14:00",
+        endTime: "14:30",
+        type: "in-person",
+      },
     ],
   },
   {
@@ -97,8 +114,20 @@ const dummyDoctors: Doctor[] = [
     image: require("@/assets/images/doctor2.png"),
     rating: 4.7,
     availableSlots: [
-      { id: "s4", date: "2025-07-01", startTime: "09:00", endTime: "09:30", type: "in-person" },
-      { id: "s5", date: "2025-07-01", startTime: "13:00", endTime: "13:30", type: "telemedicine" },
+      {
+        id: "s4",
+        date: "2025-07-01",
+        startTime: "09:00",
+        endTime: "09:30",
+        type: "in-person",
+      },
+      {
+        id: "s5",
+        date: "2025-07-01",
+        startTime: "13:00",
+        endTime: "13:30",
+        type: "telemedicine",
+      },
     ],
   },
   {
@@ -108,8 +137,20 @@ const dummyDoctors: Doctor[] = [
     image: require("@/assets/images/doctor1.png"),
     rating: 4.9,
     availableSlots: [
-      { id: "s6", date: "2025-07-02", startTime: "10:00", endTime: "10:30", type: "telemedicine" },
-      { id: "s7", date: "2025-07-03", startTime: "15:00", endTime: "15:30", type: "telemedicine" },
+      {
+        id: "s6",
+        date: "2025-07-02",
+        startTime: "10:00",
+        endTime: "10:30",
+        type: "telemedicine",
+      },
+      {
+        id: "s7",
+        date: "2025-07-03",
+        startTime: "15:00",
+        endTime: "15:30",
+        type: "telemedicine",
+      },
     ],
   },
   {
@@ -119,8 +160,20 @@ const dummyDoctors: Doctor[] = [
     image: require("@/assets/images/doctor2.png"),
     rating: 4.6,
     availableSlots: [
-      { id: "s8", date: "2025-07-01", startTime: "11:00", endTime: "11:30", type: "in-person" },
-      { id: "s9", date: "2025-07-02", startTime: "14:00", endTime: "14:30", type: "in-person" },
+      {
+        id: "s8",
+        date: "2025-07-01",
+        startTime: "11:00",
+        endTime: "11:30",
+        type: "in-person",
+      },
+      {
+        id: "s9",
+        date: "2025-07-02",
+        startTime: "14:00",
+        endTime: "14:30",
+        type: "in-person",
+      },
     ],
   },
   {
@@ -130,8 +183,20 @@ const dummyDoctors: Doctor[] = [
     image: require("@/assets/images/doctor1.png"),
     rating: 4.9,
     availableSlots: [
-      { id: "s10", date: "2025-07-01", startTime: "09:00", endTime: "09:30", type: "telemedicine" },
-      { id: "s11", date: "2025-07-01", startTime: "10:00", endTime: "10:30", type: "telemedicine" },
+      {
+        id: "s10",
+        date: "2025-07-01",
+        startTime: "09:00",
+        endTime: "09:30",
+        type: "telemedicine",
+      },
+      {
+        id: "s11",
+        date: "2025-07-01",
+        startTime: "10:00",
+        endTime: "10:30",
+        type: "telemedicine",
+      },
     ],
   },
 ];
@@ -167,7 +232,7 @@ const dummyNewAppointments: NewAppointment[] = [
     status: "completed",
     doctorImage: require("@/assets/images/doctor2.png"),
   },
-  
+
   // History appointments
   {
     id: "a4",
@@ -238,7 +303,7 @@ const AppointmentItem = ({ item }: { item: Appointment }) => {
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.97)).current;
   const expandAnim = useRef(new Animated.Value(0)).current;
-  
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Upcoming":
@@ -251,14 +316,14 @@ const AppointmentItem = ({ item }: { item: Appointment }) => {
         return Colors.primary500;
     }
   };
-  
+
   const onPressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
   };
-  
+
   const onPressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -267,7 +332,7 @@ const AppointmentItem = ({ item }: { item: Appointment }) => {
       useNativeDriver: true,
     }).start();
   };
-  
+
   const toggleExpand = () => {
     setExpanded(!expanded);
     Animated.timing(expandAnim, {
@@ -276,27 +341,27 @@ const AppointmentItem = ({ item }: { item: Appointment }) => {
       useNativeDriver: false,
     }).start();
   };
-  
+
   const maxHeight = expandAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [100, 180]
+    outputRange: [100, 180],
   });
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.appointmentCardContainer}
       activeOpacity={0.9}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       onPress={toggleExpand}
     >
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.appointmentCard, 
-          { 
+          styles.appointmentCard,
+          {
             transform: [{ scale: scaleAnim }],
-            height: expanded ? maxHeight : undefined
-          }
+            height: expanded ? maxHeight : undefined,
+          },
         ]}
       >
         <View style={styles.appointmentHeader}>
@@ -337,34 +402,52 @@ const AppointmentItem = ({ item }: { item: Appointment }) => {
             {item.status}
           </Text>
         </View>
-        
+
         {expanded && (
           <View style={styles.expandedContent}>
             <View style={styles.divider} />
             <View style={styles.actionButtons}>
               {item.status === "Upcoming" && (
                 <>
-                  <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]}>
-                    <Icon name="calendar-clock" size={16} color={Colors.primary500} />
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.rescheduleButton]}
+                  >
+                    <Icon
+                      name="calendar-clock"
+                      size={16}
+                      color={Colors.primary500}
+                    />
                     <Text style={styles.rescheduleButtonText}>Reschedule</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity style={[styles.actionButton, styles.cancelButton]}>
-                    <Icon name="close-circle-outline" size={16} color={Colors.error500} />
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.cancelButton]}
+                  >
+                    <Icon
+                      name="close-circle-outline"
+                      size={16}
+                      color={Colors.error500}
+                    />
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
                 </>
               )}
-              
+
               {item.status === "Completed" && (
-                <TouchableOpacity style={[styles.actionButton, styles.reviewButton]}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.reviewButton]}
+                >
                   <Icon name="star-outline" size={16} color={"#FF9800"} />
-                  <Text style={[styles.actionButtonText, {color: "#FF9800"}]}>Leave Review</Text>
+                  <Text style={[styles.actionButtonText, { color: "#FF9800" }]}>
+                    Leave Review
+                  </Text>
                 </TouchableOpacity>
               )}
-              
+
               {item.status === "Cancelled" && (
-                <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.rescheduleButton]}
+                >
                   <Icon name="refresh" size={16} color={Colors.primary500} />
                   <Text style={styles.rescheduleButtonText}>Book Again</Text>
                 </TouchableOpacity>
@@ -411,14 +494,15 @@ const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSlotSelect }) => {
   }, {} as Record<string, TimeSlot[]>);
 
   const dates = slotsByDate ? Object.keys(slotsByDate).sort() : [];
-  const slotsForSelectedDate = selectedDate && slotsByDate ? slotsByDate[selectedDate] || [] : [];
+  const slotsForSelectedDate =
+    selectedDate && slotsByDate ? slotsByDate[selectedDate] || [] : [];
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -450,46 +534,46 @@ const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSlotSelect }) => {
             </Text>
           </View>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.viewAvailabilityButton}
           onPress={toggleExpand}
         >
           <Text style={styles.viewAvailabilityText}>
-            {expanded ? 'Hide' : 'View Slots'}
+            {expanded ? "Hide" : "View Slots"}
           </Text>
         </TouchableOpacity>
       </View>
-      
+
       {expanded && (
         <View style={styles.timeSlotsContainer}>
           <Text style={styles.timeSlotsTitle}>Available Time Slots</Text>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dateSelector}
-          >
-            {dates.map((date) => (
+
+          <FlatList
+            data={dates}
+            renderItem={({ item: date }) => (
               <TouchableOpacity
-                key={date}
                 style={[
                   styles.dateButton,
-                  selectedDate === date && styles.selectedDateButton
+                  selectedDate === date && styles.selectedDateButton,
                 ]}
                 onPress={() => handleDateSelect(date)}
               >
                 <Text
                   style={[
                     styles.dateButtonText,
-                    selectedDate === date && styles.selectedDateText
+                    selectedDate === date && styles.selectedDateText,
                   ]}
                 >
                   {formatDate(date)}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-          
+            )}
+            keyExtractor={(date) => date}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dateSelector}
+          />
+
           {selectedDate ? (
             <View style={styles.timeSlotsGrid}>
               {slotsForSelectedDate.map((slot) => (
@@ -499,50 +583,70 @@ const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSlotSelect }) => {
                     styles.timeSlotButton,
                     selectedSlot?.id === slot.id && styles.selectedTimeSlot,
                     {
-                      backgroundColor: slot.type === 'telemedicine' 
-                        ? 'rgba(59, 130, 246, 0.1)' 
-                        : 'rgba(16, 185, 129, 0.1)'
-                    }
+                      backgroundColor:
+                        slot.type === "telemedicine"
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "rgba(16, 185, 129, 0.1)",
+                    },
                   ]}
                   onPress={() => handleSlotPress(slot)}
                 >
                   <Text style={styles.timeSlotText}>
                     {slot.startTime} - {slot.endTime}
                   </Text>
-                  <View 
+                  <View
                     style={[
                       styles.slotTypeBadge,
                       {
-                        backgroundColor: selectedSlot?.id === slot.id
-                          ? slot.type === 'telemedicine' ? '#3B82F6' : '#10B981'
-                          : 'transparent',
-                        borderColor: slot.type === 'telemedicine' ? '#3B82F6' : '#10B981'
-                      }
+                        backgroundColor:
+                          selectedSlot?.id === slot.id
+                            ? slot.type === "telemedicine"
+                              ? "#3B82F6"
+                              : "#10B981"
+                            : "transparent",
+                        borderColor:
+                          slot.type === "telemedicine" ? "#3B82F6" : "#10B981",
+                      },
                     ]}
                   >
-                    <Icon 
-                      name={slot.type === 'telemedicine' ? 'video' : 'hospital-building'} 
-                      size={12} 
-                      color={selectedSlot?.id === slot.id ? '#FFF' : (slot.type === 'telemedicine' ? '#3B82F6' : '#10B981')} 
+                    <Icon
+                      name={
+                        slot.type === "telemedicine"
+                          ? "video"
+                          : "hospital-building"
+                      }
+                      size={12}
+                      color={
+                        selectedSlot?.id === slot.id
+                          ? "#FFF"
+                          : slot.type === "telemedicine"
+                          ? "#3B82F6"
+                          : "#10B981"
+                      }
                     />
-                    <Text 
+                    <Text
                       style={[
                         styles.slotTypeText,
                         {
-                          color: selectedSlot?.id === slot.id 
-                            ? '#FFF' 
-                            : slot.type === 'telemedicine' ? '#3B82F6' : '#10B981'
-                        }
+                          color:
+                            selectedSlot?.id === slot.id
+                              ? "#FFF"
+                              : slot.type === "telemedicine"
+                              ? "#3B82F6"
+                              : "#10B981",
+                        },
                       ]}
                     >
-                      {slot.type === 'telemedicine' ? 'Video' : 'In-Person'}
+                      {slot.type === "telemedicine" ? "Video" : "In-Person"}
                     </Text>
                   </View>
                 </TouchableOpacity>
               ))}
             </View>
           ) : (
-            <Text style={styles.selectDateText}>Select a date to see available time slots</Text>
+            <Text style={styles.selectDateText}>
+              Select a date to see available time slots
+            </Text>
           )}
         </View>
       )}
@@ -555,108 +659,104 @@ const NewAppointmentItem = ({ item }: { item: NewAppointment }) => {
   const isUpcoming = item.status === "confirmed";
   const isTelemedicine = item.type === "telemedicine";
   const isPast = item.status === "completed";
-  
+
   const getStatusColor = (status: string) => {
     return status === "confirmed" ? "#4F46E5" : "#10B981"; // Indigo-600 for confirmed, Emerald-500 for completed
   };
-  
+
   const statusColor = getStatusColor(item.status);
   const statusText = item.status.charAt(0).toUpperCase() + item.status.slice(1);
-  
+
   const handleJoinMeeting = () => {
     if (item.joinUrl) {
       Linking.openURL(item.joinUrl);
     }
   };
-  
+
   return (
-    <View style={[styles.appointmentCardContainer, isPast && styles.pastAppointment]}>
-      <View style={[
-        styles.appointmentCard,
-        {
-          borderLeftWidth: 4,
-          borderLeftColor: statusColor,
-          backgroundColor: isPast ? '#F9FAFB' : '#FFF',
-        }
-      ]}>
+    <View
+      style={[
+        styles.appointmentCardContainer,
+        isPast && styles.pastAppointment,
+      ]}
+    >
+      <View
+        style={[
+          styles.appointmentCard,
+          {
+            borderLeftWidth: 4,
+            borderLeftColor: statusColor,
+            backgroundColor: isPast ? "#F9FAFB" : "#FFF",
+          },
+        ]}
+      >
         <View style={styles.appointmentHeader}>
           <View style={styles.doctorImageContainer}>
-            <Image 
-              source={item.doctorImage} 
-              style={[
-                styles.doctorImage,
-                isPast && { opacity: 0.7 }
-              ]} 
+            <Image
+              source={item.doctorImage}
+              style={[styles.doctorImage, isPast && { opacity: 0.7 }]}
             />
-
           </View>
-          
+
           <View style={styles.appointmentInfo}>
-            <Text style={[
-              styles.doctorName, 
-              isPast && styles.pastText
-            ]}>
+            <Text style={[styles.doctorName, isPast && styles.pastText]}>
               {item.doctorName}
             </Text>
-            
+
             <View style={styles.appointmentDetails}>
               <View style={styles.detailItem}>
-                <Icon 
-                  name="calendar" 
-                  size={14} 
-                  color={isPast ? '#9CA3AF' : '#6B7280'} 
+                <Icon
+                  name="calendar"
+                  size={14}
+                  color={isPast ? "#9CA3AF" : "#6B7280"}
                 />
-                <Text style={[
-                  styles.detailText, 
-                  isPast && styles.pastText
-                ]}>
+                <Text style={[styles.detailText, isPast && styles.pastText]}>
                   {format(new Date(item.date), "MMM d, yyyy")}
                 </Text>
               </View>
-              
+
               <View style={styles.detailItem}>
-                <Icon 
-                  name="clock-outline" 
-                  size={14} 
-                  color={isPast ? '#9CA3AF' : '#6B7280'}
+                <Icon
+                  name="clock-outline"
+                  size={14}
+                  color={isPast ? "#9CA3AF" : "#6B7280"}
                 />
-                <Text style={[
-                  styles.detailText, 
-                  isPast && styles.pastText
-                ]}>
+                <Text style={[styles.detailText, isPast && styles.pastText]}>
                   {item.time}
                 </Text>
               </View>
-              
+
               <View style={styles.detailItem}>
                 <Icon
                   name={isTelemedicine ? "video" : "hospital-building"}
                   size={14}
-                  color={isPast ? '#9CA3AF' : '#6B7280'}
+                  color={isPast ? "#9CA3AF" : "#6B7280"}
                 />
-                <Text style={[
-                  styles.detailText, 
-                  isPast && styles.pastText
-                ]}>
+                <Text style={[styles.detailText, isPast && styles.pastText]}>
                   {isTelemedicine ? "Video Consultation" : "In-person Visit"}
                 </Text>
               </View>
             </View>
           </View>
         </View>
-        
+
         {isUpcoming && isTelemedicine && item.status === "confirmed" && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.joinMeetingButton}
             onPress={handleJoinMeeting}
             activeOpacity={0.8}
           >
             <Icon name="video" size={16} color="#FFF" />
             <Text style={styles.joinMeetingText}>Join Meeting</Text>
-            <Icon name="arrow-right" size={16} color="#FFF" style={styles.joinMeetingIcon} />
+            <Icon
+              name="arrow-right"
+              size={16}
+              color="#FFF"
+              style={styles.joinMeetingIcon}
+            />
           </TouchableOpacity>
         )}
-        
+
         {isPast && (
           <View style={styles.pastAppointmentOverlay}>
             <Text style={styles.pastAppointmentText}>Completed</Text>
@@ -676,106 +776,120 @@ type SectionType = {
 const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
   navigation,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
-  const [activeTab, setActiveTab] = useState('Available Doctors');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSpecialty, setSelectedSpecialty] = useState("All");
+  const [activeTab, setActiveTab] = useState("Available Doctors");
   const headerAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
-  
+
   // Animate header on scroll
   useEffect(() => {
     const headerTranslateY = scrollY.interpolate({
       inputRange: [0, 50],
       outputRange: [0, -5],
-      extrapolate: 'clamp',
+      extrapolate: "clamp",
     });
-    
+
     Animated.spring(headerAnim, {
       toValue: headerTranslateY,
       useNativeDriver: true,
       friction: 8,
     }).start();
   }, []);
-  
+
   // Filter doctors by specialty and search query
-  const filteredDoctors = dummyDoctors.filter(doctor => {
-    const matchesSpecialty = selectedSpecialty === 'All' || doctor.specialty === selectedSpecialty;
-    const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredDoctors = dummyDoctors.filter((doctor) => {
+    const matchesSpecialty =
+      selectedSpecialty === "All" || doctor.specialty === selectedSpecialty;
+    const matchesSearch =
+      doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSpecialty && matchesSearch;
   });
-  
+
   // Split appointments into upcoming and history
   const upcomingAppointments = dummyNewAppointments.filter(
-    app => app.status === "confirmed"
+    (app) => app.status === "confirmed"
   );
-  
+
   const appointmentHistory = dummyNewAppointments.filter(
-    app => app.status === "completed"
+    (app) => app.status === "completed"
   );
-  
+
   // Handle time slot selection
   const handleSlotSelect = (doctor: Doctor, slot: TimeSlot) => {
     // In a real app, this would open a booking confirmation modal or navigate to a booking screen
-    console.log(`Selected ${slot.startTime}-${slot.endTime} with ${doctor.name} on ${slot.date}`);
+    console.log(
+      `Selected ${slot.startTime}-${slot.endTime} with ${doctor.name} on ${slot.date}`
+    );
     // For now, just show an alert
-    Alert.alert(`Appointment slot selected: ${slot.startTime}-${slot.endTime} with ${doctor.name}`);
+    Alert.alert(
+      `Appointment slot selected: ${slot.startTime}-${slot.endTime} with ${doctor.name}`
+    );
   };
-  
+
   // Render content based on active tab
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'Available Doctors':
+      case "Available Doctors":
         return (
           <View style={styles.doctorsSection}>
             {/* Specialties filter */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.specialtiesContainer}
-            >
-              {specialties.map((specialty) => (
-                <TouchableOpacity 
-                  key={specialty}
+            <FlatList
+              data={specialties}
+              renderItem={({ item: specialty }) => (
+                <TouchableOpacity
                   style={[
-                    styles.specialtyChip, 
-                    selectedSpecialty === specialty && styles.activeSpecialtyChip
+                    styles.specialtyChip,
+                    selectedSpecialty === specialty &&
+                      styles.activeSpecialtyChip,
                   ]}
                   onPress={() => setSelectedSpecialty(specialty)}
                 >
-                  <Text 
+                  <Text
                     style={[
-                      styles.specialtyChipText, 
-                      selectedSpecialty === specialty && styles.activeSpecialtyChipText
+                      styles.specialtyChipText,
+                      selectedSpecialty === specialty &&
+                        styles.activeSpecialtyChipText,
                     ]}
                   >
                     {specialty}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            
+              )}
+              keyExtractor={(specialty) => specialty}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.specialtiesContainer}
+            />
+
             {/* Doctors list */}
             {filteredDoctors.length > 0 ? (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {filteredDoctors.map(doctor => (
-                  <DoctorCard 
-                    key={doctor.id} 
-                    doctor={doctor} 
-                    onSlotSelect={handleSlotSelect} 
+              <FlatList
+                data={filteredDoctors}
+                renderItem={({ item: doctor }) => (
+                  <DoctorCard
+                    key={doctor.id}
+                    doctor={doctor}
+                    onSlotSelect={handleSlotSelect}
                   />
-                ))}
-              </ScrollView>
+                )}
+                keyExtractor={(doctor) => doctor.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
             ) : (
               <View style={styles.emptyContainer}>
                 <Icon name="doctor" size={60} color={Colors.primary200} />
                 <Text style={styles.emptyText}>No doctors found</Text>
-                <Text style={styles.emptySubtext}>Try adjusting your filters or search</Text>
+                <Text style={styles.emptySubtext}>
+                  Try adjusting your filters or search
+                </Text>
               </View>
             )}
           </View>
         );
-      case 'My Appointments':
+      case "My Appointments":
         return (
           <FlatList
             data={upcomingAppointments}
@@ -785,14 +899,20 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="calendar-clock" size={60} color={Colors.primary200} />
+                <Icon
+                  name="calendar-clock"
+                  size={60}
+                  color={Colors.primary200}
+                />
                 <Text style={styles.emptyText}>No upcoming appointments</Text>
-                <Text style={styles.emptySubtext}>Book an appointment with a doctor</Text>
+                <Text style={styles.emptySubtext}>
+                  Book an appointment with a doctor
+                </Text>
               </View>
             }
           />
         );
-      case 'Appointment History':
+      case "Appointment History":
         return (
           <FlatList
             data={appointmentHistory}
@@ -804,7 +924,9 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
               <View style={styles.emptyContainer}>
                 <Icon name="history" size={60} color={Colors.primary200} />
                 <Text style={styles.emptyText}>No appointment history</Text>
-                <Text style={styles.emptySubtext}>Your past appointments will appear here</Text>
+                <Text style={styles.emptySubtext}>
+                  Your past appointments will appear here
+                </Text>
               </View>
             }
           />
@@ -813,16 +935,18 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
         return null;
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFF" barStyle="dark-content" />
-      <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }] }]}>
+      <Animated.View
+        style={[styles.header, { transform: [{ translateY: headerAnim }] }]}
+      >
         <View style={styles.headerTop}>
-        <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton}>
             <Icon name="bell-outline" size={24} color={Colors.primary600} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Appointments</Text>
           <TouchableOpacity
             onPress={() => navigation.openDrawer()}
@@ -831,9 +955,14 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
             <Icon name="menu" size={24} color={Colors.primary600} />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.searchContainer}>
-          <Icon name="magnify" size={20} color={Colors.primary400} style={styles.searchIcon} />
+          <Icon
+            name="magnify"
+            size={20}
+            color={Colors.primary400}
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search doctors or specialties"
@@ -842,15 +971,18 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
             placeholderTextColor={Colors.primary300}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
               <Icon name="close-circle" size={16} color={Colors.primary400} />
             </TouchableOpacity>
           )}
         </View>
-        
+
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "Available Doctors" && styles.activeTab]}
+            style={[
+              styles.tab,
+              activeTab === "Available Doctors" && styles.activeTab,
+            ]}
             onPress={() => setActiveTab("Available Doctors")}
           >
             <Text
@@ -896,7 +1028,7 @@ const AppointmentsScreen: React.FC<DrawerScreenProps<"Appointments">> = ({
           </TouchableOpacity>
         </View>
       </Animated.View>
-      
+
       {renderTabContent()}
     </SafeAreaView>
   );
@@ -910,7 +1042,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F7FA",
   },
-  
+
   // Header
   header: {
     backgroundColor: "#FFF",
@@ -954,7 +1086,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  
+
   // Search
   searchContainer: {
     flexDirection: "row",
@@ -974,18 +1106,18 @@ const styles = StyleSheet.create({
     color: Colors.primary600,
     paddingVertical: 0,
   },
-  
+
   // Tabs
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   activeTab: {
     borderBottomWidth: 2,
@@ -993,13 +1125,13 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   activeTabText: {
     color: Colors.primary500,
-    fontWeight: '500',
+    fontWeight: "500",
   },
-  
+
   // Section List
   sectionListContent: {
     paddingBottom: 40,
@@ -1016,13 +1148,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.primary600,
   },
-  
+
   // Specialties Filter
   specialtiesContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   specialtyChip: {
     backgroundColor: "#FFF",
@@ -1050,18 +1182,18 @@ const styles = StyleSheet.create({
   activeSpecialtyChipText: {
     color: "#FFF",
   },
-  
+
   // Doctor Card
   doctorsSection: {
     marginBottom: 16,
   },
   doctorCard: {
     padding: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 12,
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1079,8 +1211,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   doctorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   doctorImage: {
@@ -1096,9 +1228,9 @@ const styles = StyleSheet.create({
   },
   doctorName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    maxWidth: '80%',
+    fontWeight: "600",
+    color: "#111827",
+    maxWidth: "80%",
   },
   specialty: {
     fontSize: 14,
@@ -1106,8 +1238,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   ratingText: {
     fontSize: 12,
@@ -1116,31 +1248,31 @@ const styles = StyleSheet.create({
   },
   ratingTotal: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     marginLeft: 2,
   },
   viewAvailabilityButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
   },
   viewAvailabilityText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
-  
+
   // Time Slots
   timeSlotsContainer: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: "#E5E7EB",
   },
   timeSlotsTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.primary600,
     marginBottom: 12,
   },
@@ -1154,24 +1286,24 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
   },
   selectedDateButton: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
   },
   dateButtonText: {
     fontSize: 14,
-    color: '#4B5563',
+    color: "#4B5563",
   },
   selectedDateText: {
-    color: '#FFF',
-    fontWeight: '500',
+    color: "#FFF",
+    fontWeight: "500",
   },
   timeSlotsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 8,
     marginBottom: 12,
   },
@@ -1182,58 +1314,58 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFF',
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFF",
   },
   selectedTimeSlot: {
-    borderColor: '#3B82F6',
+    borderColor: "#3B82F6",
     borderWidth: 2,
   },
   timeSlotText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
+    fontWeight: "500",
+    color: "#1F2937",
     marginBottom: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   slotTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 10,
     borderWidth: 1,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 4,
   },
   slotTypeText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 2,
   },
   selectDateText: {
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
     marginVertical: 12,
   },
   bookButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   bookButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: "#9CA3AF",
   },
   bookButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  
+
   // Appointment Card
   appointmentCardContainer: {
     marginHorizontal: 16,
@@ -1252,34 +1384,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
 
   doctorImageContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 12,
   },
   appointmentTypeBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -4,
     right: -4,
     width: 20,
     height: 20,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: "#FFF",
   },
   appointmentHeader: {
     flexDirection: "row",
-    position: 'relative',
+    position: "relative",
   },
   doctorInfoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   appointmentInfo: {
@@ -1289,8 +1421,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   appointmentType: {
@@ -1302,20 +1434,20 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 13,
-    color: '#4B5563',
+    color: "#4B5563",
     marginLeft: 8,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   pastText: {
     color: Colors.textMuted,
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   statusDot: {
     width: 8,
@@ -1331,13 +1463,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: '#4F46E5',
+    backgroundColor: "#4F46E5",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 16,
     elevation: 2,
-    shadowColor: '#4F46E5',
+    shadowColor: "#4F46E5",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1346,19 +1478,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   pastAppointmentOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderBottomLeftRadius: 8,
     borderTopRightRadius: 8,
   },
   pastAppointmentText: {
-    color: '#6B7280',
+    color: "#6B7280",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   joinMeetingText: {
     fontSize: 14,
@@ -1366,7 +1498,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginLeft: 8,
   },
-  
+
   // Empty States
   emptyContainer: {
     alignItems: "center",
@@ -1400,7 +1532,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: Colors.primary500,
-    textAlign: 'center',
+    textAlign: "center",
   },
   activeFilterChipText: {
     color: "#FFF",

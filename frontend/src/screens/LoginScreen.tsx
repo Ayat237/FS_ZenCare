@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, SafeAreaView, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,9 +13,15 @@ import AuthFooter from "@components/Auth/AuthFooter";
 import AuthButton from "@/components/ui/buttons/AuthButton";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
-import { loginUser, clearError } from "@/store/auth/authSlice";
+import {
+  loginUser,
+  clearError,
+  loadUserProfile,
+  logoutUser,
+} from "@/store/auth/authSlice";
 import ErrorOverlay from "@components/ui/feedback/ErrorOverlay";
 import LoadingOverlay from "@components/ui/feedback/LoadingOverlay";
+import { resetLogoutFlag } from "@/services/api/apiClient";
 
 const LoginScreen: React.FC = () => {
   const navigation =
@@ -59,23 +65,46 @@ const LoginScreen: React.FC = () => {
     dispatch(loginUser({ email, password }));
   };
 
+  // After successful login, dispatch loadUserProfile to ensure we have the doctor ID
   React.useEffect(() => {
     if (user) {
-      // Check user role for navigation
-      if (user.activeRole === "doctor") {
-        // Navigate to DoctorDrawerNavigation
-        navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
-      } else if (user.role.includes("admin")) {
-        // Navigate to AdminDrawerNavigation
-        navigation.navigate("AdminDrawer", {
-          screen: "AdminDoctorVerification",
-        });
+      console.log(
+        "🔍 LoginScreen: Login successful, navigating based on role:",
+        user.activeRole
+      );
+
+      // Reset the logout flag since we have a successful login
+      resetLogoutFlag();
+
+      // First dispatch loadUserProfile to get doctorId
+      if (user.activeRole === "doctor" && !user.doctorId) {
+        console.log(
+          "🔍 LoginScreen: Doctor role detected, loading profile data"
+        );
+        dispatch(loadUserProfile())
+          .unwrap()
+          .then(() => {
+            console.log(
+              "🔍 LoginScreen: Profile loaded successfully, navigating to DoctorHome"
+            );
+            navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
+          })
+          .catch((error) => {
+            console.error("🔍 LoginScreen: Error loading profile:", error);
+            // Still navigate even if profile load fails
+            navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
+          });
       } else {
-        // Navigate to patient DrawerNavigation with MainTabs as the initial screen
-        navigation.navigate("Drawer", { screen: "MainTabs" });
+        // Either not a doctor or doctorId already exists
+        if (user.activeRole === "doctor") {
+          navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
+        } else {
+          // Navigate to patient DrawerNavigation with MainTabs as the initial screen
+          navigation.navigate("Drawer", { screen: "MainTabs" });
+        }
       }
     }
-  }, [user, navigation]);
+  }, [user, navigation, dispatch]);
 
   return (
     <View style={styles.container}>
@@ -102,6 +131,8 @@ const LoginScreen: React.FC = () => {
                 error={
                   validationError && !email.trim() ? validationError : undefined
                 }
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
               <InputField
                 label="Password"
