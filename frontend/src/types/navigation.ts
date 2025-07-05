@@ -70,12 +70,16 @@ export type RootStackParamList = {
     emailToken: string;
   };
   MainTabs: undefined;
-  Drawer: {
-    screen?: keyof DrawerParamList;
-  } | undefined;
-  DoctorDrawer: {
-    screen?: keyof DoctorDrawerParamList;
-  } | undefined;
+  Drawer:
+    | {
+        screen?: keyof DrawerParamList;
+      }
+    | undefined;
+  DoctorDrawer:
+    | {
+        screen?: keyof DoctorDrawerParamList;
+      }
+    | undefined;
   PDFViewerTest: undefined;
   LabResult: {
     filePath: string;
@@ -116,7 +120,6 @@ export type DrawerParamList = {
 
 export type DoctorDrawerParamList = {
   DoctorHome: undefined;
-  DoctorDashboard: undefined;
   DoctorAppointments: undefined;
   DoctorPrescriptions: undefined;
   DoctorProfile: undefined;
@@ -124,10 +127,11 @@ export type DoctorDrawerParamList = {
   PatientList: undefined;
   PatientMedicalHistory: { patientId: string };
   TelemedicineSessions: undefined;
-  DoctorTelemedicine: { session?: import('./telemedicine').TelemedicineSession } | undefined;
+  DoctorTelemedicine:
+    | { session?: import("./telemedicine").TelemedicineSession }
+    | undefined;
   DoctorNotifications: undefined;
   DoctorPayments: undefined;
-  TelemedicineTest: undefined;
   Availability: undefined;
   LabResult: {
     filePath: string;

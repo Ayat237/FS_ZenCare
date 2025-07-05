@@ -7,16 +7,15 @@ import redisClient from "../utils/redis.utils.js";
 
 import { config } from "dotenv";
 import path from "path";
-config({ path: path.resolve("config.dev.env") });
+config  ({ path: path.resolve("config\.dev.env") });
 
 //dotenv.config();
 const userModel = new UserModel(database);
 
-export const authenticattion = () => {
+export const  authenticattion = () => {
   return async (req, res, next) => {
     try {
       const { token } = req.headers;
-      console.log("🔍 Auth Middleware: Received token header:", token);
       if (!token) {
         return next(
           new ErrorHandlerClass(
@@ -40,10 +39,6 @@ export const authenticattion = () => {
       }
 
       const originalToken = token.split("_")[1];
-      console.log(
-        "🔍 Auth Middleware: Extracted token:",
-        originalToken ? "EXISTS" : "MISSING"
-      );
       if (!originalToken) {
         return next(
           new ErrorHandlerClass(
@@ -55,48 +50,25 @@ export const authenticattion = () => {
         );
       }
 
-      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET;
-      console.log(
-        "🔍 Auth Middleware: Secret key exists:",
-        loginSecretKey ? "YES" : "NO"
-      );
-      console.log("🔍 Auth Middleware: Secret key value:", loginSecretKey);
+      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET; 
+      console.log("loginSecretKey",loginSecretKey);
       let decodedToken;
       try {
-        decodedToken = jwt.verify(originalToken, loginSecretKey);
-        console.log(
-          "🔍 Auth Middleware: Token decoded successfully:",
-          decodedToken
-        );
+       decodedToken = jwt.verify(originalToken,loginSecretKey);
       } catch (jwtError) {
-        console.log(
-          "🔍 Auth Middleware: JWT Error:",
-          jwtError.name,
-          jwtError.message
-        );
         if (jwtError.name === "TokenExpiredError") {
           return next(
             new ErrorHandlerClass(
-              "Token has expired, please login again",
+              "Token has expired",
               401,
               "Authentication Error",
               "Token expired"
             )
           );
         }
-        if (jwtError.name === "JsonWebTokenError") {
-          return next(
-            new ErrorHandlerClass(
-              "Invalid token signature, please login again",
-              401,
-              "Authentication Error",
-              "Token signature invalid"
-            )
-          );
-        }
         return next(
           new ErrorHandlerClass(
-            "Invalid token, please login again",
+            "Invalid token",
             401,
             "Authentication Error",
             jwtError.message
@@ -122,12 +94,14 @@ export const authenticattion = () => {
           )
         );
       }
-
+      
+      
       const user = await userModel.findById(decodedToken.userId, {
         select: "-password",
         populate: "patientID doctorID",
       });
-
+     
+      
       if (!user) {
         return next(
           new ErrorHandlerClass(
@@ -139,12 +113,6 @@ export const authenticattion = () => {
         );
       }
       req.authUser = user;
-      console.log(
-        "🔍 Auth Middleware: User object structure:",
-        JSON.stringify(user, null, 2)
-      );
-      console.log("🔍 Auth Middleware: User _id:", user._id);
-      console.log("🔍 Auth Middleware: User id:", user.id);
 
       logger.info("User authenticated successfully", { userId: user._id });
       next();

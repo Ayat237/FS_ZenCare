@@ -9,7 +9,6 @@ import Colors from "@theme/colors";
 
 import logo from "@assets/images/zencare_logo.png";
 
-
 const SplashScreen: React.FC = () => {
   // Add null check for state.auth to prevent TypeError
   const user = useSelector((state: RootState) => state?.auth?.user);
@@ -20,9 +19,9 @@ const SplashScreen: React.FC = () => {
     const timer = setTimeout(() => {
       if (user) {
         // Check user role for navigation
-        if (user.activeRole === 'doctor') {
-          // Navigate to DoctorDrawerNavigation with DoctorDashboard as initial screen
-          navigation.navigate("DoctorDrawer", { screen: "DoctorDashboard" });
+        if (user.activeRole === "doctor") {
+          // Navigate to DoctorDrawerNavigation with DoctorHome as initial screen
+          navigation.navigate("DoctorDrawer", { screen: "DoctorHome" });
         } else {
           // Navigate to patient DrawerNavigation with MainTabs as the initial screen
           navigation.navigate("Drawer", { screen: "MainTabs" });
