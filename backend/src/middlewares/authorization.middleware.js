@@ -4,7 +4,14 @@ export const authorization = (allowedRules) => {
   return async (req, res, next) => {
     try {
       const user = req.authUser; // logedin user
-      if (!user.role.includes(allowedRules)) {
+      // Check if user has at least one allowed role
+      const hasAllowedRole = Array.isArray(allowedRules) 
+        ? user.role.some(role => allowedRules.includes(role))
+        : user.role.includes(allowedRules);
+      
+      if (!hasAllowedRole) {
+        console.log("user", user.role);
+        console.log("allowedRules", allowedRules);
         return next (new ErrorHandlerClass(
           "Unauthorized Access",
           403,

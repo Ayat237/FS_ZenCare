@@ -5,6 +5,7 @@ import {
 } from "./appointment-payment.service.js";
 import { ErrorHandlerClass } from "../../utils/error-class.utils.js";
 import { logger } from "../../utils/logger.utils.js";
+import { systemRoles } from "../../utils/system-roles.utils.js";
 
 /**
  * Initialize payment for appointment booking
@@ -14,11 +15,12 @@ import { logger } from "../../utils/logger.utils.js";
  */
 export const initializePayment = async (req, res, next) => {
   try {
-    const { slotId, doctorId, appointmentType, notes } = req.body;
-    const patientId = req.authUser._id.toString();
+    const { slotId, doctorId, appointmentType } = req.body;
+    const user = req.authUser;
+    console.log("user", user);
 
     // Verify the requesting user is the patient
-    if (req.authUser.activeRole !== 'patient') {
+    if (user.activeRole !== systemRoles.PATIENT) {
       throw new ErrorHandlerClass(
         "Only patients can book appointments",
         403,
@@ -28,10 +30,9 @@ export const initializePayment = async (req, res, next) => {
 
     const result = await initializeAppointmentPayment({
       slotId,
-      patientId,
+      patientId: user._id,
       doctorId,
       appointmentType,
-      notes
     });
 
     return res.status(200).json({
@@ -58,11 +59,11 @@ export const initializePayment = async (req, res, next) => {
  */
 export const completeBooking = async (req, res, next) => {
   try {
-    const { paymentIntentId, slotId, doctorId, appointmentType, notes } = req.body;
-    const patientId = req.authUser._id.toString();
+    const { paymentIntentId, slotId, doctorId, appointmentType, notes, medicalHistoryShared} = req.body;
+    const user = req.authUser;
 
     // Verify the requesting user is the patient
-    if (req.authUser.activeRole !== 'patient') {
+    if (user.activeRole !== systemRoles.PATIENT) {
       throw new ErrorHandlerClass(
         "Only patients can complete appointment bookings",
         403,
@@ -72,11 +73,12 @@ export const completeBooking = async (req, res, next) => {
 
     const appointment = await completeAppointmentBooking({
       paymentIntentId,
-      patientId,
+      patientId: user._id,
       doctorId,
       slotId,
       appointmentType,
-      notes
+      notes,
+      medicalHistoryShared
     });
 
     return res.status(201).json({
@@ -105,7 +107,7 @@ export const cancelAppointment = async (req, res, next) => {
   try {
     const { appointmentId } = req.params;
     const { reason } = req.body;
-    const userId = req.authUser._id.toString();
+    const user = req.authUser;
 
     // Get appointment to check permissions
     const { getAppointmentService } = await import("./appointment.service.js");
@@ -113,9 +115,9 @@ export const cancelAppointment = async (req, res, next) => {
 
     // Check if user has permission to cancel this appointment
     const canCancel = 
-      appointment.patientId._id.toString() === userId ||
-      appointment.doctorId._id.toString() === userId ||
-      req.authUser.role.includes("admin");
+      appointment.patientId._id.toString() === user._id ||
+      appointment.doctorId._id.toString() === user._id ||
+      user.role.includes(systemRoles.ADMIN);
 
     if (!canCancel) {
       throw new ErrorHandlerClass(
@@ -153,7 +155,7 @@ export const cancelAppointment = async (req, res, next) => {
 export const getPaymentStatus = async (req, res, next) => {
   try {
     const { appointmentId } = req.params;
-    const userId = req.authUser._id.toString();
+    const user = req.authUser;
 
     // Get appointment to check permissions
     const { getAppointmentService } = await import("./appointment.service.js");
@@ -161,9 +163,9 @@ export const getPaymentStatus = async (req, res, next) => {
 
     // Check if user has access to this appointment
     const hasAccess = 
-      appointment.patientId._id.toString() === userId ||
-      appointment.doctorId._id.toString() === userId ||
-      req.authUser.role.includes("admin");
+      appointment.patientId._id.toString() === user._id ||
+      appointment.doctorId._id.toString() === user._id ||
+      user.role.includes(systemRoles.ADMIN);
 
     if (!hasAccess) {
       throw new ErrorHandlerClass(
@@ -180,8 +182,8 @@ export const getPaymentStatus = async (req, res, next) => {
         appointmentId: appointment._id,
         paymentStatus: appointment.paymentStatus,
         paymentIntentId: appointment.paymentIntentId,
-        price: appointment.price
-      }
+        price: appointment.price,
+      },
     });
   } catch (error) {
     logger.error("Error in getPaymentStatus controller", {

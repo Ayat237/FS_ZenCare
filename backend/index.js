@@ -37,7 +37,7 @@ app.use("/medical-history", router.medicalHistoryRouter);
 app.use("/address", router.addressRouter);
 app.use("/doctor", router.doctorRouter);
 app.use("/slots", router.slotRoutes);
-app.use("/appointments", router.appointmentRouter);
+app.use("/appointments", router.appointmentPaymentRouter);
 app.use("/admin", router.adminRouter);
 
 // Stripe webhook endpoint (no authentication required)

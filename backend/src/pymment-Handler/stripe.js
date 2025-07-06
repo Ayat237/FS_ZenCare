@@ -2,7 +2,29 @@ import Stripe from "stripe";
 import { ErrorHandlerClass } from "../utils/error-class.utils.js";
 import { logger } from "../utils/logger.utils.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Helper function to safely convert values to strings for Stripe metadata
+const safeToString = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return value.toString();
+};
+
+let stripe;
+
+// Initialize Stripe with proper error handling
+try {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    logger.warn("STRIPE_SECRET_KEY not found in environment variables. Stripe functionality will be disabled.");
+    stripe = null;
+  } else {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    logger.info("Stripe initialized successfully");
+  }
+} catch (error) {
+  logger.error("Failed to initialize Stripe:", error.message);
+  stripe = null;
+}
 
 /**
  * Create a payment intent for appointment booking
@@ -17,6 +39,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
  */
 export const createPaymentIntent = async (params) => {
   try {
+    if (!stripe) {
+      throw new ErrorHandlerClass(
+        "Stripe is not configured",
+        500,
+        "Configuration Error",
+        "Please set STRIPE_SECRET_KEY environment variable"
+      );
+    }
+
     const {
       amount,
       currency = 'usd',
@@ -26,14 +57,33 @@ export const createPaymentIntent = async (params) => {
       appointmentType
     } = params;
 
+    // Validate required parameters
+    if (!patientId || !slotId || !doctorId || !appointmentType) {
+      throw new ErrorHandlerClass(
+        "Missing required parameters",
+        400,
+        "Validation Error",
+        "patientId, slotId, doctorId, and appointmentType are required"
+      );
+    }
+
+    // Debug logging to see the types of values being passed
+    logger.info("Creating payment intent with parameters", {
+      patientId: typeof patientId,
+      slotId: typeof slotId,
+      doctorId: typeof doctorId,
+      appointmentType: typeof appointmentType,
+      amount: typeof amount
+    });
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
       metadata: {
-        patientId,
-        slotId,
-        doctorId,
-        appointmentType,
+        patientId: safeToString(patientId),
+        slotId: safeToString(slotId),
+        doctorId: safeToString(doctorId),
+        appointmentType: safeToString(appointmentType),
         purpose: 'appointment_booking'
       },
       automatic_payment_methods: {
@@ -44,8 +94,10 @@ export const createPaymentIntent = async (params) => {
     logger.info("Payment intent created successfully", {
       paymentIntentId: paymentIntent.id,
       amount,
-      patientId,
-      slotId
+      patientId: safeToString(patientId),
+      slotId: safeToString(slotId),
+      doctorId: safeToString(doctorId),
+      appointmentType: safeToString(appointmentType)
     });
 
     return paymentIntent;
@@ -70,6 +122,15 @@ export const createPaymentIntent = async (params) => {
  */
 export const confirmPaymentIntent = async (paymentIntentId) => {
   try {
+    if (!stripe) {
+      throw new ErrorHandlerClass(
+        "Stripe is not configured",
+        500,
+        "Configuration Error",
+        "Please set STRIPE_SECRET_KEY environment variable"
+      );
+    }
+
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     
     if (paymentIntent.status === 'succeeded') {
@@ -99,6 +160,15 @@ export const confirmPaymentIntent = async (paymentIntentId) => {
  */
 export const refundPayment = async (paymentIntentId, amount = null) => {
   try {
+    if (!stripe) {
+      throw new ErrorHandlerClass(
+        "Stripe is not configured",
+        500,
+        "Configuration Error",
+        "Please set STRIPE_SECRET_KEY environment variable"
+      );
+    }
+
     const refundParams = {
       payment_intent: paymentIntentId,
     };

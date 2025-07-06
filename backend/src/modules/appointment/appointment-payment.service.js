@@ -33,7 +33,7 @@ const userModel = new UserModel(database);
  */
 export const initializeAppointmentPayment = async (params) => {
   try {
-    const { slotId, patientId, doctorId, appointmentType, notes } = params;
+    const { slotId, patientId, doctorId, appointmentType } = params;
 
     // 1. Fetch and validate the slot
     const slot = await slotModel.findById(slotId);
@@ -142,7 +142,7 @@ export const completeAppointmentBooking = async (params) => {
       appointmentType,
       notes,
       medicalHistoryShared,
-      attachments,
+    
     } = params;
 
     // 1. Confirm payment was successful
@@ -187,7 +187,7 @@ export const completeAppointmentBooking = async (params) => {
       paymentStatus: PaymentStatus.PAID,
       paymentIntentId,
       medicalHistoryShared: medicalHistoryShared || false,
-      attachments: attachments || [],
+    //  attachments: attachments || [],
     };
 
     // 6. Create the appointment
