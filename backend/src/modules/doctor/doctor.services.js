@@ -22,6 +22,7 @@ import redisClient from "../../utils/redis.utils.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import { encrypt } from "./utils/encryption.utils.js";
 import bcrypt from "bcryptjs";
+import { populate } from "dotenv";
 
 const addressModel = new AddressModel(database);
 const doctorModel = new DoctorModel(database);
@@ -449,5 +450,52 @@ export const addDoctorRoleToExistingUserService = async (
       }
     }
     throw error;
+  }
+};
+
+export const getAllDoctorsService = async () => {
+  try {
+    console.log("🔍 getAllDoctorsService: Fetching all approved doctors...");
+
+    // Find all approved doctors and populate user and address information
+    const doctors = await doctorModel.find(
+      { isAdminApproved: true },
+      {
+        populate: [
+          {
+            path: "user",
+            model: "User",
+          },
+          {
+            path: "clinicBranches.address",
+            model: "Address",
+          },
+        ],
+      }
+    );
+
+    console.log(
+      "🔍 getAllDoctorsService: Found doctors:",
+      doctors?.length || 0
+    );
+    console.log(
+      "🔍 getAllDoctorsService: Sample doctor with clinic addresses:",
+      doctors?.[0]?.clinicBranches?.[0]?.address || "none"
+    );
+
+    return {
+      status: 200,
+      success: true,
+      data: doctors || [],
+      message: `Found ${doctors?.length || 0} approved doctors`,
+    };
+  } catch (error) {
+    console.error("❌ getAllDoctorsService error:", error);
+    throw new ErrorHandlerClass(
+      "Failed to retrieve doctors",
+      500,
+      "Database Error",
+      error.message
+    );
   }
 };

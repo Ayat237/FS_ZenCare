@@ -5,6 +5,7 @@ import { possibleRoles } from "../../utils/index.js";
 import {
   registerNewDoctorUserService,
   addDoctorRoleToExistingUserService,
+  getAllDoctorsService,
 } from "./doctor.services.js";
 import { ErrorHandlerClass, logger } from "../../utils/index.js";
 import { UserModel } from "../../../database/models/user.model.js";
@@ -631,3 +632,22 @@ export const addDoctorRoleToExistingUser = async (req, res, next) => {
     next(error);
   }
 };
+
+
+/**
+ * Get all doctors
+ * @route GET /doctor/all
+ */
+export const getAllDoctors = async (req, res, next) => {
+  try {
+    const result = await getAllDoctorsService();
+
+    res.status(result.status).json({
+      success: result.success,
+      message: result.message,
+      data: result.data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
