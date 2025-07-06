@@ -208,7 +208,32 @@ export const registerNewDoctorUserService = async (
         );
       }
       const filePath = path.join(TEMP_UPLOAD_DIR, uploadResult.filename);
+
+      // Validate that the file path exists and is readable
+      if (!fs.existsSync(uploadResult.path)) {
+        throw new ErrorHandlerClass(
+          "Verification ID file not found at upload path.",
+          400,
+          "File Error",
+          "File not found"
+        );
+      }
+
       const fileBuffer = fs.readFileSync(uploadResult.path);
+
+      // Validate that we have a valid file buffer
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new ErrorHandlerClass(
+          "Verification ID file is empty or corrupted.",
+          400,
+          "File Error",
+          "Empty file buffer"
+        );
+      }
+
+      console.log(
+        `Processing verification file - Size: ${fileBuffer.length} bytes`
+      );
 
       // Read the uploaded file and encrypt it
       const { encryptedData, iv } = encrypt(
@@ -293,7 +318,7 @@ export const addDoctorRoleToExistingUserService = async (
     const customId = `${existingUser.firstName}_${nanoid(4)}`;
 
     if (!files || !files.profileImage) {
-      const defaultImage = getDefaultImageByGender(userData.gender);
+      const defaultImage = getDefaultImageByGender(existingUser.gender);
       profileImageObject = {
         URL: {
           secure_url: defaultImage.secure_url,

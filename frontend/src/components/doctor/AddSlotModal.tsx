@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,21 +10,23 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+  TextInput,
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 // Theme
-import Colors from '../../theme/colors';
+import Colors from "../../theme/colors";
 
 // Types
-import { TimeSlot } from '../../types/availability';
+import { TimeSlot } from "../../types/availability";
 
 interface AddSlotModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (slot: TimeSlot) => void;
   selectedDate: string;
+  loading?: boolean;
 }
 
 const AddSlotModal: React.FC<AddSlotModalProps> = ({
@@ -32,6 +34,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   onClose,
   onSave,
   selectedDate,
+  loading = false,
 }) => {
   // State for the form
   const [startTime, setStartTime] = useState(new Date());
@@ -40,10 +43,11 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
     date.setHours(date.getHours() + 1);
     return date;
   });
-  const [duration, setDuration] = useState<15 | 30 | 45 | 60>(30);
-  const [type, setType] = useState<'telemedicine' | 'in-person'>('telemedicine');
+  const [duration, setDuration] = useState<number>(30);
+  const [type, setType] = useState<"telemedicine" | "inperson">("telemedicine");
+  const [price, setPrice] = useState<string>("");
   const [isRecurring, setIsRecurring] = useState(false);
-  
+
   // State for time pickers
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
@@ -52,7 +56,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   useEffect(() => {
     const diffMs = endTime.getTime() - startTime.getTime();
     const diffMins = Math.round(diffMs / 60000);
-    
+
     // Round to nearest valid duration
     if (diffMins <= 15) {
       setDuration(15);
@@ -70,7 +74,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
     setShowStartTimePicker(false);
     if (selectedTime) {
       setStartTime(selectedTime);
-      
+
       // Ensure end time is after start time
       if (selectedTime >= endTime) {
         const newEndTime = new Date(selectedTime);
@@ -88,15 +92,15 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
       if (selectedTime > startTime) {
         setEndTime(selectedTime);
       } else {
-        Alert.alert('Invalid Time', 'End time must be after start time');
+        Alert.alert("Invalid Time", "End time must be after start time");
       }
     }
   };
 
   // Handle duration change
-  const handleDurationChange = (newDuration: 15 | 30 | 45 | 60) => {
+  const handleDurationChange = (newDuration: number) => {
     setDuration(newDuration);
-    
+
     // Update end time based on new duration
     const newEndTime = new Date(startTime);
     newEndTime.setMinutes(startTime.getMinutes() + newDuration);
@@ -107,17 +111,17 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   const formatTime = (date: Date) => {
     let hours = date.getHours();
     const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const ampm = hours >= 12 ? "PM" : "AM";
     hours = hours % 12;
     hours = hours ? hours : 12; // the hour '0' should be '12'
-    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+    const minutesStr = minutes < 10 ? "0" + minutes : minutes;
     return `${hours}:${minutesStr} ${ampm}`;
   };
 
   // Format time for saving (24-hour format)
   const formatTimeForSave = (date: Date) => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
 
@@ -125,21 +129,29 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   const handleSave = () => {
     // Validate times
     if (endTime <= startTime) {
-      Alert.alert('Invalid Time', 'End time must be after start time');
+      Alert.alert("Invalid Time", "End time must be after start time");
       return;
     }
-    
+
+    // Validate price
+    const priceNumber = parseFloat(price);
+    if (!price || isNaN(priceNumber) || priceNumber <= 0) {
+      Alert.alert("Invalid Price", "Please enter a valid price greater than 0");
+      return;
+    }
+
     // Create new slot
     const newSlot: TimeSlot = {
-      id: '', // Will be set by the parent component
+      id: "", // Will be set by the parent component
       day: selectedDate,
       startTime: formatTimeForSave(startTime),
       endTime: formatTimeForSave(endTime),
       duration,
       type,
+      price: priceNumber,
       isRecurring,
     };
-    
+
     onSave(newSlot);
   };
 
@@ -151,7 +163,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.modalOverlay}
       >
         <View style={styles.modalContainer}>
@@ -161,7 +173,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
               <Icon name="close" size={24} color="#555" />
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.modalContent}>
             {/* Time Selection */}
             <View style={styles.formGroup}>
@@ -171,21 +183,31 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                   style={styles.timePickerButton}
                   onPress={() => setShowStartTimePicker(true)}
                 >
-                  <Icon name="clock-outline" size={20} color={Colors.primary500} style={styles.timeIcon} />
+                  <Icon
+                    name="clock-outline"
+                    size={20}
+                    color={Colors.primary500}
+                    style={styles.timeIcon}
+                  />
                   <Text style={styles.timeText}>{formatTime(startTime)}</Text>
                 </TouchableOpacity>
-                
+
                 <Text style={styles.toText}>to</Text>
-                
+
                 <TouchableOpacity
                   style={styles.timePickerButton}
                   onPress={() => setShowEndTimePicker(true)}
                 >
-                  <Icon name="clock-outline" size={20} color={Colors.primary500} style={styles.timeIcon} />
+                  <Icon
+                    name="clock-outline"
+                    size={20}
+                    color={Colors.primary500}
+                    style={styles.timeIcon}
+                  />
                   <Text style={styles.timeText}>{formatTime(endTime)}</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {showStartTimePicker && (
                 <DateTimePicker
                   value={startTime}
@@ -195,7 +217,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                   onChange={handleStartTimeChange}
                 />
               )}
-              
+
               {showEndTimePicker && (
                 <DateTimePicker
                   value={endTime}
@@ -206,7 +228,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                 />
               )}
             </View>
-            
+
             {/* Duration Selection */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Duration</Text>
@@ -218,7 +240,9 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                       styles.durationButton,
                       duration === value && styles.selectedDurationButton,
                     ]}
-                    onPress={() => handleDurationChange(value as 15 | 30 | 45 | 60)}
+                    onPress={() =>
+                      handleDurationChange(value as 15 | 30 | 45 | 60)
+                    }
                   >
                     <Text
                       style={[
@@ -232,7 +256,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                 ))}
               </View>
             </View>
-            
+
             {/* Consultation Type */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Consultation Type</Text>
@@ -240,43 +264,47 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.typeButton,
-                    type === 'telemedicine' && styles.selectedTypeButton,
+                    type === "telemedicine" && styles.selectedTypeButton,
                   ]}
-                  onPress={() => setType('telemedicine')}
+                  onPress={() => setType("telemedicine")}
                 >
                   <Icon
                     name="video"
                     size={20}
-                    color={type === 'telemedicine' ? Colors.white : Colors.primary500}
+                    color={
+                      type === "telemedicine" ? Colors.white : Colors.primary500
+                    }
                     style={styles.typeIcon}
                   />
                   <Text
                     style={[
                       styles.typeButtonText,
-                      type === 'telemedicine' && styles.selectedTypeButtonText,
+                      type === "telemedicine" && styles.selectedTypeButtonText,
                     ]}
                   >
                     Telemedicine
                   </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[
                     styles.typeButton,
-                    type === 'in-person' && styles.selectedTypeButton,
+                    type === "inperson" && styles.selectedTypeButton,
                   ]}
-                  onPress={() => setType('in-person')}
+                  onPress={() => setType("inperson")}
                 >
                   <Icon
                     name="hospital-building"
                     size={20}
-                    color={type === 'in-person' ? Colors.white : Colors.primary500}
+                    color={
+                      type === "inperson" ? Colors.white : Colors.primary500
+                    }
                     style={styles.typeIcon}
                   />
                   <Text
                     style={[
                       styles.typeButtonText,
-                      type === 'in-person' && styles.selectedTypeButtonText,
+                      type === "inperson" && styles.selectedTypeButtonText,
                     ]}
                   >
                     In-Person
@@ -284,7 +312,20 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
-            
+
+            {/* Price Selection */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Price (EGP)</Text>
+              <TextInput
+                style={styles.priceInput}
+                value={price}
+                onChangeText={setPrice}
+                placeholder="Enter consultation price"
+                keyboardType="numeric"
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+
             {/* Recurring Option */}
             <View style={styles.formGroup}>
               <View style={styles.switchContainer}>
@@ -292,24 +333,35 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
                 <Switch
                   value={isRecurring}
                   onValueChange={setIsRecurring}
-                  trackColor={{ false: '#D1D1D6', true: Colors.primary200 }}
-                  thumbColor={isRecurring ? Colors.primary500 : '#F4F4F4'}
+                  trackColor={{ false: "#D1D1D6", true: Colors.primary200 }}
+                  thumbColor={isRecurring ? Colors.primary500 : "#F4F4F4"}
                 />
               </View>
               {isRecurring && (
                 <Text style={styles.helperText}>
-                  This slot will be available every week on the same day and time
+                  This slot will be available every week on the same day and
+                  time
                 </Text>
               )}
             </View>
           </ScrollView>
-          
+
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+              disabled={loading}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save Slot</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, loading && styles.disabledSaveButton]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? "Creating..." : "Save Slot"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -321,26 +373,26 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContainer: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.text,
   },
   closeButton: {
@@ -354,18 +406,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: Colors.text,
     marginBottom: 8,
   },
   timeRangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   timePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.background,
     borderRadius: 8,
     padding: 12,
@@ -384,16 +436,16 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
   },
   durationContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   durationButton: {
-    width: '23%',
+    width: "23%",
     backgroundColor: Colors.background,
     borderRadius: 8,
     padding: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 8,
   },
   selectedDurationButton: {
@@ -402,19 +454,19 @@ const styles = StyleSheet.create({
   durationButtonText: {
     fontSize: 14,
     color: Colors.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   selectedDurationButtonText: {
     color: Colors.white,
   },
   typeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   typeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: Colors.background,
     borderRadius: 8,
     padding: 12,
@@ -430,15 +482,24 @@ const styles = StyleSheet.create({
   typeButtonText: {
     fontSize: 14,
     color: Colors.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   selectedTypeButtonText: {
     color: Colors.white,
   },
+  priceInput: {
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   helperText: {
     fontSize: 14,
@@ -446,32 +507,35 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalFooter: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   cancelButton: {
     flex: 1,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     borderRightWidth: 0.5,
     borderRightColor: Colors.border,
   },
   cancelButtonText: {
     fontSize: 16,
     color: Colors.textLight,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   saveButton: {
     flex: 1,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: Colors.primary500,
+  },
+  disabledSaveButton: {
+    backgroundColor: Colors.textLight,
   },
   saveButtonText: {
     fontSize: 16,
     color: Colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

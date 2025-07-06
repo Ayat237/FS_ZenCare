@@ -11,6 +11,7 @@ export interface User {
   refreshToken: string;
   mobilePhone: string;
   // Doctor-specific fields
+  doctorId?: string; // Add doctor ID for quick access
   specialty?: string;
   yearsOfExperience?: number;
   education?: {
@@ -44,4 +45,5 @@ export interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
+  profileLoading: boolean;
 }

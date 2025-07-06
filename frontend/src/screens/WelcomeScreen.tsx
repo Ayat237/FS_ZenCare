@@ -40,6 +40,14 @@ const GetStartedScreen: React.FC = () => {
               <Text style={styles.loginLink}> Log In</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Temporary Admin Access Button */}
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate("AdminDoctorVerification")}
+          >
+            <Text style={styles.adminButtonText}>Admin Access (Testing)</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -101,6 +109,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#facc15",
     marginLeft: 4,
+  },
+  adminButton: {
+    paddingVertical: 8,
+    backgroundColor: "#dc2626",
+    marginHorizontal: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  adminButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    textAlign: "center",
   },
 });
 

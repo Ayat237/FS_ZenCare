@@ -7,7 +7,6 @@ import LoginScreen from "@screens/LoginScreen";
 import RoleSelectionScreen from "@screens/SignUp/RoleSelectionScreen";
 import SignUpDetailsScreen from "@screens/SignUp/SignUpDetailsScreen";
 import PhotoUploadScreen from "@screens/SignUp/PhotoUploadScreen";
-import RegistrationSubmittedScreen from "@screens/SignUp/RegistrationSubmittedScreen";
 import EmailVerificationScreen from "@screens/EmailVerification/EmailVerificationScreen";
 import SplashScreen from "@screens/SplashScreen";
 import ResetPasswordEmailScreen from "@screens/ResetPassword/ResetPasswordEmailScreen";
@@ -38,10 +37,6 @@ const AppNavigation: React.FC = () => {
         <Stack.Screen name="SignUp" component={RoleSelectionScreen} />
         <Stack.Screen name="SignUpDetails" component={SignUpDetailsScreen} />
         <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
-        <Stack.Screen
-          name="RegistrationSubmitted"
-          component={RegistrationSubmittedScreen}
-        />
         <Stack.Screen
           name="EmailVerification"
           component={EmailVerificationScreen}

@@ -2,7 +2,10 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
 import { possibleRoles } from "../../utils/index.js";
-import { registerNewDoctorUserService, addDoctorRoleToExistingUserService } from "./doctor.services.js";
+import {
+  registerNewDoctorUserService,
+  addDoctorRoleToExistingUserService,
+} from "./doctor.services.js";
 import { ErrorHandlerClass, logger } from "../../utils/index.js";
 import { UserModel } from "../../../database/models/user.model.js";
 import database from "../../../database/databaseConnection.js";
@@ -10,7 +13,6 @@ import redisClient from "../../utils/redis.utils.js";
 import { sendEmailService } from "../../services/sendEmail.service.js";
 import { uploadFile } from "../../utils/cloudinary.utils.js";
 import { Doctor } from "../../../database/models/doctor.model.js";
-
 
 const userModel = new UserModel(database);
 
@@ -280,7 +282,8 @@ export const adminApproveDoctor = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Doctor verification status updated successfully. Doctor can now login.",
+      message:
+        "Doctor verification status updated successfully. Doctor can now login.",
       data: {
         doctorId: doctorObject._id,
         isVerified: true,
@@ -533,7 +536,11 @@ export const registerNewDoctorUser = async (req, res, next) => {
       clinicBranches,
     };
 
-    const result = await registerNewDoctorUserService(userData, doctorData, req.files);
+    const result = await registerNewDoctorUserService(
+      userData,
+      doctorData,
+      req.files
+    );
 
     res.status(result.status).json({
       success: result.success,
@@ -551,6 +558,31 @@ export const registerNewDoctorUser = async (req, res, next) => {
  */
 export const addDoctorRoleToExistingUser = async (req, res, next) => {
   try {
+    console.log("=== ADD DOCTOR ROLE TO EXISTING USER ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("Request files:", req.files);
+
+    if (req.files) {
+      console.log("Files details:");
+      Object.keys(req.files).forEach((key) => {
+        console.log(`- ${key}:`, req.files[key]);
+        req.files[key].forEach((file, index) => {
+          console.log(`  File ${index}:`, {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            encoding: file.encoding,
+            mimetype: file.mimetype,
+            destination: file.destination,
+            filename: file.filename,
+            path: file.path,
+            size: file.size,
+          });
+        });
+      });
+    } else {
+      console.log("No files received");
+    }
+
     const {
       specialty,
       yearsOfExperience,
@@ -565,12 +597,14 @@ export const addDoctorRoleToExistingUser = async (req, res, next) => {
     const existingUser = await userModel.findByEmail(email);
 
     if (!existingUser) {
-      return next(new ErrorHandlerClass(
-        "User with this email does not exist",
-        404,
-        "Not Found Error",
-        "User does not exist"
-      ));
+      return next(
+        new ErrorHandlerClass(
+          "User with this email does not exist",
+          404,
+          "Not Found Error",
+          "User does not exist"
+        )
+      );
     }
 
     const doctorData = {
@@ -582,7 +616,11 @@ export const addDoctorRoleToExistingUser = async (req, res, next) => {
       clinicBranches,
     };
 
-    const result = await addDoctorRoleToExistingUserService(existingUser, doctorData, req.files);
+    const result = await addDoctorRoleToExistingUserService(
+      existingUser,
+      doctorData,
+      req.files
+    );
 
     res.status(result.status).json({
       success: result.success,

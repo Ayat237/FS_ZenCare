@@ -32,13 +32,10 @@ export const INITIAL_DOCTOR_FORM_DATA: DoctorFormData = {
   clinicBranches: [
     {
       address: {
-        street: "",
-        city: "",
-        country: "",
-        neighborhood: "",
+        displayName: "",
         coordinates: {
-          longitude: 0,
           latitude: 0,
+          longitude: 0,
         },
       },
       phoneNumber: "",
@@ -67,7 +64,9 @@ export const useDoctorSignUpForm = () => {
     []
   );
 
-  const validateDoctorForm = (): boolean => {
+  const validateDoctorForm = (
+    skipVerificationCheck: boolean = false
+  ): boolean => {
     const errors: {
       specialty?: string;
       yearsOfExperience?: string;
@@ -118,26 +117,29 @@ export const useDoctorSignUpForm = () => {
         (branch.address.coordinates.latitude !== 0 ||
           branch.address.coordinates.longitude !== 0);
 
-      // If coordinates are valid, we don't need to strictly check street/city/country
-      if (hasValidCoordinates) {
-        return !branch.phoneNumber; // Only require phone number
-      } else {
-        // If no valid coordinates, require the traditional address fields
-        return (
-          !branch.address.street ||
-          !branch.address.city ||
-          !branch.address.country ||
-          !branch.phoneNumber
-        );
-      }
+      // Check if displayName is provided
+      const hasDisplayName =
+        branch.address.displayName && branch.address.displayName.trim() !== "";
+
+      // We need valid coordinates, displayName, and a phone number
+      return !hasValidCoordinates || !hasDisplayName || !branch.phoneNumber;
     });
     if (doctorFormData.clinicBranches.length === 0 || hasIncompleteClinic) {
       errors.clinicBranches = "Complete clinic branch information is required";
     }
 
-    // Validate verification document
-    if (!doctorFormData.verificationId) {
+    // Validate verification document - can be skipped for initial validation
+    if (!doctorFormData.verificationId && !skipVerificationCheck) {
+      console.log("VALIDATION ERROR: Missing verification document", {
+        verificationId: doctorFormData.verificationId,
+        skipCheck: skipVerificationCheck,
+      });
       errors.verificationId = "Verification document is required";
+    } else {
+      console.log("Verification document validation passed:", {
+        verificationId: doctorFormData.verificationId,
+        skipCheck: skipVerificationCheck,
+      });
     }
 
     setValidationErrors(errors);

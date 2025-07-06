@@ -6,15 +6,20 @@ import { nanoid } from "nanoid";
 import extensions from "../utils/file-extenstions.utils.js";
 import { ErrorHandlerClass } from "../utils/index.js";
 
-
-
-
 export const multerMiddleware = ({
   filePath = "general",
   allowedExtensions = extensions.Images,
 }) => {
   const storage = multer.diskStorage({
-
+    // destination
+    destination: (req, file, cb) => {
+      // Create the upload directory if it doesn't exist
+      const uploadDir = path.join(process.cwd(), "uploads", filePath);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
     // filename
     filename: (req, file, cb) => {
       // 2024-12-12
@@ -39,7 +44,7 @@ export const multerMiddleware = ({
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,
-        'Error in multer middleware'
+        "Error in multer middleware"
       ),
       false
     );
@@ -48,12 +53,13 @@ export const multerMiddleware = ({
   return multer({ fileFilter, storage });
 };
 
-export const multerHost = ({ allowedExtensions = extensions.Images.concat(extensions.Documents) }={}) => {
+export const multerHost = ({
+  allowedExtensions = extensions.Images.concat(extensions.Documents),
+} = {}) => {
   const storage = multer.diskStorage({});
 
   // fileFilter
   const fileFilter = (req, file, cb) => {
-
     if (allowedExtensions.includes(file.mimetype)) {
       return cb(null, true);
     }
@@ -63,7 +69,7 @@ export const multerHost = ({ allowedExtensions = extensions.Images.concat(extens
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,
-        'Error in multer host middleware'
+        "Error in multer host middleware"
       ),
       false
     );

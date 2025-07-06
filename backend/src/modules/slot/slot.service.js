@@ -13,15 +13,16 @@ const slotModel = new SlotModel(database);
  */
 export const createSlotsService = async (slotData) => {
   try {
-    const { doctorId, date, startTime, endTime, duration, type } = slotData;
-    
+    const { doctorId, date, startTime, endTime, duration, type, price } =
+      slotData;
+
     // Convert times to minutes for easier calculation
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-    
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
-    
+
     if (startTotalMinutes >= endTotalMinutes) {
       throw new ErrorHandlerClass(
         "Start time must be before end time",
@@ -29,30 +30,34 @@ export const createSlotsService = async (slotData) => {
         "Validation Error"
       );
     }
-    
+
     // Generate slots
     const slots = [];
     let currentTime = startTotalMinutes;
-    
+
     while (currentTime + duration <= endTotalMinutes) {
       const slotStartHour = Math.floor(currentTime / 60);
       const slotStartMinute = currentTime % 60;
       const slotEndTime = currentTime + duration;
       const slotEndHour = Math.floor(slotEndTime / 60);
       const slotEndMinute = slotEndTime % 60;
-      
-      const slotStartTime = `${slotStartHour.toString().padStart(2, '0')}:${slotStartMinute.toString().padStart(2, '0')}`;
-      const slotEndTimeStr = `${slotEndHour.toString().padStart(2, '0')}:${slotEndMinute.toString().padStart(2, '0')}`;
-      
+
+      const slotStartTime = `${slotStartHour
+        .toString()
+        .padStart(2, "0")}:${slotStartMinute.toString().padStart(2, "0")}`;
+      const slotEndTimeStr = `${slotEndHour
+        .toString()
+        .padStart(2, "0")}:${slotEndMinute.toString().padStart(2, "0")}`;
+
       // Check for overlapping slots
       const existingSlot = await slotModel.findOne({
         doctorId,
         date,
         startTime: slotStartTime,
         endTime: slotEndTimeStr,
-        isBooked: true
+        isBooked: true,
       });
-      
+
       if (!existingSlot) {
         slots.push({
           doctorId,
@@ -61,13 +66,14 @@ export const createSlotsService = async (slotData) => {
           endTime: slotEndTimeStr,
           duration,
           type,
-          isBooked: false
+          price,
+          isBooked: false,
         });
       }
-      
+
       currentTime = slotEndTime;
     }
-    
+
     if (slots.length === 0) {
       throw new ErrorHandlerClass(
         "No available slots could be created. All slots in the given range are already booked.",
@@ -75,20 +81,32 @@ export const createSlotsService = async (slotData) => {
         "No Available Slots"
       );
     }
-    
-    // Insert all slots at once
-    const createdSlots = await slotModel.insertMany(slots);
+
+    console.log("🔍 Creating slots:", JSON.stringify(slots, null, 2));
+
+    // Insert all slots one by one (since insertMany is not available in BaseModel)
+    const createdSlots = [];
+    for (const slot of slots) {
+      const createdSlot = await slotModel.create(slot);
+      createdSlots.push(createdSlot);
+    }
+
+    logger.info("Successfully created slots", {
+      count: createdSlots.length,
+      doctorId,
+      date,
+    });
+
     return createdSlots;
-    
   } catch (error) {
     logger.error("Error in createSlotsService", {
       error: error.message,
       stack: error.stack,
-      slotData
+      slotData,
     });
-    
-    throw error instanceof ErrorHandlerClass 
-      ? error 
+
+    throw error instanceof ErrorHandlerClass
+      ? error
       : new ErrorHandlerClass(
           "Failed to create slots",
           500,
@@ -107,28 +125,27 @@ export const createSlotsService = async (slotData) => {
  */
 export const getAvailableSlotsService = async (doctorId, date, type) => {
   try {
-    const query = { 
-      doctorId, 
+    const query = {
+      doctorId,
       date,
-      isBooked: false 
+      isBooked: false,
     };
-    
+
     if (type) {
       query.type = type;
     }
-    
+
     const slots = await slotModel.find(query, { __v: 0 });
     return slots;
-    
   } catch (error) {
     logger.error("Error in getAvailableSlotsService", {
       error: error.message,
       stack: error.stack,
       doctorId,
       date,
-      type
+      type,
     });
-    
+
     throw new ErrorHandlerClass(
       "Failed to fetch available slots",
       500,
@@ -147,14 +164,13 @@ export const getDoctorSlotsService = async (doctorId) => {
   try {
     const slots = await slotModel.find({ doctorId }, { __v: 0 });
     return slots;
-    
   } catch (error) {
     logger.error("Error in getDoctorSlotsService", {
       error: error.message,
       stack: error.stack,
-      doctorId
+      doctorId,
     });
-    
+
     throw new ErrorHandlerClass(
       "Failed to fetch doctor slots",
       500,
@@ -172,15 +188,11 @@ export const getDoctorSlotsService = async (doctorId) => {
 export const deleteSlotService = async (slotId) => {
   try {
     const slot = await slotModel.findById(slotId);
-    
+
     if (!slot) {
-      throw new ErrorHandlerClass(
-        "Slot not found",
-        404,
-        "Not Found"
-      );
+      throw new ErrorHandlerClass("Slot not found", 404, "Not Found");
     }
-    
+
     if (slot.isBooked) {
       throw new ErrorHandlerClass(
         "Cannot delete a booked slot",
@@ -188,19 +200,18 @@ export const deleteSlotService = async (slotId) => {
         "Bad Request"
       );
     }
-    
+
     await slotModel.deleteOne({ _id: slotId });
     return { success: true };
-    
   } catch (error) {
     logger.error("Error in deleteSlotService", {
       error: error.message,
       stack: error.stack,
-      slotId
+      slotId,
     });
-    
-    throw error instanceof ErrorHandlerClass 
-      ? error 
+
+    throw error instanceof ErrorHandlerClass
+      ? error
       : new ErrorHandlerClass(
           "Failed to delete slot",
           500,
@@ -218,40 +229,31 @@ export const deleteSlotService = async (slotId) => {
 export const markSlotAsBookedService = async (slotId) => {
   try {
     const slot = await slotModel.findById(slotId);
-    
+
     if (!slot) {
-      throw new ErrorHandlerClass(
-        "Slot not found",
-        404,
-        "Not Found"
-      );
+      throw new ErrorHandlerClass("Slot not found", 404, "Not Found");
     }
-    
+
     if (slot.isBooked) {
-      throw new ErrorHandlerClass(
-        "Slot is already booked",
-        400,
-        "Bad Request"
-      );
+      throw new ErrorHandlerClass("Slot is already booked", 400, "Bad Request");
     }
-    
+
     const updatedSlot = await slotModel.findByIdAndUpdate(
       slotId,
       { isBooked: true },
-      { new: true, select: '-__v' }
+      { new: true, select: "-__v" }
     );
-    
+
     return updatedSlot;
-    
   } catch (error) {
     logger.error("Error in markSlotAsBookedService", {
       error: error.message,
       stack: error.stack,
-      slotId
+      slotId,
     });
-    
-    throw error instanceof ErrorHandlerClass 
-      ? error 
+
+    throw error instanceof ErrorHandlerClass
+      ? error
       : new ErrorHandlerClass(
           "Failed to mark slot as booked",
           500,

@@ -1,30 +1,28 @@
-import React from 'react';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Colors from '@theme/colors';
-import { useRoute } from '@react-navigation/native';
-import { DoctorDrawerParamList } from '@/types/navigation';
+import React from "react";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { StyleSheet } from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Colors from "@theme/colors";
+import { useRoute } from "@react-navigation/native";
+import { DoctorDrawerParamList } from "@/types/navigation";
 
 // Doctor Screens
-import DoctorHomeScreen from '../screens/Doctor/DoctorHomeScreen';
-import DoctorDashboardScreen from '../screens/Doctor/DoctorDashboardScreen';
-import DoctorAppointmentsScreen from '../screens/Doctor/DoctorAppointmentsScreen';
-import DoctorProfileScreen from '../screens/Doctor/DoctorProfileScreen';
-import DoctorPrescriptionScreen from '../screens/Doctor/DoctorPrescriptionScreen';
-import DoctorClinicLocationScreen from '../screens/Doctor/DoctorClinicLocationScreen';
-import PatientListScreen from '../screens/Doctor/PatientListScreen';
-import PatientMedicalHistoryScreen from '../screens/Doctor/PatientMedicalHistoryScreen';
-import TelemedicineSessionsScreen from '../screens/Doctor/TelemedicineSessionsScreen';
-import DoctorTelemedicineScreen from '../screens/Doctor/DoctorTelemedicineScreen';
-import TelemedicineTestScreen from '../screens/Doctor/TelemedicineTestScreen';
-import DoctorNotificationsScreen from '../screens/Doctor/DoctorNotificationsScreen';
-import DoctorPaymentsScreen from '../screens/Doctor/DoctorPaymentsScreen';
-import AvailabilityScreen from '../screens/Doctor/AvailabilityScreen';
-import LabResultScreen from '../screens/LabResultScreen';
+import DoctorHomeScreen from "../screens/Doctor/DoctorHomeScreen";
+import DoctorAppointmentsScreen from "../screens/Doctor/DoctorAppointmentsScreen";
+import DoctorProfileScreen from "../screens/Doctor/DoctorProfileScreen";
+import DoctorPrescriptionScreen from "../screens/Doctor/DoctorPrescriptionScreen";
+import DoctorClinicLocationScreen from "../screens/Doctor/DoctorClinicLocationScreen";
+import PatientListScreen from "../screens/Doctor/PatientListScreen";
+import PatientMedicalHistoryScreen from "../screens/Doctor/PatientMedicalHistoryScreen";
+import TelemedicineSessionsScreen from "../screens/Doctor/TelemedicineSessionsScreen";
+import DoctorTelemedicineScreen from "../screens/Doctor/DoctorTelemedicineScreen";
+import DoctorNotificationsScreen from "../screens/Doctor/DoctorNotificationsScreen";
+import DoctorPaymentsScreen from "../screens/Doctor/DoctorPaymentsScreen";
+import AvailabilityScreen from "../screens/Doctor/AvailabilityScreen";
+import LabResultScreen from "../screens/LabResultScreen";
 
 // Custom Drawer Content
-import CustomDrawerContent from '../components/layout/CustomDrawerContent';
+import CustomDrawerContent from "../components/layout/CustomDrawerContent";
 
 // Using DoctorDrawerParamList from types/navigation.ts
 
@@ -32,8 +30,8 @@ const Drawer = createDrawerNavigator<DoctorDrawerParamList>();
 
 const DoctorDrawerNavigation = () => {
   const route = useRoute<any>();
-  // Get the screen parameter from route params if available
-  const initialRouteName = route.params?.screen || 'DoctorDashboard';
+  // Get the screen parameter from route params if available - default to DoctorHome
+  const initialRouteName = route.params?.screen || "DoctorHome";
 
   return (
     <Drawer.Navigator
@@ -53,22 +51,12 @@ const DoctorDrawerNavigation = () => {
       }}
     >
       <Drawer.Screen
-        name="DoctorDashboard"
-        component={DoctorDashboardScreen}
-        options={{
-          title: "Dashboard",
-          drawerIcon: ({ color } : { color: string }) => (
-            <Icon name="view-dashboard-outline" size={22} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
         name="DoctorHome"
         component={DoctorHomeScreen}
         options={{
-          title: "Home",
-          drawerIcon: ({ color } : { color: string }) => (
-            <Icon name="home-outline" size={22} color={color} />
+          title: "Dashboard",
+          drawerIcon: ({ color }: { color: string }) => (
+            <Icon name="view-dashboard-outline" size={22} color={color} />
           ),
         }}
       />
@@ -126,7 +114,7 @@ const DoctorDrawerNavigation = () => {
         name="TelemedicineSessions"
         component={TelemedicineSessionsScreen}
         options={{
-          title: 'Telemedicine',
+          title: "Telemedicine",
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="video" size={22} color={color} />
           ),
@@ -136,7 +124,7 @@ const DoctorDrawerNavigation = () => {
         name="Availability"
         component={AvailabilityScreen}
         options={{
-          title: 'Availability',
+          title: "Availability",
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="calendar-clock" size={22} color={color} />
           ),
@@ -146,7 +134,7 @@ const DoctorDrawerNavigation = () => {
         name="DoctorNotifications"
         component={DoctorNotificationsScreen}
         options={{
-          title: 'Notifications',
+          title: "Notifications",
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="bell-outline" size={22} color={color} />
           ),
@@ -156,7 +144,7 @@ const DoctorDrawerNavigation = () => {
         name="DoctorPayments"
         component={DoctorPaymentsScreen}
         options={{
-          title: 'Payments',
+          title: "Payments",
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="cash-multiple" size={22} color={color} />
           ),
@@ -170,7 +158,7 @@ const DoctorDrawerNavigation = () => {
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="clipboard-text-outline" size={22} color={color} />
           ),
-          drawerItemStyle: { display: 'none' } // Hide from drawer but keep in navigation
+          drawerItemStyle: { display: "none" }, // Hide from drawer but keep in navigation
         }}
       />
       <Drawer.Screen
@@ -181,19 +169,10 @@ const DoctorDrawerNavigation = () => {
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="video-outline" size={22} color={color} />
           ),
-          drawerItemStyle: { display: 'none' } // Hide from drawer but keep in navigation
+          drawerItemStyle: { display: "none" }, // Hide from drawer but keep in navigation
         }}
       />
-      <Drawer.Screen
-        name="TelemedicineTest"
-        component={TelemedicineTestScreen}
-        options={{
-          title: "Test Video Call",
-          drawerIcon: ({ color }: { color: string }) => (
-            <Icon name="video-check" size={22} color={color} />
-          )
-        }}
-      />
+
       <Drawer.Screen
         name="LabResult"
         component={LabResultScreen}
@@ -202,7 +181,7 @@ const DoctorDrawerNavigation = () => {
           drawerIcon: ({ color }: { color: string }) => (
             <Icon name="file-pdf-box" size={22} color={color} />
           ),
-          drawerItemStyle: { display: 'none' } // Hide from drawer but keep in navigation
+          drawerItemStyle: { display: "none" }, // Hide from drawer but keep in navigation
         }}
       />
     </Drawer.Navigator>

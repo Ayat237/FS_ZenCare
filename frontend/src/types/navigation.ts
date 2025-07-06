@@ -57,11 +57,8 @@ export type RootStackParamList = {
       };
     };
   };
-  RegistrationSubmitted: undefined;
   EmailVerification: {
     emailToken: string | null;
-    userRole?: "patient" | "doctor";
-    email?: string;
   };
   ResetPasswordEmail: undefined;
   ResetPasswordVerification: {
@@ -123,7 +120,6 @@ export type DrawerParamList = {
 
 export type DoctorDrawerParamList = {
   DoctorHome: undefined;
-  DoctorDashboard: undefined;
   DoctorAppointments: undefined;
   DoctorPrescriptions: undefined;
   DoctorProfile: undefined;
@@ -136,7 +132,6 @@ export type DoctorDrawerParamList = {
     | undefined;
   DoctorNotifications: undefined;
   DoctorPayments: undefined;
-  TelemedicineTest: undefined;
   Availability: undefined;
   LabResult: {
     filePath: string;

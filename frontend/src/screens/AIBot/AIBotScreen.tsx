@@ -1,5 +1,15 @@
 import React from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, TouchableWithoutFeedback } from "react-native";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { MessageBubble, ChatInput, ChatHeader } from "@/components/ui/chat";
 import { RootState } from "@/store";
@@ -9,16 +19,16 @@ import Colors from "@theme/colors";
 
 const AIBotScreen = () => {
   const { user } = useSelector((state: RootState) => state.auth);
-  
+
   // Temporary user ID for testing - in production this would come from auth state
   const userId = user?.id || "64f8b8e77571f6e4745bcbe1";
-  
+
   // Use our custom chat hook
   const { messages, loading, sendMessage, flatListRef } = useChat(userId);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === "ios" ? "padding" : "padding"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 30}
@@ -27,14 +37,14 @@ const AIBotScreen = () => {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.contentContainer}>
               <ChatHeader title="ZenCare Bot" />
-              
+
               <View style={styles.container}>
                 {messages.length === 0 && !loading ? (
                   <View style={styles.emptyContainer}>
-                    <MessageBubble 
+                    <MessageBubble
                       message={{
                         role: "bot",
-                        data: "Hi! I'm zenCare bot, your doctor assistant. How can I help you today?"
+                        data: "Hi! I'm zenCare bot, your doctor assistant. How can I help you today?",
                       }}
                     />
                   </View>
@@ -44,8 +54,8 @@ const AIBotScreen = () => {
                     data={messages}
                     keyExtractor={(item, index) => `message-${index}`}
                     renderItem={({ item, index }) => (
-                      <MessageBubble 
-                        message={item} 
+                      <MessageBubble
+                        message={item}
                         isLastMessage={index === messages.length - 1}
                       />
                     )}
@@ -53,7 +63,7 @@ const AIBotScreen = () => {
                     showsVerticalScrollIndicator={false}
                   />
                 )}
-                
+
                 {loading && (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={Colors.primary500} />
@@ -63,7 +73,7 @@ const AIBotScreen = () => {
             </View>
           </TouchableWithoutFeedback>
           <ChatInput onSendMessage={sendMessage} isLoading={loading} />
-          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -80,9 +90,9 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   contentContainer: {
     flex: 1,

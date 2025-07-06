@@ -34,6 +34,10 @@ const slotSchema = new Schema(
       enum: Object.values(AppointmentType),
       required: true,
     },
+    price: {
+      type: Number,
+      required: true,
+    },
   },
   {
     timestamps: true, // This will add createdAt and updatedAt fields
@@ -47,7 +51,7 @@ const Slot = mongoose.models.Slot || model("Slot", slotSchema);
 
 class SlotModel extends BaseModel {
   constructor(database) {
-    super(database, "Slot");
+    super(database, "slot");
   }
 }
 

@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Image,
   TouchableOpacity,
   TextInput,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import Colors from "@theme/colors";
 import { useSelector } from "react-redux";
@@ -24,7 +24,8 @@ import AppointmentCard from "@components/Home/AppointmentCard";
 import MedicineReminderCard from "@components/Home/MedicineReminderCard";
 
 // Define a type that combines both stack and drawer navigation capabilities
-type CombinedNavigation = NativeStackNavigationProp<RootStackParamList> & DrawerNavigationProp<RootStackParamList>;
+type CombinedNavigation = NativeStackNavigationProp<RootStackParamList> &
+  DrawerNavigationProp<RootStackParamList>;
 
 const HomeScreen = () => {
   // Use the combined navigation type
@@ -33,11 +34,10 @@ const HomeScreen = () => {
   const loggedUser = useSelector((state: RootState) => state?.auth?.user);
   // console.log("loggedUser: ", loggedUser);
   const user = {
-    name: loggedUser?.firstName + ' ' + loggedUser?.lastName,
+    name: loggedUser?.firstName + " " + loggedUser?.lastName,
     email: loggedUser?.email,
     avatar: loggedUser?.profileImage,
   };
-
 
   const appointments = [
     {
