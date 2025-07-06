@@ -1,5 +1,6 @@
 import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
+import { ErrorHandlerClass } from "../../src/utils/error-class.utils.js";
 
 const addressSchema = new Schema(
   {
@@ -40,11 +41,11 @@ const addressSchema = new Schema(
 );
 // Ensure either patientId or doctorId is provided, but not both
 addressSchema.pre("save", function (next) {
-  // if (!this.patientId && !this.doctorId) {
-  //   return next(new Error("Either patientId or doctorId is required"));
-  // }
+  if (!this.patientId && !this.doctorId) {
+    return next(new ErrorHandlerClass("Either patientId or doctorId is required"));
+  }
   if (this.patientId && this.doctorId) {
-    return next(new Error("Cannot specify both patientId and doctorId"));
+    return next(new ErrorHandlerClass("Cannot specify both patientId and doctorId"));
   }
   next();
 });

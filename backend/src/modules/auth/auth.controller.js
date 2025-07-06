@@ -404,7 +404,9 @@ export const forgetPassword = async (req, res, next) => {
       <p>Hello ${user.fullName || "User"},</p>
       <p>We received a request to reset your password. Please use the following One-Time Password (OTP) to proceed:</p>
       <p style="font-size: 20px; font-weight: bold; color: #333; padding: 10px 0;">${otp}</p>
-      <p>This code will expire in <strong>10 minutes</strong>. If you did not request this, please ignore this email or contact our support team immediately.</p>
+      <p>This code will expire in <strong>10 minutes</strong>. After this time, you will need to request a new OTP via resend OTP. 
+         <p style="color: #cc0000;"><strong>Important:</strong> Do not share this code with anyone for security reasons.</p>
+      If you did not request this, please ignore this email or contact our support team immediately.</p>
       <br/>
       <p>Best regards,</p>
       <p><strong>zenCare</strong></p>
@@ -599,25 +601,26 @@ export const resendOtpPassword = async (req, res, next) => {
   const newOtp = crypto.randomInt(100000, 999999).toString();
   await redisClient.SET(`otp:${user.userName}`, newOtp, 10 * 60);
 
-  // Send verification email
+
+  // 5. Send OTP via email
   const isEmailSent = await sendEmailService({
     to: user.email,
-    subject: "Action Required: Verify Your Email Address",
+    subject: "Password Reset Request - One-Time Password (OTP)",
     htmlMessage: `
-      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
-        <h2 style="color: #007BFF;">Email Verification - ${user.role[0]}</h2>
-        <p>Hello ${user.fullName || "User"},</p>
-        <p>Thank you for registering as a patient on our platform. Please use the One-Time Password (OTP) below to verify your email address:</p>
-        <p style="font-size: 20px; font-weight: bold; color: #000; margin: 15px 0;">${newOtp}</p>
-        <p>This OTP will expire in <strong>5 minutes</strong>. For your security, do not share this code with anyone.</p>
-        <p>If you did not initiate this request, you can safely ignore this email.</p>
-        <br />
-        <p>Best regards,</p>
-        <p><strong>The [YourAppName] Team</strong></p>
-      </div>
-    `,
+    <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      <h2 style="color: #007BFF;">Reset Your Password</h2>
+      <p>Hello ${user.firstName || "User"},</p>
+      <p>We received a request to reset your password. Please use the following One-Time Password (OTP) to proceed:</p>
+      <p style="font-size: 20px; font-weight: bold; color: #333; padding: 10px 0;">${newOtp}</p>
+      <p>This code will expire in <strong>10 minutes</strong>.
+         <p style="color: #cc0000;"><strong>Important:</strong> Do not share this code with anyone for security reasons.</p>
+      If you did not request this, please ignore this email or contact our support team immediately.</p>
+      <br/>
+      <p>Best regards,</p>
+      <p><strong>ZenCare</strong></p>
+    </div>
+  `,
   });
-
   if (isEmailSent.rejected.length) {
     logger.error("Failed to send verification email", error);
     return next(
@@ -813,8 +816,18 @@ export const updateAccount = async (req, res, next) => {
     const isEmailSent = await sendEmailService({
       to: email,
       subject: "Verify Your New Email",
-      htmlMessage: `<h3>Your verification code is  <strong>${verificationOTP}.</strong></h3>
-       <p>It expires in 24 hours. Please use this code to confirm your new email.</p>`,
+      htmlMessage: `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      <h2 style="color: #007BFF;">Verify Your New Email</h2>
+      <p>Hello ${user.firstName || "User"},</p>
+      <p>Your verification code is  <strong>${verificationOTP}.</strong></p>
+       <p>It expires in 24 hours. Please use this code to confirm your new email.</p>
+       <p>If you did not request this, please ignore this email or contact our support team immediately.</p>
+       <br/>
+       <p>Best regards,</p>
+       <p><strong>ZenCare</strong></p>
+       </div>
+       `,
     });
     if (isEmailSent.rejected.length) {
       logger.error("Failed to send verification email", error);
@@ -832,8 +845,17 @@ export const updateAccount = async (req, res, next) => {
     await sendEmailService({
       to: user.email,
       subject: "Email Change Notification",
-      htmlMessage: `<h3>A request to change your email to <strong>${email}</strong>has been made. 
-      Please verify it with the code sent to the new address.</h3>`,
+      htmlMessage: `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      <h2 style="color: #007BFF;">Email Change Notification</h2>
+      <p>Hello ${user.firstName || "User"},</p>
+      <p>A request to change your email to <strong>${email}</strong>has been made. 
+      Please verify it with the code sent to the new address.</p>
+      <br/>
+      <p>Best regards,</p>
+      <p><strong>ZenCare</strong></p>
+      </div>
+      `,
     });
 
     emailChanged = true;
