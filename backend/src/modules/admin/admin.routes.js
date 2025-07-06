@@ -20,7 +20,7 @@ adminRouter.get(
   errorHandling(adminController.getPendingDoctors)
 );
 adminRouter.patch(
-  "/verify-doctor/:userId",
+  "/",
   authenticattion(),
   authorization(possibleRoles.ADMIN),
   errorHandling(validation(VSchema.verifyDoctorSchema)),
