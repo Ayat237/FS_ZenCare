@@ -1,12 +1,12 @@
 import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
-import { AppointmentType } from "../../src/utils/enums.utils.js";
+import { PaymentStatus } from "../../src/utils/enums.utils.js";
 
 const appointmentSchema = new mongoose.Schema(
   {
     patientId: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Patient",
       required: true,
     },
     doctorId: {
@@ -18,22 +18,6 @@ const appointmentSchema = new mongoose.Schema(
       type: Schema.Types.ObjectId,
       ref: "Slot",
       required: true,
-    },
-    type: {
-      type: String,
-      enum: Object.values(AppointmentType),
-      required: true,
-      default: AppointmentType.TELEMEDICINE,
-    },
-    dateTime: {
-      type: Date,
-      required: true,
-    },
-    duration: {
-      type: Number,
-      default: 25,
-      min: 1,
-      max: 40,
     },
     jitsiMeeting: {
       roomName: {
@@ -67,6 +51,11 @@ const appointmentSchema = new mongoose.Schema(
         customId: { type: String, unique: true },
       },
     ],
+    paymentStatus: {
+      type: String,
+      enum: Object.values(PaymentStatus),
+      default: PaymentStatus.PENDING,
+    },
     paymentIntentId: { type: String, unique: true },
     prescription: {
       text: { type: String },

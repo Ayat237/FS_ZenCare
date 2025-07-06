@@ -291,3 +291,9 @@ export const AppointmentType = {
   TELEMEDICINE: 'telemedicine',
   IN_PERSON: 'inperson'
 };
+
+export const PaymentStatus = {
+  PENDING: "pending",
+  PAID: "paid",
+  FAILED: "failed",
+};

@@ -154,6 +154,8 @@ export const addPrescriptionService = async (user, prescriptionData) => {
     medicationResults.push(result);
     prescription.medicationIds.push(result.id);
   }
+  console.log("prescription.medicationIds", prescription.medicationIds);
+  console.log("prescription", prescription);
   await prescriptionModel.save(prescription);
   console.log("prescription", prescription);
 

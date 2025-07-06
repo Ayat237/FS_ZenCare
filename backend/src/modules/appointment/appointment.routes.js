@@ -15,6 +15,7 @@ import { validation } from "../../middlewares/validation.middleware.js";
 import { authenticattion } from "../../middlewares/authentication.middleware.js";
 import { authorization } from "../../middlewares/authorization.middleware.js";
 import { systemRoles } from "../../utils/system-roles.utils.js";
+import appointmentPaymentRouter from "./appointment-payment.routes.js";
 
 const router = Router();
 
@@ -61,5 +62,8 @@ router.get(
   validation(getAppointmentSchema),
   getJitsiMeetingDetails
 );
+
+// Mount payment routes
+router.use("/payment", appointmentPaymentRouter);
 
 export { router as appointmentRouter };

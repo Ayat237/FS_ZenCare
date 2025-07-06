@@ -9,18 +9,18 @@ const prescriptionRouter = Router();
 
 prescriptionRouter.post(
     "/create-prescription",
-    validation(VSchema.createPrescriptionSchema),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
+    validation(VSchema.createPrescriptionSchema),
     errorHandling(prescriptionController.createPrescription)
 )
 
 
 prescriptionRouter.post(
     "/accepted-prescription",
-    errorHandling(validation(VSchema.acceptAndAddPrescriptionSchema)),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
+    errorHandling(validation(VSchema.acceptAndAddPrescriptionSchema)),
     errorHandling(prescriptionController.acceptAndAddPrescription)
 )
 
@@ -28,9 +28,9 @@ prescriptionRouter.post(
 
 prescriptionRouter.delete(
     "/delete-prescription/:prescriptionId",
-    errorHandling(validation(VSchema.deletePrescriptionSchema)),
     authenticattion(),
     authorization(possibleRoles.PATIENT),
+    errorHandling(validation(VSchema.deletePrescriptionSchema)),
     errorHandling(prescriptionController.deletePrescription)
 )
 

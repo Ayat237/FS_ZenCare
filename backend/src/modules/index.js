@@ -9,3 +9,12 @@ export * from "./address/address.routes.js";
 export * from "./admin/admin.routes.js";
 export * from "./slot/slot.routes.js";
 export * from "./appointment/appointment.routes.js";
+
+// Stripe webhook router
+import { Router } from "express";
+import { handleStripeWebhook } from "./appointment/stripe-webhook.controller.js";
+
+const stripeWebhookRouter = Router();
+stripeWebhookRouter.post("/", handleStripeWebhook);
+
+export { stripeWebhookRouter };

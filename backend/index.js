@@ -40,6 +40,9 @@ app.use("/slots", router.slotRoutes);
 app.use("/appointments", router.appointmentRouter);
 app.use("/admin", router.adminRouter);
 
+// Stripe webhook endpoint (no authentication required)
+app.post("/webhook/stripe", express.raw({ type: 'application/json' }), router.stripeWebhookRouter);
+
 const client = createClient();
 
 client.on("error", (err) => console.log("Redis Client Error", err));
