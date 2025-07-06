@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AxiosInstance } from 'axios';
+import { AxiosInstance } from "axios";
 import { getApiUrl } from "@/config/api";
 
 // Get the base URL from the centralized configuration
@@ -17,7 +17,7 @@ const apiClient = axios.create({
 let store: any;
 export const injectStore = (_store: any) => {
   store = _store;
-  
+
   // Set up interceptors after store is injected
   setupInterceptors();
 };
@@ -31,8 +31,16 @@ const setupInterceptors = () => {
       // Add null check for state.auth to prevent TypeError
       const token = state?.auth?.user?.token;
 
+      console.log("🔍 API Interceptor - Token found:", !!token);
+      console.log("🔍 API Interceptor - Token value:", token);
+      console.log("🔍 API Interceptor - Request URL:", config.url);
+
       if (token) {
-        config.headers.Authorization = `Bearer_${token}`;
+        // Use 'token' header instead of 'Authorization'
+        config.headers.token = `Bearer_${token}`;
+        console.log("🔍 API Interceptor - Added header:", config.headers.token);
+      } else {
+        console.log("🔍 API Interceptor - No token found, skipping header");
       }
 
       return config;

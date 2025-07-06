@@ -201,7 +201,7 @@ export const deleteSlotService = async (slotId) => {
       );
     }
 
-    await slotModel.deleteOne({ _id: slotId });
+    await slotModel.deleteById(slotId);
     return { success: true };
   } catch (error) {
     logger.error("Error in deleteSlotService", {

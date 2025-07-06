@@ -27,6 +27,7 @@ interface AddSlotModalProps {
   onSave: (slot: TimeSlot) => void;
   selectedDate: string;
   loading?: boolean;
+  editingSlot?: TimeSlot | null;
 }
 
 const AddSlotModal: React.FC<AddSlotModalProps> = ({
@@ -35,6 +36,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   onSave,
   selectedDate,
   loading = false,
+  editingSlot = null,
 }) => {
   // State for the form
   const [startTime, setStartTime] = useState(new Date());
@@ -51,6 +53,40 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
   // State for time pickers
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+
+  // Effect to populate form when editing
+  useEffect(() => {
+    if (editingSlot) {
+      // Parse times from string format (HH:MM)
+      const [startHour, startMin] = editingSlot.startTime
+        .split(":")
+        .map(Number);
+      const [endHour, endMin] = editingSlot.endTime.split(":").map(Number);
+
+      const startDate = new Date();
+      startDate.setHours(startHour, startMin, 0, 0);
+
+      const endDate = new Date();
+      endDate.setHours(endHour, endMin, 0, 0);
+
+      setStartTime(startDate);
+      setEndTime(endDate);
+      setDuration(editingSlot.duration);
+      setType(editingSlot.type);
+      setPrice(editingSlot.price.toString());
+      setIsRecurring(editingSlot.isRecurring || false);
+    } else {
+      // Reset form for new slot
+      const now = new Date();
+      setStartTime(now);
+      const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+      setEndTime(oneHourLater);
+      setDuration(30);
+      setType("telemedicine");
+      setPrice("");
+      setIsRecurring(false);
+    }
+  }, [editingSlot, visible]);
 
   // Update duration when start or end time changes
   useEffect(() => {
@@ -168,7 +204,9 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Availability Slot</Text>
+            <Text style={styles.modalTitle}>
+              {editingSlot ? "Edit Availability Slot" : "Add Availability Slot"}
+            </Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Icon name="close" size={24} color="#555" />
             </TouchableOpacity>
@@ -360,7 +398,13 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({
               disabled={loading}
             >
               <Text style={styles.saveButtonText}>
-                {loading ? "Creating..." : "Save Slot"}
+                {loading
+                  ? editingSlot
+                    ? "Updating..."
+                    : "Creating..."
+                  : editingSlot
+                  ? "Update Slot"
+                  : "Save Slot"}
               </Text>
             </TouchableOpacity>
           </View>

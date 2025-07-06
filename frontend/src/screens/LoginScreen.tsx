@@ -97,6 +97,8 @@ const LoginScreen: React.FC = () => {
                 error={
                   validationError && !email.trim() ? validationError : undefined
                 }
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
               <InputField
                 label="Password"

@@ -68,7 +68,6 @@ const appointmentSchema = new mongoose.Schema(
       },
     ],
     paymentIntentId: { type: String, unique: true },
-    isPaid: { type: Boolean, default: false },
     prescription: {
       text: { type: String },
       sentAt: { type: Date },

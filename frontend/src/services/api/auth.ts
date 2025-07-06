@@ -2,6 +2,7 @@ import apiClient from "./apiClient";
 import { dummyDoctor } from "../../mockData/doctors";
 // Import store reference function instead of direct import to avoid circular dependency
 import { injectStore } from "./apiClient";
+import { debugToken } from "../../utils/tokenDebug";
 
 // Get store reference directly for use in service functions
 let store: any;
@@ -68,14 +69,22 @@ export const authService = {
       }
       const { token, refreshToken } = data;
       const userData = data.user;
-      console.log("userData", userData);
-      // console.log("token", token);
+
+      console.log("🔍 Login API response.data:", response.data);
+      console.log("🔍 Login extracted token:", token);
+      console.log("🔍 Login extracted refreshToken:", refreshToken);
+      console.log("🔍 Login userData:", userData);
+
+      const finalUserData = {
+        ...userData,
+        token,
+        refreshToken,
+      };
+
+      console.log("🔍 Login final user data with tokens:", finalUserData);
+
       return {
-        user: {
-          ...userData,
-          token,
-          refreshToken,
-        },
+        user: finalUserData,
       };
     } catch (error: any) {
       console.log("error:", error);
@@ -369,6 +378,39 @@ export const authService = {
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Doctor email verification failed";
+      throw new Error(errorMessage);
+    }
+  },
+
+  getUserProfile: async () => {
+    try {
+      console.log("Fetching user profile...");
+
+      // Let's manually check the token from store to debug
+      if (store) {
+        const state = store.getState();
+        const token = state?.auth?.user?.token;
+        console.log("🔍 getUserProfile - Token from store:", token);
+        console.log("🔍 getUserProfile - User in store:", state?.auth?.user);
+
+        // Debug the token in detail
+        debugToken(token);
+      }
+
+      const response = await apiClient.get("/auth/user-profile");
+      console.log("User profile response:", response.data);
+
+      if (!response.data || !response.data.data) {
+        throw new Error("Invalid profile response format");
+      }
+
+      return response.data.data; // Return the user profile data
+    } catch (error: any) {
+      console.log("Get user profile error:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to fetch profile";
       throw new Error(errorMessage);
     }
   },

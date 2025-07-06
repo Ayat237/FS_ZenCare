@@ -1,4 +1,24 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * AvailabilityScreen - Doctor's Schedule Management
+ *
+ * This screen allows doctors to:
+ * 1. View their weekly availability schedule
+ * 2. Add new time slots with price and type (telemedicine/in-person)
+ * 3. Delete existing slots (if not booked)
+ * 4. Navigate between weeks
+ *
+ * Backend Integration:
+ * - GET /slots - Fetch all doctor's slots
+ * - POST /slots - Create new slot
+ * - DELETE /slots/:id - Delete a slot
+ *
+ * Auth Requirements:
+ * - User must be logged in as a doctor
+ * - doctorId from user.roleData.doctor._id is used for API calls
+ * - Backend validates that the requesting user owns the slots
+ */
+
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,21 +28,48 @@ import {
   FlatList,
   Alert,
   StatusBar,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { format, addDays, parseISO, isAfter, isBefore, isEqual } from 'date-fns';
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import {
+  format,
+  addDays,
+  parseISO,
+  isAfter,
+  isBefore,
+  isEqual,
+} from "date-fns";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 // Components
-import TimeSlotItem from '../../components/doctor/TimeSlotItem';
-import AddSlotModal from '../../components/doctor/AddSlotModal';
+import TimeSlotItem from "../../components/doctor/TimeSlotItem";
+import AddSlotModal from "../../components/doctor/AddSlotModal";
+
+// Services
+import {
+  slotsService,
+  CreateSlotData,
+  SlotResponse,
+} from "../../services/api/slots";
 
 // Theme
-import Colors from '../../theme/colors';
+import Colors from "../../theme/colors";
 
 // Types
-import { TimeSlot, DayAvailability, WeekAvailability } from '../../types/availability';
+import {
+  TimeSlot,
+  DayAvailability,
+  WeekAvailability,
+} from "../../types/availability";
 
 const AvailabilityScreen: React.FC = () => {
+  // Get user data from Redux
+  const { user } = useSelector((state: RootState) => state.auth);
+  const doctorId = user?.roleData?.doctor?._id;
+
+  // State for loading
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   // State for the current week
   const [currentWeek, setCurrentWeek] = useState<WeekAvailability>(() => {
     const today = new Date();
@@ -30,137 +77,373 @@ const AvailabilityScreen: React.FC = () => {
     const dayOfWeek = today.getDay();
     const diff = dayOfWeek === 6 ? 0 : 6 - dayOfWeek - 7;
     const startDate = addDays(today, diff);
-    
+
     // Generate the week days
     const days: DayAvailability[] = [];
     for (let i = 0; i < 7; i++) {
       const date = addDays(startDate, i);
       days.push({
-        date: format(date, 'yyyy-MM-dd'),
-        dayName: format(date, 'EEEE'),
+        date: format(date, "yyyy-MM-dd"),
+        dayName: format(date, "EEEE"),
         dayOfMonth: date.getDate(),
-        month: format(date, 'MMMM'),
+        month: format(date, "MMMM"),
         slots: [],
       });
     }
-    
+
     return {
       days,
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(addDays(startDate, 6), 'yyyy-MM-dd'),
+      startDate: format(startDate, "yyyy-MM-dd"),
+      endDate: format(addDays(startDate, 6), "yyyy-MM-dd"),
     };
   });
 
   // State for the selected day
-  const [selectedDay, setSelectedDay] = useState<DayAvailability>(currentWeek.days[0]);
-  
+  const [selectedDay, setSelectedDay] = useState<DayAvailability>(
+    currentWeek.days[0]
+  );
+
   // State for the add slot modal
   const [isAddSlotModalVisible, setIsAddSlotModalVisible] = useState(false);
 
-  // Mock data for time slots (in a real app, this would come from an API)
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
-    {
-      id: '1',
-      day: format(new Date(), 'yyyy-MM-dd'),
-      startTime: '09:00',
-      endTime: '09:30',
-      duration: 30,
-      type: 'telemedicine',
-      isRecurring: true,
-    },
-    {
-      id: '2',
-      day: format(new Date(), 'yyyy-MM-dd'),
-      startTime: '10:00',
-      endTime: '10:30',
-      duration: 30,
-      type: 'in-person',
-      isRecurring: false,
-    },
-  ]);
+  // State for time slots - now connected to backend
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
-  // Effect to update the slots for the selected day
-  useEffect(() => {
-    // In a real app, you would fetch the slots for the selected day from an API
-    const updatedDays = currentWeek.days.map(day => {
-      if (day.date === selectedDay.date) {
+  // Fetch slots for the current doctor
+  const fetchDoctorSlots = async () => {
+    console.log("🔍 fetchDoctorSlots called");
+    console.log("🔍 user:", user);
+    console.log("🔍 user.roleData:", user?.roleData);
+    console.log("🔍 user.roleData.doctor:", user?.roleData?.doctor);
+    console.log("🔍 doctorId:", doctorId);
+
+    if (!doctorId) {
+      console.log("❌ No doctor ID available");
+      Alert.alert(
+        "Error",
+        "Doctor profile not available. Please make sure you are logged in as a doctor."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("✅ Fetching slots for doctor:", doctorId);
+      const slots: SlotResponse[] = await slotsService.getDoctorSlots(doctorId);
+
+      // Convert backend slots to frontend format and deduplicate
+      const convertedSlots: TimeSlot[] = slots.map((slot) => {
+        // Safely handle date conversion
+        let dateStr = "";
+        if (slot.date) {
+          try {
+            dateStr = String(slot.date).split("T")[0];
+          } catch (error) {
+            console.warn("Error processing slot date:", slot.date, error);
+            dateStr = "";
+          }
+        }
+
         return {
-          ...day,
-          slots: timeSlots.filter(slot => slot.day === day.date),
+          _id: slot._id,
+          id: slot._id, // For backward compatibility
+          doctorId: slot.doctorId,
+          day: dateStr, // Convert to YYYY-MM-DD
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          duration: slot.duration,
+          type: slot.type,
+          price: slot.price,
+          isBooked: slot.isBooked,
+          isRecurring: false, // Default value
+          createdAt: slot.createdAt,
+          updatedAt: slot.updatedAt,
         };
-      }
-      return day;
+      });
+
+      // Deduplicate slots by _id to prevent React key warnings
+      const uniqueSlots = convertedSlots.filter(
+        (slot, index, self) =>
+          index === self.findIndex((s) => s._id === slot._id)
+      );
+
+      setTimeSlots(uniqueSlots);
+      console.log("Fetched slots:", uniqueSlots);
+    } catch (error: any) {
+      console.log("Error fetching slots:", error.message);
+      Alert.alert("Error", "Failed to load your availability slots");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load of slots
+  useEffect(() => {
+    if (doctorId) {
+      fetchDoctorSlots();
+    }
+  }, [doctorId]);
+
+  // Effect to update the slots for all days when timeSlots change
+  useEffect(() => {
+    console.log("🔍 Updating days with slots. Total slots:", timeSlots.length);
+    console.log(
+      "🔍 Current week days:",
+      currentWeek.days.map((d) => d.date)
+    );
+
+    const updatedDays = currentWeek.days.map((day) => {
+      // Filter slots for this specific day
+      const daySlots = timeSlots.filter((slot) => {
+        const slotDate =
+          slot.day || (slot.date ? String(slot.date).split("T")[0] : "");
+        console.log(
+          `🔍 Checking slot date: ${slotDate} against day: ${day.date}`
+        );
+        return slotDate === day.date;
+      });
+
+      console.log(`🔍 Day ${day.date} has ${daySlots.length} slots:`, daySlots);
+
+      return {
+        ...day,
+        slots: daySlots,
+      };
     });
 
-    setCurrentWeek(prev => ({
+    setCurrentWeek((prev) => ({
       ...prev,
       days: updatedDays,
     }));
-  }, [timeSlots, selectedDay.date]);
+
+    // Update selected day if it's one of the updated days
+    const updatedSelectedDay = updatedDays.find(
+      (day) => day.date === selectedDay.date
+    );
+    if (updatedSelectedDay) {
+      setSelectedDay(updatedSelectedDay);
+    }
+  }, [timeSlots, currentWeek.startDate]); // Remove selectedDay.date dependency to avoid infinite loop
 
   // Handle day selection
   const handleDaySelect = (day: DayAvailability) => {
+    console.log(
+      "🔍 Day selected:",
+      day.date,
+      "with",
+      day.slots.length,
+      "slots"
+    );
     setSelectedDay(day);
   };
 
   // Handle adding a new slot
-  const handleAddSlot = (newSlot: TimeSlot) => {
+  const handleAddSlot = async (newSlot: TimeSlot) => {
+    console.log("🔍 handleAddSlot called with:", newSlot);
+    console.log("🔍 Current doctorId:", doctorId);
+    console.log("🔍 Current user:", user);
+
+    if (!doctorId) {
+      Alert.alert(
+        "Error",
+        "Doctor information not available. Please make sure you are logged in properly."
+      );
+      return;
+    }
+
     // Check for overlapping slots
-    const isOverlapping = timeSlots.some(slot => {
+    const isOverlapping = timeSlots.some((slot) => {
       if (slot.day !== newSlot.day) return false;
-      
+
       const newSlotStart = parseISO(`${newSlot.day}T${newSlot.startTime}:00`);
       const newSlotEnd = parseISO(`${newSlot.day}T${newSlot.endTime}:00`);
       const existingSlotStart = parseISO(`${slot.day}T${slot.startTime}:00`);
       const existingSlotEnd = parseISO(`${slot.day}T${slot.endTime}:00`);
-      
+
       // Check if the new slot overlaps with an existing slot
       return (
-        (isAfter(newSlotStart, existingSlotStart) && isBefore(newSlotStart, existingSlotEnd)) ||
-        (isAfter(newSlotEnd, existingSlotStart) && isBefore(newSlotEnd, existingSlotEnd)) ||
-        (isBefore(newSlotStart, existingSlotStart) && isAfter(newSlotEnd, existingSlotEnd)) ||
+        (isAfter(newSlotStart, existingSlotStart) &&
+          isBefore(newSlotStart, existingSlotEnd)) ||
+        (isAfter(newSlotEnd, existingSlotStart) &&
+          isBefore(newSlotEnd, existingSlotEnd)) ||
+        (isBefore(newSlotStart, existingSlotStart) &&
+          isAfter(newSlotEnd, existingSlotEnd)) ||
         isEqual(newSlotStart, existingSlotStart) ||
         isEqual(newSlotEnd, existingSlotEnd)
       );
     });
 
     if (isOverlapping) {
-      Alert.alert('Time Conflict', 'This slot overlaps with an existing slot. Please choose a different time.');
+      Alert.alert(
+        "Time Conflict",
+        "This slot overlaps with an existing slot. Please choose a different time."
+      );
       return;
     }
 
-    // Add the new slot
-    setTimeSlots(prev => [...prev, { ...newSlot, id: `slot-${Date.now()}` }]);
-    setIsAddSlotModalVisible(false);
+    try {
+      setLoading(true);
+
+      // Prepare data for backend
+      const slotData: CreateSlotData = {
+        doctorId,
+        date:
+          newSlot.day ||
+          (newSlot.date ? String(newSlot.date).split("T")[0] : "") ||
+          "",
+        startTime: newSlot.startTime,
+        endTime: newSlot.endTime,
+        duration: newSlot.duration,
+        type: newSlot.type,
+        price: newSlot.price,
+      };
+
+      console.log("🔍 Creating new slot with data:", slotData);
+      console.log("🔍 doctorId being sent:", doctorId);
+      console.log("🔍 newSlot received:", newSlot);
+
+      // Call backend API
+      const createdSlot = await slotsService.createSlot(slotData);
+
+      setIsAddSlotModalVisible(false);
+
+      // Refresh slots from backend to get the latest state
+      await fetchDoctorSlots();
+
+      Alert.alert("Success", "Time slot created successfully");
+    } catch (error: any) {
+      console.log("❌ Error creating slot:", error);
+      console.log("❌ Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      Alert.alert("Error", error.message || "Failed to create time slot");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // State for editing slot
+  const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
 
   // Handle editing a slot
   const handleEditSlot = (slotId: string) => {
-    const slotToEdit = timeSlots.find(slot => slot.id === slotId);
+    const slotToEdit = timeSlots.find(
+      (slot) => slot._id === slotId || slot.id === slotId
+    );
     if (slotToEdit) {
-      // In a real app, you would open the edit modal with the slot data
-      Alert.alert('Edit Slot', 'Edit slot functionality would be implemented here.');
+      console.log("🔍 Editing slot:", slotToEdit);
+      setEditingSlot(slotToEdit);
+      setIsAddSlotModalVisible(true);
+    } else {
+      Alert.alert("Error", "Slot not found");
+    }
+  };
+
+  // Handle updating an existing slot
+  const handleUpdateSlot = async (updatedSlot: TimeSlot) => {
+    if (!editingSlot || !doctorId) {
+      Alert.alert("Error", "Invalid slot or doctor information");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      console.log("🔍 Updating slot - creating new slot instead of updating");
+
+      // Create the new slot with updated data
+      const slotData: CreateSlotData = {
+        doctorId,
+        date:
+          updatedSlot.day ||
+          (updatedSlot.date ? String(updatedSlot.date).split("T")[0] : "") ||
+          "",
+        startTime: updatedSlot.startTime,
+        endTime: updatedSlot.endTime,
+        duration: updatedSlot.duration,
+        type: updatedSlot.type,
+        price: updatedSlot.price,
+      };
+
+      const createdSlot = await slotsService.createSlot(slotData);
+
+      // Try to delete old slot in background (don't fail if it doesn't work)
+      try {
+        await slotsService.deleteSlot(editingSlot._id || editingSlot.id || "");
+        console.log("🔍 Old slot deleted successfully");
+      } catch (deleteError: any) {
+        console.log(
+          "🔍 Failed to delete old slot, but new slot created:",
+          deleteError.message
+        );
+        // Don't fail the operation, just log the error
+      }
+
+      setEditingSlot(null);
+      setIsAddSlotModalVisible(false);
+
+      // Refresh slots from backend to get the latest state
+      await fetchDoctorSlots();
+
+      Alert.alert("Success", "Time slot updated successfully");
+    } catch (error: any) {
+      console.log("❌ Error updating slot:", error);
+      console.log("❌ Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      Alert.alert("Error", error.message || "Failed to update time slot");
+    } finally {
+      setLoading(false);
     }
   };
 
   // Handle deleting a slot
   const handleDeleteSlot = (slotId: string) => {
     Alert.alert(
-      'Delete Slot',
-      'Are you sure you want to delete this time slot?',
+      "Delete Slot",
+      "Are you sure you want to delete this time slot?",
       [
         {
-          text: 'Cancel',
-          style: 'cancel',
+          text: "Cancel",
+          style: "cancel",
         },
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setTimeSlots(prev => prev.filter(slot => slot.id !== slotId));
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              console.log("Deleting slot:", slotId);
+
+              // Call backend API
+              await slotsService.deleteSlot(slotId);
+
+              // Refresh slots from backend to get the latest state
+              await fetchDoctorSlots();
+
+              Alert.alert("Success", "Time slot deleted successfully");
+            } catch (error: any) {
+              console.log("❌ Error deleting slot:", error);
+              console.log("❌ Error details:", {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+              });
+              Alert.alert(
+                "Error",
+                error.message || "Failed to delete time slot"
+              );
+            } finally {
+              setLoading(false);
+            }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -168,23 +451,23 @@ const AvailabilityScreen: React.FC = () => {
   const goToPreviousWeek = () => {
     const startDate = parseISO(currentWeek.startDate);
     const newStartDate = addDays(startDate, -7);
-    
+
     const days: DayAvailability[] = [];
     for (let i = 0; i < 7; i++) {
       const date = addDays(newStartDate, i);
       days.push({
-        date: format(date, 'yyyy-MM-dd'),
-        dayName: format(date, 'EEEE'),
+        date: format(date, "yyyy-MM-dd"),
+        dayName: format(date, "EEEE"),
         dayOfMonth: date.getDate(),
-        month: format(date, 'MMMM'),
+        month: format(date, "MMMM"),
         slots: [],
       });
     }
-    
+
     setCurrentWeek({
       days,
-      startDate: format(newStartDate, 'yyyy-MM-dd'),
-      endDate: format(addDays(newStartDate, 6), 'yyyy-MM-dd'),
+      startDate: format(newStartDate, "yyyy-MM-dd"),
+      endDate: format(addDays(newStartDate, 6), "yyyy-MM-dd"),
     });
     setSelectedDay(days[0]);
   };
@@ -193,23 +476,23 @@ const AvailabilityScreen: React.FC = () => {
   const goToNextWeek = () => {
     const startDate = parseISO(currentWeek.startDate);
     const newStartDate = addDays(startDate, 7);
-    
+
     const days: DayAvailability[] = [];
     for (let i = 0; i < 7; i++) {
       const date = addDays(newStartDate, i);
       days.push({
-        date: format(date, 'yyyy-MM-dd'),
-        dayName: format(date, 'EEEE'),
+        date: format(date, "yyyy-MM-dd"),
+        dayName: format(date, "EEEE"),
         dayOfMonth: date.getDate(),
-        month: format(date, 'MMMM'),
+        month: format(date, "MMMM"),
         slots: [],
       });
     }
-    
+
     setCurrentWeek({
       days,
-      startDate: format(newStartDate, 'yyyy-MM-dd'),
-      endDate: format(addDays(newStartDate, 6), 'yyyy-MM-dd'),
+      startDate: format(newStartDate, "yyyy-MM-dd"),
+      endDate: format(addDays(newStartDate, 6), "yyyy-MM-dd"),
     });
     setSelectedDay(days[0]);
   };
@@ -217,8 +500,8 @@ const AvailabilityScreen: React.FC = () => {
   // Render day item for the week view
   const renderDayItem = ({ item }: { item: DayAvailability }) => {
     const isSelected = item.date === selectedDay.date;
-    const isToday = item.date === format(new Date(), 'yyyy-MM-dd');
-    
+    const isToday = item.date === format(new Date(), "yyyy-MM-dd");
+
     return (
       <TouchableOpacity
         style={[
@@ -255,7 +538,7 @@ const AvailabilityScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary600} />
-      
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: Colors.primary500 }]}>
         <Text style={styles.headerTitle}>Availability Schedule</Text>
@@ -263,23 +546,27 @@ const AvailabilityScreen: React.FC = () => {
           Configure your weekly availability for consultations
         </Text>
       </View>
-      
+
       <ScrollView style={styles.content}>
         {/* Week Navigation */}
         <View style={styles.weekNavigation}>
-          <TouchableOpacity style={styles.weekNavButton} onPress={goToPreviousWeek}>
+          <TouchableOpacity
+            style={styles.weekNavButton}
+            onPress={goToPreviousWeek}
+          >
             <Icon name="chevron-left" size={24} color={Colors.primary500} />
           </TouchableOpacity>
-          
+
           <Text style={styles.weekRangeText}>
-            {format(parseISO(currentWeek.startDate), 'MMM d')} - {format(parseISO(currentWeek.endDate), 'MMM d, yyyy')}
+            {format(parseISO(currentWeek.startDate), "MMM d")} -{" "}
+            {format(parseISO(currentWeek.endDate), "MMM d, yyyy")}
           </Text>
-          
+
           <TouchableOpacity style={styles.weekNavButton} onPress={goToNextWeek}>
             <Icon name="chevron-right" size={24} color={Colors.primary500} />
           </TouchableOpacity>
         </View>
-        
+
         {/* Week Days */}
         <FlatList
           data={currentWeek.days}
@@ -289,47 +576,85 @@ const AvailabilityScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.daysContainer}
         />
-        
+
         {/* Selected Day Slots */}
         <View style={styles.slotsSection}>
           <View style={styles.slotsSectionHeader}>
             <Text style={styles.slotsSectionTitle}>
-              {format(parseISO(selectedDay.date), 'EEEE, MMMM d, yyyy')}
+              {format(parseISO(selectedDay.date), "EEEE, MMMM d, yyyy")}
             </Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setIsAddSlotModalVisible(true)}
-            >
-              <Icon name="plus" size={16} color={Colors.white} />
-              <Text style={styles.addButtonText}>Add Slot</Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={[styles.refreshButton, { marginRight: 8 }]}
+                onPress={() => {
+                  setRefreshing(true);
+                  fetchDoctorSlots().finally(() => setRefreshing(false));
+                }}
+                disabled={loading || refreshing}
+              >
+                <Icon
+                  name={refreshing ? "loading" : "refresh"}
+                  size={16}
+                  color={Colors.primary500}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.addButton, { opacity: loading ? 0.6 : 1 }]}
+                onPress={() => setIsAddSlotModalVisible(true)}
+                disabled={loading}
+              >
+                <Icon name="plus" size={16} color={Colors.white} />
+                <Text style={styles.addButtonText}>Add Slot</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          
-          {selectedDay.slots.length > 0 ? (
-            selectedDay.slots.map((slot) => (
-              <TimeSlotItem
-                key={slot.id}
-                slot={slot}
-                onEdit={() => handleEditSlot(slot.id)}
-                onDelete={() => handleDeleteSlot(slot.id)}
-              />
-            ))
+
+          {loading && timeSlots.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <Icon name="loading" size={32} color={Colors.primary500} />
+              <Text style={styles.loadingText}>
+                Loading your availability...
+              </Text>
+            </View>
+          ) : selectedDay.slots.length > 0 ? (
+            <>
+              {/* Debug info */}
+
+              {selectedDay.slots.map((slot, index) => (
+                <TimeSlotItem
+                  key={`${slot._id || slot.id || index}-${slot.startTime}-${
+                    slot.endTime
+                  }`}
+                  slot={slot}
+                  onEdit={() => handleEditSlot(slot._id || slot.id || "")}
+                  onDelete={() => handleDeleteSlot(slot._id || slot.id || "")}
+                />
+              ))}
+            </>
           ) : (
             <View style={styles.emptySlots}>
               <Icon name="calendar-clock" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>No time slots available for this day</Text>
-              <Text style={styles.emptySubtext}>Tap the "Add Slot" button to create a new time slot</Text>
+              <Text style={styles.emptyText}>
+                No time slots available for this day
+              </Text>
+              <Text style={styles.emptySubtext}>
+                Tap the "Add Slot" button to create a new time slot
+              </Text>
             </View>
           )}
         </View>
       </ScrollView>
-      
+
       {/* Add Slot Modal */}
       <AddSlotModal
         visible={isAddSlotModalVisible}
-        onClose={() => setIsAddSlotModalVisible(false)}
-        onSave={handleAddSlot}
+        onClose={() => {
+          setIsAddSlotModalVisible(false);
+          setEditingSlot(null);
+        }}
+        onSave={editingSlot ? handleUpdateSlot : handleAddSlot}
         selectedDate={selectedDay.date}
+        editingSlot={editingSlot}
       />
     </View>
   );
@@ -347,14 +672,14 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.white,
     marginBottom: 4,
   },
@@ -368,9 +693,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   weekNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingHorizontal: 8,
   },
@@ -379,14 +704,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: Colors.white,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
   weekRangeText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text,
   },
   daysContainer: {
@@ -398,11 +723,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderRadius: 12,
     backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 8,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -423,14 +748,14 @@ const styles = StyleSheet.create({
   },
   selectedDayText: {
     color: Colors.primary600,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dayNumber: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   selectedDayNumber: {
     backgroundColor: Colors.primary500,
@@ -440,7 +765,7 @@ const styles = StyleSheet.create({
   },
   dayNumberText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text,
   },
   selectedDayNumberText: {
@@ -455,25 +780,37 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
   slotsSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   slotsSectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text,
+    flex: 1,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: Colors.primary100,
+    alignItems: "center",
+    justifyContent: "center",
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.primary500,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -481,17 +818,32 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: Colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textLight,
+    marginTop: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginVertical: 2,
+  },
   emptySlots: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 24,
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: Colors.textLight,
     marginTop: 12,
   },
@@ -499,7 +851,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textMuted,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
 

@@ -19,10 +19,26 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const fetchUserProfile = createAsyncThunk(
+  "auth/fetchUserProfile",
+  async (_, thunkAPI) => {
+    try {
+      console.log("🔍 Fetching user profile in background...");
+      const profileData = await authService.getUserProfile();
+      console.log("🔍 Profile data received:", profileData);
+      return profileData;
+    } catch (error: any) {
+      console.log("🔍 Profile fetch error:", error.message);
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
 const initialState: AuthState = {
   user: null,
   loading: false,
   error: null,
+  profileLoading: false,
 };
 
 const authSlice = createSlice({
@@ -54,7 +70,28 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+      .addCase(fetchUserProfile.pending, (state) => {
+        state.profileLoading = true;
+      })
+      .addCase(
+        fetchUserProfile.fulfilled,
+        (state, action: PayloadAction<any>) => {
+          state.profileLoading = false;
+          // Merge the profile data with existing user data
+          if (state.user) {
+            state.user = { ...state.user, ...action.payload };
+            console.log("🔍 Profile data stored in Redux:", state.user);
+          }
+        }
+      )
+      .addCase(
+        fetchUserProfile.rejected,
+        (state, action: PayloadAction<any>) => {
+          state.profileLoading = false;
+          console.log("🔍 Profile fetch failed:", action.payload);
+        }
+      );
   },
 });
 

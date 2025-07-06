@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,78 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store";
-import { logout } from "@/store/auth/authSlice";
+import { RootState, AppDispatch } from "@/store";
+import { logout, fetchUserProfile } from "@/store/auth/authSlice";
 import Colors from "@theme/colors";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { debugToken } from "@/utils/tokenDebug";
 
 const { width } = Dimensions.get("window");
 
 const DoctorHomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const profileLoading = useSelector(
+    (state: RootState) => state.auth.profileLoading
+  );
+
+  // Fetch user profile when component mounts (for doctors)
+  useEffect(() => {
+    if (
+      user?.activeRole === "doctor" &&
+      user?.token &&
+      !user?.roleData?.doctor
+    ) {
+      console.log("🔍 Doctor detected, fetching detailed profile...");
+      dispatch(fetchUserProfile());
+    }
+  }, [dispatch, user?.activeRole, user?.token, user?.roleData?.doctor]);
+
+  // Log the complete user data stored in Redux
+  useEffect(() => {
+    if (user) {
+      console.log("🔍 COMPLETE USER DATA IN REDUX:");
+      console.log("Basic User Info:", {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        activeRole: user.activeRole,
+        mobilePhone: user.mobilePhone,
+        gender: user.gender,
+      });
+
+      // Debug token information
+      console.log("🔍 TOKEN DEBUG:");
+      debugToken(user.token);
+      console.log("Refresh token exists:", !!user.refreshToken);
+
+      if (user.roleData?.doctor) {
+        console.log("🔍 DOCTOR DATA IN REDUX:");
+        console.log("Doctor ID:", user.roleData.doctor._id);
+        console.log("Specialty:", user.roleData.doctor.specialty);
+        console.log(
+          "Years of Experience:",
+          user.roleData.doctor.yearsOfExperience
+        );
+        console.log(
+          "Hospital Affiliations:",
+          user.roleData.doctor.hospitalAffiliation
+        );
+        console.log("Clinic Branches:", user.roleData.doctor.clinicBranches);
+        console.log("Education:", user.roleData.doctor.education);
+        console.log("Certifications:", user.roleData.doctor.certifications);
+        console.log(
+          "Profile Image URL:",
+          user.roleData.doctor.profileImage?.URL?.secure_url
+        );
+        console.log("Rating:", user.roleData.doctor.rating);
+        console.log("Admin Approved:", user.roleData.doctor.isAdminApproved);
+      } else {
+        console.log("🔍 No doctor role data available yet");
+      }
+    }
+  }, [user]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -51,7 +112,6 @@ const DoctorHomeScreen: React.FC = () => {
       icon: "clock-outline",
       color: "#FF9800",
     },
-    
   ];
 
   const quickActions = [
@@ -143,6 +203,7 @@ const DoctorHomeScreen: React.FC = () => {
           <Image
             source={{
               uri:
+                user?.roleData?.doctor?.profileImage?.URL?.secure_url ||
                 user?.profileImage ||
                 "https://dummyimage.com/200x200/007bff/ffffff",
             }}
@@ -151,7 +212,16 @@ const DoctorHomeScreen: React.FC = () => {
           <Text style={styles.welcomeText}>
             Welcome, Dr. {user?.firstName} {user?.lastName}
           </Text>
-          <Text style={styles.specialtyText}>{user?.specialty}</Text>
+          <Text style={styles.specialtyText}>
+            {user?.roleData?.doctor?.specialty ||
+              user?.specialty ||
+              "General Practitioner"}
+          </Text>
+          {profileLoading && (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading profile details...</Text>
+            </View>
+          )}
         </View>
 
         {/* Dashboard Statistics */}
@@ -228,6 +298,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.primary500,
     marginTop: 5,
+  },
+  loadingContainer: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: Colors.primary50,
+    borderRadius: 6,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: Colors.primary600,
+    textAlign: "center",
   },
   buttonsContainer: {
     padding: 20,
@@ -345,6 +426,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 10,
     color: "#fff",
+  },
+  debugButton: {
+    backgroundColor: Colors.primary600,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  debugButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  debugContainer: {
+    backgroundColor: "#f0f8ff",
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary200,
+  },
+  debugText: {
+    fontSize: 12,
+    color: Colors.primary700,
+    marginBottom: 4,
+    fontFamily: "monospace",
   },
 });
 

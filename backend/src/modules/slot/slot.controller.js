@@ -33,9 +33,36 @@ export const createSlots = async (req, res, next) => {
     console.log("🔍 CreateSlots: doctorId from body:", doctorId);
 
     // Verify the requesting user is the doctor
-    // Check if the authenticated user's doctorID._id matches the requested doctorId
-    const userDoctorId = req.authUser?.doctorID?._id?.toString();
+    // First check if the user has a doctorID
+    if (!req.authUser?.doctorID) {
+      console.log("🔍 CreateSlots: No doctorID found in authUser");
+      throw new ErrorHandlerClass(
+        "User is not associated with a doctor profile",
+        403,
+        "Forbidden"
+      );
+    }
+
+    // Handle different possible structures of doctorID
+    let userDoctorId;
+    if (typeof req.authUser.doctorID === "string") {
+      userDoctorId = req.authUser.doctorID;
+    } else if (req.authUser.doctorID._id) {
+      userDoctorId = req.authUser.doctorID._id.toString();
+    } else if (req.authUser.doctorID.toString) {
+      userDoctorId = req.authUser.doctorID.toString();
+    }
+
     console.log("🔍 CreateSlots: userDoctorId (extracted _id):", userDoctorId);
+
+    if (!userDoctorId) {
+      console.log("🔍 CreateSlots: Could not extract doctorID._id");
+      throw new ErrorHandlerClass(
+        "Invalid doctor profile data",
+        403,
+        "Forbidden"
+      );
+    }
 
     if (userDoctorId !== doctorId) {
       console.log(
@@ -148,12 +175,31 @@ export const getDoctorSlots = async (req, res, next) => {
     console.log("🔍 GetDoctorSlots: doctorId from query:", doctorId);
 
     // Verify the requesting user is the doctor
+    // First check if the user has a doctorID
+    if (!req.authUser?.doctorID) {
+      console.log("🔍 GetDoctorSlots: No doctorID found in authUser");
+      throw new ErrorHandlerClass(
+        "User is not associated with a doctor profile",
+        403,
+        "Forbidden"
+      );
+    }
+
     // Check if the authenticated user's doctorID._id matches the requested doctorId
-    const userDoctorId = req.authUser?.doctorID?._id?.toString();
+    const userDoctorId = req.authUser.doctorID._id?.toString();
     console.log(
       "🔍 GetDoctorSlots: userDoctorId (extracted _id):",
       userDoctorId
     );
+
+    if (!userDoctorId) {
+      console.log("🔍 GetDoctorSlots: Could not extract doctorID._id");
+      throw new ErrorHandlerClass(
+        "Invalid doctor profile data",
+        403,
+        "Forbidden"
+      );
+    }
 
     if (userDoctorId !== doctorId) {
       console.log(
@@ -214,11 +260,44 @@ export const deleteSlot = async (req, res, next) => {
     }
 
     // Verify the requesting user is the doctor who owns the slot
-    const userDoctorId = req.authUser?.doctorID?._id?.toString();
+    if (!req.authUser?.doctorID) {
+      console.log("🔍 DeleteSlot: No doctorID found in authUser");
+      throw new ErrorHandlerClass(
+        "User is not associated with a doctor profile",
+        403,
+        "Forbidden"
+      );
+    }
+
+    // Handle different possible structures of doctorID
+    let userDoctorId;
+    if (typeof req.authUser.doctorID === "string") {
+      userDoctorId = req.authUser.doctorID;
+    } else if (req.authUser.doctorID._id) {
+      userDoctorId = req.authUser.doctorID._id.toString();
+    } else if (req.authUser.doctorID.toString) {
+      userDoctorId = req.authUser.doctorID.toString();
+    }
+
     console.log("🔍 DeleteSlot: userDoctorId (extracted _id):", userDoctorId);
     console.log("🔍 DeleteSlot: slot.doctorId:", slot.doctorId.toString());
 
+    if (!userDoctorId) {
+      console.log("🔍 DeleteSlot: Could not extract doctorID._id");
+      throw new ErrorHandlerClass(
+        "Invalid doctor profile data",
+        403,
+        "Forbidden"
+      );
+    }
+
     if (userDoctorId !== slot.doctorId.toString()) {
+      console.log(
+        "🔍 DeleteSlot: Authorization failed - userDoctorId:",
+        userDoctorId,
+        "vs slot.doctorId:",
+        slot.doctorId.toString()
+      );
       throw new ErrorHandlerClass(
         "Unauthorized to delete this slot",
         403,
