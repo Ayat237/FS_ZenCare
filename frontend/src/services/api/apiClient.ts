@@ -36,7 +36,7 @@ const setupInterceptors = () => {
       console.log("🔍 API Interceptor - Request URL:", config.url);
 
       if (token) {
-        // Use 'token' header instead of 'Authorization'
+        // Use 'token' header with Bearer_ format as expected by backend
         config.headers.token = `Bearer_${token}`;
         console.log("🔍 API Interceptor - Added header:", config.headers.token);
       } else {

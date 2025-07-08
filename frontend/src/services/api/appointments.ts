@@ -21,9 +21,9 @@ export interface AppointmentResponse {
     startTime: string;
     endTime: string;
     duration: number;
-    type: "telemedicine" | "in-person";
+    type: "telemedicine" | "inperson";
   };
-  type: "telemedicine" | "in-person";
+  type: "telemedicine" | "inperson";
   dateTime: string;
   duration: number;
   notes?: string;
@@ -57,7 +57,7 @@ export interface CreateAppointmentRequest {
   doctorId: string;
   patientId: string;
   slotId: string;
-  type: "telemedicine" | "in-person";
+  type: "telemedicine" | "inperson";
   notes?: string;
   price: number;
   paymentIntentId?: string;
@@ -66,7 +66,7 @@ export interface CreateAppointmentRequest {
 export interface GetMyAppointmentsFilters {
   startDate?: string;
   endDate?: string;
-  type?: "telemedicine" | "in-person";
+  type?: "telemedicine" | "inperson";
 }
 
 export interface AppointmentApiResponse {

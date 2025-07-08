@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import * as DocumentPicker from "expo-document-picker";
 import Colors from "@theme/colors";
 import { DrawerScreenProps } from "@/types/navigation";
+import { useSelector } from "react-redux";
+import { appointmentsService } from "@/services/api/appointments";
 
 // Define constants
 const BUTTON_CONTAINER_HEIGHT = 92; // Approximate height of button container with padding
@@ -115,6 +117,16 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
       </SafeAreaView>
     );
   }
+
+  // Get current user from Redux store
+  const currentUser = useSelector((state: any) => state.auth.user);
+
+  // Debug logging
+  console.log(
+    "🔍 Redux state.auth:",
+    useSelector((state: any) => state.auth)
+  );
+  console.log("🔍 currentUser from selector:", currentUser);
 
   // Form state
   const [notes, setNotes] = useState("");
@@ -447,19 +459,24 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
     safeSetState(() => setMedicalHistoryShared((prev) => !prev));
   };
 
-  // Book appointment
+  // Book appointment with backend integration
   const handleBookAppointment = async () => {
     // Validate card details
     if (!cardDetails.isValid) {
-      setTimeout(() => {
-        if (isMounted.current) {
-          Alert.alert(
-            "Card Details Required",
-            "Please complete all card details before proceeding with the booking.",
-            [{ text: "OK", style: "default" }]
-          );
-        }
-      }, 100);
+      Alert.alert(
+        "Card Details Required",
+        "Please complete all card details before proceeding with the booking."
+      );
+      return;
+    } // Validate user is logged in
+    const userId = currentUser?.id || currentUser?._id;
+    console.log("🔍 Booking: userId found:", userId);
+
+    if (!currentUser || !userId) {
+      Alert.alert(
+        "Authentication Required",
+        "Please log in to book an appointment."
+      );
       return;
     }
 
@@ -467,84 +484,100 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
     safeSetState(() => setPaymentProcessing(true));
 
     try {
-      // Simulate payment processing
+      // Generate a dummy payment intent ID (simulating Stripe payment)
+      const dummyPaymentIntentId = `pi_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
       console.log("Processing payment with card:", {
         type: getCardType(),
         last4: getLastFourDigits(),
         expiry: cardDetails.expiry,
         name: cardDetails.name,
+        paymentIntentId: dummyPaymentIntentId,
       });
 
-      // For demo purposes, simulate a successful payment - using safer timeout pattern
-      const timeoutId = setTimeout(() => {
-        if (!isMounted.current) return;
+      // Prepare appointment data for backend
+      const appointmentType =
+        slot.type === "inperson" ? "inperson" : "telemedicine";
 
-        safeSetState(() => setPaymentProcessing(false));
+      const appointmentData = {
+        doctorId: doctor._id,
+        patientId: userId, // Use current logged-in user as patient
+        slotId: slot._id,
+        type: appointmentType as "telemedicine" | "inperson",
+        notes: notes.trim() || undefined,
+        price: totalAmount,
+        paymentIntentId: dummyPaymentIntentId,
+      };
 
-        // Prepare appointment data to send to backend
-        const appointmentData = {
-          doctorId: doctor._id,
-          slotId: slot._id,
-          notes: notes,
-          attachments: attachments.map((att) => ({
-            file: att.file,
-            customId: att.customId,
-          })),
-          medicalHistoryShared: medicalHistoryShared,
-          paymentMethod: {
-            type: getCardType(),
-            last4: getLastFourDigits(),
-            expiry: cardDetails.expiry,
-            holderName: cardDetails.name,
+      console.log("Creating appointment with data:", appointmentData);
+
+      // Call backend to create appointment
+      const createdAppointment = await appointmentsService.createAppointment(
+        appointmentData
+      );
+
+      console.log("Appointment created successfully:", createdAppointment);
+
+      if (!isMounted.current) return;
+      safeSetState(() => setPaymentProcessing(false));
+
+      // Show success alert with appointment details
+      const appointmentTypeDisplay =
+        slot.type === "telemedicine" ? "Video Call" : "In-Person Visit";
+      const jitsiInfo = createdAppointment.jitsiMeeting
+        ? `\n\n🎥 Video Meeting: ${createdAppointment.jitsiMeeting.roomName}`
+        : "";
+
+      Alert.alert(
+        "Booking Confirmed! 🎉",
+        `Your appointment has been successfully booked.\n\nBooking Details:\n• Doctor: Dr. ${
+          doctor.user.firstName
+        } ${doctor.user.lastName}\n• Date: ${format(
+          new Date(slot.date),
+          "MMM dd, yyyy"
+        )}\n• Time: ${slot.startTime} - ${
+          slot.endTime
+        }\n• Type: ${appointmentTypeDisplay}\n• Amount: EGP ${totalAmount.toFixed(
+          2
+        )}\n• Card: ${getCardType()} ****${getLastFourDigits()}${jitsiInfo}`,
+        [
+          {
+            text: "View Appointments",
+            onPress: () => {
+              if (isMounted.current) {
+                // Navigate to appointments screen to see the created appointment
+                navigation.navigate("Appointments" as any);
+              }
+            },
           },
-          amount: totalAmount,
-        };
-
-        console.log("Appointment Data:", appointmentData);
-
-        // Show success alert - with timeout to ensure UI thread safety
-        setTimeout(() => {
-          if (!isMounted.current) return;
-
-          Alert.alert(
-            "Booking Confirmed! 🎉",
-            `Your appointment has been successfully booked.\n\nBooking Details:\n• Doctor: ${
-              doctor.user.firstName + " " + doctor.user.lastName
-            }\n• Date: ${format(
-              new Date(slot.date),
-              "MMM dd, yyyy"
-            )}\n• Time: ${slot.startTime}\n• Amount: EGP ${totalAmount.toFixed(
-              2
-            )}\n• Card: ${getCardType()} ****${getLastFourDigits()}`,
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  if (isMounted.current) {
-                    navigation.goBack();
-                  }
-                },
-              },
-            ]
-          );
-        }, 100);
-      }, 2000);
-
-      // Cleanup timeout if component unmounts
-      return () => clearTimeout(timeoutId);
+          {
+            text: "OK",
+            onPress: () => {
+              if (isMounted.current) {
+                navigation.goBack();
+              }
+            },
+            style: "default",
+          },
+        ]
+      );
     } catch (error: any) {
-      console.error("Payment error:", error);
-      if (isMounted.current) {
-        safeSetState(() => setPaymentProcessing(false));
-        setTimeout(() => {
-          if (isMounted.current) {
-            Alert.alert(
-              "Payment Failed",
-              error.message || "Failed to process payment. Please try again."
-            );
-          }
-        }, 100);
-      }
+      console.error("Appointment booking error:", error);
+
+      if (!isMounted.current) return;
+      safeSetState(() => setPaymentProcessing(false));
+
+      // Show appropriate error message
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to book appointment. Please try again.";
+
+      Alert.alert("Booking Failed", errorMessage, [
+        { text: "OK", style: "default" },
+      ]);
     }
   };
 

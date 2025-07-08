@@ -2,6 +2,7 @@ import {
   AppointmentModel,
   SlotModel,
   UserModel,
+  DoctorModel,
 } from "../../../database/models/index.js";
 import MongooseDatabase from "../../../database/mongoDatabase.js";
 import { ErrorHandlerClass } from "../../utils/error-class.utils.js";
@@ -16,6 +17,7 @@ const database = new MongooseDatabase(process.env.MONGODB_URI);
 const appointmentModel = new AppointmentModel(database);
 const slotModel = new SlotModel(database);
 const userModel = new UserModel(database);
+const doctorModel = new DoctorModel(database);
 
 /**
  * Create a new appointment
@@ -26,11 +28,13 @@ const userModel = new UserModel(database);
  * @param {string} appointmentData.type - Appointment type ('telemedicine' | 'in-person')
  * @param {string} appointmentData.notes - Appointment notes
  * @param {number} appointmentData.price - Appointment price
+ * @param {string} appointmentData.paymentIntentId - Payment intent ID from Stripe/payment processor
  * @returns {Object} Created appointment
  */
 export const createAppointmentService = async (appointmentData) => {
   try {
-    const { doctorId, patientId, slotId, type, notes, price } = appointmentData;
+    const { doctorId, patientId, slotId, type, notes, price, paymentIntentId } =
+      appointmentData;
 
     // 1. Fetch and validate the slot
     const slot = await slotModel.findById(slotId);
@@ -90,6 +94,7 @@ export const createAppointmentService = async (appointmentData) => {
       price,
       isPaid: false,
       medicalHistoryShared: false,
+      ...(paymentIntentId && { paymentIntentId }),
     };
 
     // 7. Create the appointment first to get its ID
@@ -107,14 +112,17 @@ export const createAppointmentService = async (appointmentData) => {
         const roomName = generateRoomName(appointment._id.toString());
 
         // Fetch user and doctor details for token generation
-        const [patient, doctor] = await Promise.all([
+        // patientId is the user ID, doctorId is the doctor record ID
+        const [patient, doctorRecord] = await Promise.all([
           userModel.findById(patientId),
-          userModel.findById(doctorId),
+          doctorModel.findById(doctorId, { populate: "user" }),
         ]);
 
-        if (!patient || !doctor) {
+        if (!patient || !doctorRecord || !doctorRecord.user) {
           throw new Error("Patient or doctor not found for token generation");
         }
+
+        const doctor = doctorRecord.user;
 
         // Generate JWT tokens
         const moderatorToken = generateJitsiToken({

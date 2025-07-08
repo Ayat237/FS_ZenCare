@@ -30,6 +30,9 @@ export const createAppointmentSchema = {
       "number.positive": "Price must be a positive number",
       "any.required": "Price is required",
     }),
+    paymentIntentId: Joi.string().optional().messages({
+      "string.base": "Payment intent ID must be a string",
+    }),
   }),
 };
 

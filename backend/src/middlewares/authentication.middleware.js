@@ -5,14 +5,10 @@ import { UserModel } from "../../database/models/index.js";
 import database from "../../database/databaseConnection.js";
 import redisClient from "../utils/redis.utils.js";
 
-import { config } from "dotenv";
-import path from "path";
-config  ({ path: path.resolve("config\.dev.env") });
-
-//dotenv.config();
+dotenv.config();
 const userModel = new UserModel(database);
 
-export const  authenticattion = () => {
+export const authenticattion = () => {
   return async (req, res, next) => {
     try {
       const { token } = req.headers;
@@ -50,11 +46,10 @@ export const  authenticattion = () => {
         );
       }
 
-      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET; 
-      console.log("loginSecretKey",loginSecretKey);
+      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET;
       let decodedToken;
       try {
-       decodedToken = jwt.verify(originalToken,loginSecretKey);
+        decodedToken = jwt.verify(originalToken, loginSecretKey);
       } catch (jwtError) {
         if (jwtError.name === "TokenExpiredError") {
           return next(
@@ -94,14 +89,12 @@ export const  authenticattion = () => {
           )
         );
       }
-      
-      
+
       const user = await userModel.findById(decodedToken.userId, {
         select: "-password",
         populate: "patientID doctorID",
       });
-     
-      
+
       if (!user) {
         return next(
           new ErrorHandlerClass(

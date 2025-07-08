@@ -15,7 +15,8 @@ import { logger } from "../../utils/logger.utils.js";
  */
 export const createAppointment = async (req, res, next) => {
   try {
-    const { doctorId, patientId, slotId, type, notes, price } = req.body;
+    const { doctorId, patientId, slotId, type, notes, price, paymentIntentId } =
+      req.body;
 
     // Verify the requesting user is either the patient or has admin privileges
     if (
@@ -36,6 +37,7 @@ export const createAppointment = async (req, res, next) => {
       type,
       notes,
       price,
+      paymentIntentId,
     });
 
     return res.status(201).json({

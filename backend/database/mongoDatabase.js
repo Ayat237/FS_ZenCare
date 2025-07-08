@@ -22,13 +22,16 @@ class MongooseDatabase extends IDatabase {
       user: User,
       patient: Patient,
       doctor: Doctor,
+      Doctor: Doctor,
       medication: Medication,
       prescription: Prescription,
       medicalHistory: MedicalHistory,
       drug: Drug,
       address: Address,
       slot: Slot,
+      Slot: Slot,
       appointment: Appointment,
+      Appointment: Appointment,
     };
   }
 
