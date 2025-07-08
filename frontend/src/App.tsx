@@ -1,6 +1,5 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigation from "@navigation/appNavigation";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -37,16 +36,10 @@ const App: FC = () => {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <SafeAreaProvider>
-          <View style={styles.container}>
-            <StatusBar
-              style="dark"
-              backgroundColor="#fff"
-              translucent={false}
-            />
-            <AppNavigation />
-          </View>
-        </SafeAreaProvider>
+        <View style={styles.container}>
+          <AppNavigation />
+          <StatusBar style="light" />
+        </View>
       </PersistGate>
     </Provider>
   );

@@ -9,6 +9,7 @@ export * from "./address/address.routes.js";
 export * from "./admin/admin.routes.js";
 export * from "./slot/slot.routes.js";
 export * from "./appointment/appointment.routes.js";
+export * from "./chat/chat.routes.js";
 
 // Stripe webhook router
 import { Router } from "express";

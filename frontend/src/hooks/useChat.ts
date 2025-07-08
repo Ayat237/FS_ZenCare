@@ -1,30 +1,27 @@
-import { useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { FlatList } from 'react-native';
-import { fetchMessages, sendChatMessage, clearMessages } from '@/store/chat/chatSlice';
-import { RootState, AppDispatch } from '@/store';
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { FlatList } from "react-native";
+import { sendCustomChatMessage, clearMessages } from "@/store/chat/chatSlice";
+import { RootState, AppDispatch } from "@/store";
 
 /**
- * Custom hook for chat functionality
- * @param userId - The user ID for the chat
+ * Custom hook for chat functionality with custom backend API
+ * @param userId - The user ID for the chat (maintained for compatibility)
  * @returns Chat state and functions
  */
 export const useChat = (userId: string) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { messages, loading, error, conversationId } = useSelector((state: RootState) => state.chat);
+  const { messages, loading, error, chatId } = useSelector(
+    (state: RootState) => state.chat
+  );
   const flatListRef = useRef<FlatList>(null);
 
-  // Fetch messages when component mounts
+  // Clean up messages when unmounting
   useEffect(() => {
-    if (userId) {
-      dispatch(fetchMessages(userId));
-    }
-    
-    // Clean up messages when unmounting
     return () => {
       dispatch(clearMessages());
     };
-  }, [dispatch, userId]);
+  }, [dispatch]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -35,17 +32,30 @@ export const useChat = (userId: string) => {
     }
   }, [messages]);
 
-  // Send a message
-  const sendMessage = (message: string) => {
-    if (!message.trim() || !userId) return;
-    dispatch(sendChatMessage({ userId, message: message.trim() }));
+  // Send a message using the custom chat API with optional attachments
+  const sendMessage = (
+    message: string,
+    attachments?: Array<{
+      type: "image" | "document";
+      uri: string;
+      name?: string;
+    }>
+  ) => {
+    if (!message.trim() && (!attachments || attachments.length === 0)) return;
+
+    dispatch(
+      sendCustomChatMessage({
+        message: message.trim(),
+        attachments,
+      })
+    );
   };
 
   return {
     messages,
     loading,
     error,
-    conversationId,
+    chatId,
     sendMessage,
     flatListRef,
   };

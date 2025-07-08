@@ -28,6 +28,9 @@ app.use(cors());
 
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use("/uploads", express.static("uploads"));
+
 app.use("/auth", router.authRouter);
 app.use("/patient", router.patientRouter);
 app.use("/medication", router.medicationRouter);
@@ -39,9 +42,14 @@ app.use("/doctor", router.doctorRouter);
 app.use("/slots", router.slotRoutes);
 app.use("/appointments", router.appointmentRouter);
 app.use("/admin", router.adminRouter);
+app.use("/chat", router.chatRouter);
 
 // Stripe webhook endpoint (no authentication required)
-app.post("/webhook/stripe", express.raw({ type: 'application/json' }), router.stripeWebhookRouter);
+app.post(
+  "/webhook/stripe",
+  express.raw({ type: "application/json" }),
+  router.stripeWebhookRouter
+);
 
 const client = createClient();
 

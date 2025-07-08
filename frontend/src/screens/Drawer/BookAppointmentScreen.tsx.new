@@ -1,0 +1,112 @@
+import React from "react";
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Colors from "@theme/colors";
+import { DrawerScreenProps } from "@/types/navigation";
+
+// Simplified component that just shows a message
+const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
+  navigation,
+  route,
+}) => {
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Icon name="arrow-left" size={24} color={Colors.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Book Appointment</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      <View style={styles.content}>
+        <Icon name="information" size={60} color={Colors.primary500} style={styles.icon} />
+        <Text style={styles.message}>
+          The appointment booking feature has been removed.
+        </Text>
+        <Text style={styles.submessage}>
+          Please contact your administrator for more information.
+        </Text>
+        <TouchableOpacity
+          style={styles.backToAppointmentsButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backToAppointmentsText}>
+            Back to Appointments
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    backgroundColor: Colors.primary500,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.white,
+  },
+  headerRight: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  icon: {
+    marginBottom: 20,
+  },
+  message: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.textPrimary,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  submessage: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  backToAppointmentsButton: {
+    backgroundColor: Colors.primary500,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  backToAppointmentsText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});
+
+export default BookAppointmentScreen;

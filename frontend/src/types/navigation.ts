@@ -106,6 +106,10 @@ export type TabScreenProps<T extends keyof TabParamList> = BottomTabScreenProps<
 export type DrawerParamList = {
   MainTabs: undefined;
   Appointments: undefined;
+  BookAppointment: {
+    doctor: import("../services/api/doctors").DoctorResponse;
+    slot: import("../services/api/slots").SlotResponse;
+  };
   MedicalHistory: undefined;
   Prescriptions: undefined;
   Telemedicine: undefined;

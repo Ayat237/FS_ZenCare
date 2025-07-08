@@ -1,5 +1,12 @@
-import React from "react";
-import { View, Text, StyleSheet, Image, Dimensions } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Dimensions,
+  Animated,
+} from "react-native";
 import { ChatMessage } from "@/types";
 import Colors from "@theme/colors";
 import { format } from "date-fns";
@@ -8,16 +15,49 @@ import { RootState } from "@/store";
 import Markdown from "react-native-markdown-display";
 
 // Get screen width for better text wrapping calculations
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
+
+// Animated streaming dots component
+const StreamingDots: React.FC = () => {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+
+    return () => animation.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.Text style={[styles.streamingDots, { opacity }]}>
+      ●●●
+    </Animated.Text>
+  );
+};
 
 interface MessageBubbleProps {
   message: ChatMessage;
   isLastMessage?: boolean;
+  isStreaming?: boolean;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isLastMessage = false,
+  isStreaming = false,
 }) => {
   const isBot = message.role === "bot";
   const { user } = useSelector((state: RootState) => state.auth);
@@ -36,16 +76,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const markdownStyles = {
     // Base container and text styles
     view: {
-      width: '100%',
+      width: "100%",
     },
     body: {
-      width: '100%',
+      width: "100%",
     },
     // Text styling
     text: {
       ...styles.text,
       ...styles.botText,
-      flexWrap: 'wrap',
+      flexWrap: "wrap",
     },
     // Bold text - working well
     strong: styles.strongText,
@@ -58,7 +98,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     ordered_list: styles.orderedList,
     // List items
     list_item: {
-      flexDirection: 'row',
+      flexDirection: "row",
       marginBottom: 6,
     },
     // Paragraph
@@ -66,18 +106,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     // Links
     link: {
       color: Colors.primary500,
-      textDecorationLine: 'underline',
+      textDecorationLine: "underline",
     },
     // Code blocks
     code_inline: {
-      fontFamily: 'monospace',
-      backgroundColor: 'rgba(0,0,0,0.05)',
+      fontFamily: "monospace",
+      backgroundColor: "rgba(0,0,0,0.05)",
       paddingHorizontal: 4,
       borderRadius: 3,
     },
     code_block: {
-      fontFamily: 'monospace',
-      backgroundColor: 'rgba(0,0,0,0.05)',
+      fontFamily: "monospace",
+      backgroundColor: "rgba(0,0,0,0.05)",
       padding: 8,
       borderRadius: 5,
       marginVertical: 5,
@@ -114,7 +154,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Markdown
               style={markdownStyles}
               rules={{
-                paragraph: (node:any, children:any) => (
+                paragraph: (node: any, children: any) => (
                   <Text key={node.key} style={styles.paragraph}>
                     {children}
                   </Text>
@@ -122,13 +162,23 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 bullet_list_icon: () => (
                   <Text style={styles.bulletListIcon}>•</Text>
                 ),
-                ordered_list_icon: (node: any, children: any, parent:any, styles: any) => (
+                ordered_list_icon: (
+                  node: any,
+                  children: any,
+                  parent: any,
+                  styles: any
+                ) => (
                   <Text style={styles.bulletListIcon}>{node.index + 1}.</Text>
                 ),
               }}
             >
               {message.data}
             </Markdown>
+            {isStreaming && (
+              <View style={styles.streamingIndicator}>
+                <StreamingDots />
+              </View>
+            )}
           </View>
         ) : (
           <Text style={[styles.text, styles.userText]}>{message.data}</Text>
@@ -189,7 +239,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   markdownContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: screenWidth * 0.65, // Limit width to prevent overflow
   },
   botBubble: {
@@ -205,7 +255,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     flexShrink: 1,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     color: Colors.accent500,
   },
   botText: {
@@ -282,31 +332,31 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginVertical: 10,
     color: Colors.accent500,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   heading2: {
     fontSize: 19,
     fontWeight: "bold",
     marginVertical: 8,
     color: Colors.accent500,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   heading3: {
     fontSize: 17,
     fontWeight: "bold",
     marginVertical: 6,
     color: Colors.accent500,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   bulletList: {
     marginLeft: 8,
     marginRight: 8,
-    width: '100%',
+    width: "100%",
   },
   orderedList: {
     marginLeft: 8,
     marginRight: 8,
-    width: '100%',
+    width: "100%",
   },
   bulletListIcon: {
     fontSize: 14,
@@ -316,10 +366,19 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     marginVertical: 5,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     flexShrink: 1,
     color: Colors.accent500,
-    width: '100%',
+    width: "100%",
+  },
+  streamingIndicator: {
+    marginTop: 5,
+    alignItems: "flex-start",
+  },
+  streamingDots: {
+    fontSize: 16,
+    color: Colors.primary400,
+    opacity: 0.7,
   },
 });
 

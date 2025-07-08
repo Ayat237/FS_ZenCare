@@ -10,7 +10,7 @@
 export const API_CONFIG = {
   // Default development URL (local development)
   // DEV_URL: "http://192.168.1.10:4000",
-  DEV_URL: "http://192.168.1.26:4000",
+  DEV_URL: "http://192.168.1.10:4000",
   // Alternative development URL (different network)
   ALT_DEV_URL: "http://192.168.187.46:4000",
   // Staging URL (for testing before production)
@@ -21,8 +21,8 @@ export const API_CONFIG = {
 
 // Chatbot service configuration
 export const CHATBOT_API_CONFIG = {
-  // Default development URL
-  DEV_URL: "http://192.168.1.10:3000",
+  // Default development URL - updated to match your running backend
+  DEV_URL: "http://192.168.1.10:4000",
   // Staging URL
   STAGING_URL: "https://staging-chatbot.zencare.com", // Replace with actual staging URL when available
   // Production URL

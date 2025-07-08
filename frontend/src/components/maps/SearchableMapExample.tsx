@@ -124,41 +124,29 @@ const SearchableMapExample: React.FC<SearchableMapExampleProps> = ({
     try {
       console.log(`Fetching display name for: ${latitude}, ${longitude}`);
 
-      // Enhanced approach with more robust headers for OpenStreetMap
+      // Use a different approach with headers to avoid Nominatim blocking
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
         {
           headers: {
             // Provide a proper User-Agent as required by Nominatim's terms of use
-            "User-Agent": "ZenCare-Medical-App/1.0 (contact@zencare-app.com)",
+            "User-Agent": "ZenCare-App/1.0",
             "Accept-Language": "en-US,en",
             "Content-Type": "application/json",
-            // Respect Nominatim's usage policy
-            Referer: "https://zencare-app.com",
           },
           method: "GET",
         }
       );
 
-      console.log("OpenStreetMap API request status:", response.status);
+      console.log("API request status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("OpenStreetMap API response received");
-
-        // Extract address components for more meaningful fallback
-        const addressParts = data.address || {};
-        const road = addressParts.road || "";
-        const city =
-          addressParts.city || addressParts.town || addressParts.village || "";
-        const country = addressParts.country || "";
-
-        // Use display_name as primary, but have a backup that's more readable than coordinates
+        console.log("OpenStreetMap API response:", data);
+        console.log("Raw data from OpenStreetMap API:", data);
         const displayName =
           data.display_name ||
-          (road && city
-            ? `${road}, ${city}${country ? ", " + country : ""}`
-            : `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
         console.log("Setting display name to:", displayName);
 
@@ -172,50 +160,22 @@ const SearchableMapExample: React.FC<SearchableMapExampleProps> = ({
       } else {
         console.error(
           "Error response from OpenStreetMap API:",
-          response.status,
-          "Attempting fallback..."
+          response.status
         );
 
-        // Try an alternative approach if we get blocked
+        // Check if it's likely a headers/user-agent issue
         if (response.status === 403 || response.status === 429) {
           console.warn(
-            "API restrictions detected. Using alternate geocoding approach..."
+            "Possible User-Agent restrictions from Nominatim API. Using backup approach..."
           );
 
-          try {
-            // Alternative geocoding service could be implemented here
-            // For now, attempt with a slightly different approach (different endpoint or parameters)
-            const altResponse = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`,
-              {
-                headers: {
-                  "User-Agent": "ZenCare-Medical-App/1.0",
-                  "Accept-Language": "en-US,en",
-                },
-              }
-            );
-
-            if (altResponse.ok) {
-              const altData = await altResponse.json();
-              if (altData.display_name) {
-                console.log("Alternate geocoding successful");
-                setLocation((prev) => ({
-                  ...prev,
-                  displayName: altData.display_name,
-                }));
-                return altData.display_name;
-              }
-            }
-          } catch (altError) {
-            console.error("Alternative geocoding failed:", altError);
-          }
+          // In a production app, you might want to use a proxy server or a different geocoding service
+          // For now, we'll just use our fallback
         }
 
-        // Generate a more descriptive fallback
         const fallback = `Location at ${latitude.toFixed(
           4
         )}, ${longitude.toFixed(4)}`;
-        console.log("Using fallback location name:", fallback);
 
         setLocation((prev) => ({
           ...prev,
@@ -237,11 +197,9 @@ const SearchableMapExample: React.FC<SearchableMapExampleProps> = ({
         );
       }
 
-      // Create a meaningful fallback that's better than just coordinates
       const fallback = `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(
         4
       )}`;
-      console.log("Using fallback location name due to error:", fallback);
 
       setLocation((prev) => ({
         ...prev,
