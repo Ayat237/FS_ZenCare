@@ -132,10 +132,9 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
   });
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
-  // Calculate costs
+  // Calculate costs - only consultation fee (no platform fee)
   const consultationFee = slot?.price ?? 0;
-  const platformFee = consultationFee * 0.05; // 5% platform fee
-  const totalAmount = consultationFee + platformFee;
+  const totalAmount = consultationFee; // Only consultation fee
 
   // Tracking state changes and pending operations
   const pendingTimeouts = useRef<number[]>([]);
@@ -267,128 +266,131 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
     );
   };
 
-  // Handle card input changes with validation
-  const handleCardNumberChange = (text: string) => {
-    if (!isMounted.current) return;
+  // Debounced validation for performance
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
-    // Remove any non-numeric characters
-    const formattedText = text.replace(/\D/g, "");
-
-    // Format with spaces every 4 digits
-    let formatted = "";
-    for (let i = 0; i < formattedText.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += " ";
-      }
-      formatted += formattedText[i];
+  const debouncedValidation = useCallback(() => {
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
     }
 
-    // Limit to 16 digits (19 characters with spaces)
-    if (formattedText.length <= 16) {
-      // Direct setState to avoid multiple renders and lag
-      if (Platform.OS === "ios") {
+    validationTimeoutRef.current = setTimeout(() => {
+      setCardDetails((prev) => ({
+        ...prev,
+        isValid: validateCardDetails(prev),
+      }));
+    }, 300); // Validate 300ms after user stops typing
+  }, []);
+
+  // Cleanup validation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle card input changes - optimized for smooth typing
+  const handleCardNumberChange = useCallback(
+    (text: string) => {
+      // Remove any non-numeric characters
+      const formattedText = text.replace(/\D/g, "");
+
+      // Format with spaces every 4 digits
+      let formatted = "";
+      for (let i = 0; i < formattedText.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+          formatted += " ";
+        }
+        formatted += formattedText[i];
+      }
+
+      // Limit to 16 digits (19 characters with spaces)
+      if (formattedText.length <= 16) {
+        // Update immediately without validation for smooth typing
         setCardDetails((prev) => ({
           ...prev,
           number: formatted,
-          isValid: validateCardDetails({ ...prev, number: formatted }),
+          // Skip validation during typing for performance
+          isValid: prev.isValid,
         }));
-      } else {
-        // For Android, use the safe approach
-        safeSetState(() =>
-          setCardDetails((prev) => ({
-            ...prev,
-            number: formatted,
-            isValid: validateCardDetails({ ...prev, number: formatted }),
-          }))
-        );
+
+        // Trigger debounced validation
+        debouncedValidation();
       }
-    }
-  };
+    },
+    [debouncedValidation]
+  );
 
-  const handleCardExpiryChange = (text: string) => {
-    if (!isMounted.current) return;
+  const handleCardExpiryChange = useCallback(
+    (text: string) => {
+      // Remove any non-numeric characters
+      const formattedText = text.replace(/\D/g, "");
 
-    // Remove any non-numeric characters
-    const formattedText = text.replace(/\D/g, "");
+      // Format as MM/YY
+      let formatted = formattedText;
+      if (formattedText.length > 2) {
+        formatted =
+          formattedText.substring(0, 2) + "/" + formattedText.substring(2);
+      }
 
-    // Format as MM/YY
-    let formatted = formattedText;
-    if (formattedText.length > 2) {
-      formatted =
-        formattedText.substring(0, 2) + "/" + formattedText.substring(2);
-    }
-
-    // Limit to 4 digits (5 characters with slash)
-    if (formattedText.length <= 4) {
-      // Direct setState to avoid multiple renders and lag
-      if (Platform.OS === "ios") {
+      // Limit to 4 digits (5 characters with slash)
+      if (formattedText.length <= 4) {
+        // Update immediately without validation for smooth typing
         setCardDetails((prev) => ({
           ...prev,
           expiry: formatted,
-          isValid: validateCardDetails({ ...prev, expiry: formatted }),
+          // Skip validation during typing for performance
+          isValid: prev.isValid,
         }));
-      } else {
-        // For Android, use the safe approach
-        safeSetState(() =>
-          setCardDetails((prev) => ({
-            ...prev,
-            expiry: formatted,
-            isValid: validateCardDetails({ ...prev, expiry: formatted }),
-          }))
-        );
+
+        // Trigger debounced validation
+        debouncedValidation();
       }
-    }
-  };
+    },
+    [debouncedValidation]
+  );
 
-  const handleCardCVCChange = (text: string) => {
-    if (!isMounted.current) return;
+  const handleCardCVCChange = useCallback(
+    (text: string) => {
+      // Remove any non-numeric characters
+      const formattedText = text.replace(/\D/g, "");
 
-    // Remove any non-numeric characters
-    const formattedText = text.replace(/\D/g, "");
-
-    // Limit to 3-4 digits
-    if (formattedText.length <= 4) {
-      // Direct setState to avoid multiple renders and lag
-      if (Platform.OS === "ios") {
+      // Limit to 3-4 digits
+      if (formattedText.length <= 4) {
+        // Update immediately without validation for smooth typing
         setCardDetails((prev) => ({
           ...prev,
           cvc: formattedText,
-          isValid: validateCardDetails({ ...prev, cvc: formattedText }),
+          // Skip validation during typing for performance
+          isValid: prev.isValid,
         }));
-      } else {
-        // For Android, use the safe approach
-        safeSetState(() =>
-          setCardDetails((prev) => ({
-            ...prev,
-            cvc: formattedText,
-            isValid: validateCardDetails({ ...prev, cvc: formattedText }),
-          }))
-        );
+
+        // Trigger debounced validation
+        debouncedValidation();
       }
-    }
-  };
+    },
+    [debouncedValidation]
+  );
 
-  const handleCardNameChange = (text: string) => {
-    if (!isMounted.current) return;
-
-    // Direct setState to avoid multiple renders and lag
-    if (Platform.OS === "ios") {
+  const handleCardNameChange = useCallback(
+    (text: string) => {
+      // Update immediately without validation for smooth typing
       setCardDetails((prev) => ({
         ...prev,
         name: text,
-        isValid: validateCardDetails({ ...prev, name: text }),
+        // Skip validation during typing for performance
+        isValid: prev.isValid,
       }));
-    } else {
-      // For Android, use the safe approach
-      safeSetState(() =>
-        setCardDetails((prev) => ({
-          ...prev,
-          name: text,
-          isValid: validateCardDetails({ ...prev, name: text }),
-        }))
-      );
-    }
-  };
+
+      // Trigger debounced validation
+      debouncedValidation();
+    },
+    [debouncedValidation]
+  );
 
   // Validate all card details - optimized for performance
   const validateCardDetails = (details: CardDetails): boolean => {
@@ -800,25 +802,9 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
               <Text style={styles.sectionTitle}>Payment Summary</Text>
               <View style={styles.paymentCard}>
                 <View style={styles.paymentRow}>
-                  <Text style={styles.paymentLabel}>Consultation Fee</Text>
-                  <Text style={styles.paymentValue}>
-                    EGP {consultationFee.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={styles.paymentRow}>
-                  <Text style={styles.paymentLabel}>Platform Fee</Text>
-                  <Text style={styles.paymentValue}>
-                    EGP {platformFee.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={styles.paymentDivider} />
-
-                <View style={styles.paymentRow}>
-                  <Text style={styles.paymentTotalLabel}>Total Amount</Text>
+                  <Text style={styles.paymentTotalLabel}>Consultation Fee</Text>
                   <Text style={styles.paymentTotalValue}>
-                    EGP {totalAmount.toFixed(2)}
+                    EGP {consultationFee.toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -853,7 +839,7 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                   </View>
                 </View>
 
-                {/* Card Number Input - Simplified for better performance */}
+                {/* Card Number Input - Optimized for performance */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Card Number</Text>
                   <TextInput
@@ -864,6 +850,15 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                     value={cardDetails.number}
                     onChangeText={handleCardNumberChange}
                     maxLength={19} // 16 digits + 3 spaces
+                    returnKeyType="next"
+                    autoComplete="cc-number"
+                    textContentType="creditCardNumber"
+                    importantForAutofill="yes"
+                    enablesReturnKeyAutomatically={false}
+                    clearButtonMode="never"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    contextMenuHidden={true}
                   />
                 </View>
 
@@ -881,6 +876,12 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                       value={cardDetails.expiry}
                       onChangeText={handleCardExpiryChange}
                       maxLength={5} // MM/YY
+                      returnKeyType="next"
+                      autoComplete="cc-exp"
+                      textContentType="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      contextMenuHidden={true}
                     />
                   </View>
 
@@ -894,6 +895,13 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                       value={cardDetails.cvc}
                       onChangeText={handleCardCVCChange}
                       maxLength={4} // Some cards have 4-digit CVC
+                      returnKeyType="next"
+                      autoComplete="cc-csc"
+                      textContentType="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      contextMenuHidden={true}
+                      secureTextEntry={true}
                     />
                   </View>
                 </View>
@@ -908,6 +916,12 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                     value={cardDetails.name}
                     onChangeText={handleCardNameChange}
                     autoCapitalize="words"
+                    returnKeyType="done"
+                    autoComplete="cc-name"
+                    textContentType="name"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    contextMenuHidden={false}
                   />
                 </View>
 
@@ -925,15 +939,6 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
                     </View>
                   </View>
                 )}
-
-                {/* Test Card Notice - Static to avoid lag */}
-                <View style={styles.testCardNotice}>
-                  <Icon name="information-outline" size={14} color="#635bff" />
-                  <Text style={styles.testCardText}>
-                    Use test card 4242 4242 4242 4242 with any future date and
-                    CVC.
-                  </Text>
-                </View>
 
                 {/* Modern Security Notice */}
                 <View style={styles.modernSecurityNotice}>
@@ -964,20 +969,21 @@ const BookAppointmentScreen: React.FC<DrawerScreenProps<"BookAppointment">> = ({
         <TouchableOpacity
           style={[
             styles.bookButton,
-            paymentProcessing && styles.bookButtonDisabled,
+            (paymentProcessing || !cardDetails.isValid) &&
+              styles.bookButtonDisabled,
           ]}
           onPress={handleBookAppointment}
-          activeOpacity={0.6}
-          disabled={paymentProcessing}
+          activeOpacity={0.7}
+          disabled={paymentProcessing || !cardDetails.isValid}
         >
           {paymentProcessing ? (
-            <ActivityIndicator size="small" color={Colors.white} />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <>
-              <Icon name="calendar-plus" size={22} color={Colors.white} />
+              <Icon name="calendar-plus" size={18} color="#FFFFFF" />
               <Text style={styles.bookButtonText}>
                 {!cardDetails.isValid
-                  ? "Complete Card Details to Continue"
+                  ? "Complete Card Details"
                   : `Confirm Booking • EGP ${totalAmount.toFixed(2)}`}
               </Text>
             </>
@@ -1467,34 +1473,35 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   bookButton: {
-    backgroundColor: Colors.primary500,
+    backgroundColor: "#007AFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    elevation: 8,
+    elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    height: 60,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    height: 56,
     width: "100%",
     borderWidth: 1,
-    borderColor: Colors.primary600,
+    borderColor: "#0056CC",
   },
   bookButtonDisabled: {
-    backgroundColor: Colors.gray400,
+    backgroundColor: "#9CA3AF",
+    borderColor: "#6B7280",
+    elevation: 2,
+    shadowOpacity: 0.1,
   },
   bookButtonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: "bold",
-    marginLeft: 10,
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
     textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.2)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 });
 
