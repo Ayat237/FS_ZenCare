@@ -1,10 +1,5 @@
 import { Router } from "express";
-import {
-  initializePayment,
-  completeBooking,
-  cancelAppointment,
-  getPaymentStatus,
-} from "./appointment-payment.controller.js";
+import * as appointmentController from "./appointment-payment.controller.js";
 import {
   initializePaymentSchema,
   completeBookingSchema,
@@ -14,44 +9,46 @@ import {
 import { validation } from "../../middlewares/validation.middleware.js";
 import { authenticattion } from "../../middlewares/authentication.middleware.js";
 import { authorization } from "../../middlewares/authorization.middleware.js";
-import { systemRoles } from "../../utils/system-roles.utils.js";
-
-const router = Router();
+import { possibleRoles} from "../../utils/system-roles.utils.js";
+const appointmentPaymentRouter = Router();
 
 // Initialize payment for appointment booking (patients only)
-router.post(
+appointmentPaymentRouter.post(
   "/initialize-payment",
   authenticattion(),
-  authorization([systemRoles.PATIENT]),
+  authorization(possibleRoles.PATIENT),
   validation(initializePaymentSchema),
-  initializePayment
+  appointmentController.initializePayment
 );
 
 // Complete appointment booking after successful payment (patients only)
-router.post(
+appointmentPaymentRouter.post(
   "/complete-booking",
   authenticattion(),
-  authorization([systemRoles.PATIENT]),
-  validation(completeBookingSchema),
-  completeBooking
+  authorization(possibleRoles.PATIENT),
+  //validation(completeBookingSchema),
+  appointmentController.completeBooking
 );
 
 // Cancel appointment and process refund (appointment participants and admins)
-router.post(
+appointmentPaymentRouter.post(
   "/:appointmentId/cancel",
   authenticattion(),
-  authorization([systemRoles.PATIENT, systemRoles.DOCTOR, systemRoles.ADMIN]),
+  authorization([possibleRoles.PATIENT, possibleRoles.DOCTOR, possibleRoles.ADMIN]),
   validation(cancelAppointmentSchema),
-  cancelAppointment
+  appointmentController.cancelAppointment
 );
 
 // Get payment status for an appointment (appointment participants and admins)
-router.get(
+appointmentPaymentRouter.get(
   "/:appointmentId/payment-status",
   authenticattion(),
-  authorization([systemRoles.PATIENT, systemRoles.DOCTOR, systemRoles.ADMIN]),
+  authorization([possibleRoles.PATIENT, possibleRoles.DOCTOR, possibleRoles.ADMIN]),
   validation(getPaymentStatusSchema),
-  getPaymentStatus
+  appointmentController.getPaymentStatus
 );
 
-export default router; 
+// Stripe webhook endpoint (no authentication required)
+//appointmentPaymentRouter.post("/webhook/stripe", express.raw({ type: 'application/json' }), router.stripeWebhookRouter);
+
+  export { appointmentPaymentRouter }; 
