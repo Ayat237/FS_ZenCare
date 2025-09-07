@@ -33,7 +33,7 @@ const userSchema = new Schema(
       required: true,
     },
     mobilePhone: {
-      type: [String],
+      type: String,
       required: true,
     },
     role: {

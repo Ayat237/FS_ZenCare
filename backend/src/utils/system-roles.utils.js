@@ -5,7 +5,7 @@ export const systemRoles= {
 
 const {DOCTOR, PATIENT,} = systemRoles;
 export const possibleRoles = {
-    DOCTOR : PATIENT,
+    DOCTOR : DOCTOR,
     PATIENT : PATIENT,
     DOCTOR_PATIENT_ROLE : [DOCTOR, PATIENT]
 }
