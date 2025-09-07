@@ -4,7 +4,7 @@ import path from "path";
 import { DateTime } from "luxon";
 import { nanoid } from "nanoid";
 import extensions from "../utils/file-extenstions.utils.js";
-import { ErrorHandlerCalss } from "../utils/index.js";
+import { ErrorHandlerClass } from "../utils/index.js";
 
 
 
@@ -45,7 +45,7 @@ export const multerMiddleware = ({
     }
 
     cb(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,
@@ -58,17 +58,18 @@ export const multerMiddleware = ({
   return multer({ fileFilter, storage });
 };
 
-export const multerHost = ({ allowedExtensions = extensions.Images }={}) => {
+export const multerHost = ({ allowedExtensions = extensions.Images.concat(extensions.Documents) }={}) => {
   const storage = multer.diskStorage({});
 
   // fileFilter
   const fileFilter = (req, file, cb) => {
+
     if (allowedExtensions.includes(file.mimetype)) {
       return cb(null, true);
     }
 
     cb(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,

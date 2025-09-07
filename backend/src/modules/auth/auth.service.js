@@ -53,8 +53,8 @@ export const completeLogin = async (user, selectedRole, selectedId, res) => {
   } else if (selectedRole === possibleRoles.DOCTOR) {
     // Assuming a Doctor model exists; adjust accordingly
     //TODO: Replace with actual Doctor model
-    // const doctor = await doctorModel.findById(selectedId);
-    // profileImage = doctor?.profileImage?.URL?.secure_url;
+    const doctor = await doctorModel.findById(selectedId);
+    profileImage = doctor?.profileImage?.URL?.secure_url;
   }
 
   // 7. Send response
@@ -66,8 +66,11 @@ export const completeLogin = async (user, selectedRole, selectedId, res) => {
       refreshToken,
       user: {
         id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
         userName: user.userName,
         email: user.email,
+        mobilePhone: user.mobilePhone,
         role: selectedRole,
         activeRole: selectedRole,
         profileImage,

@@ -1,8 +1,7 @@
-import mongoose, { Schema, Model, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
 import { logger, Provider, systemRoles } from "../../src/utils/index.js";
-import MongooseDatabase from "../mongoDatabase.js";
-import { hash, hashSync } from "bcryptjs";
+import { hashSync } from "bcryptjs";
 
 const userSchema = new Schema(
   {
@@ -33,7 +32,7 @@ const userSchema = new Schema(
       required: true,
     },
     mobilePhone: {
-      type: [String],
+      type: String,
       required: true,
     },
     role: {
@@ -96,6 +95,21 @@ class UserModel extends BaseModel {
         error: error.message,
         stack: error.stack,
         email,
+      });
+      throw error;
+    }
+  }
+
+  async findByEmailOrUserName(email, userName) {
+    try {
+      const result = await this.database.findByEmailOrUserName(email, userName);
+      return result;
+    } catch (error) {
+      logger.error("Failed to find user by email or user name in repository", {
+        error: error.message,
+        stack: error.stack,
+        email,
+        userName,
       });
       throw error;
     }
