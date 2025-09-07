@@ -4,26 +4,21 @@ import path from "path";
 import { DateTime } from "luxon";
 import { nanoid } from "nanoid";
 import extensions from "../utils/file-extenstions.utils.js";
-import { ErrorHandlerCalss } from "../utils/index.js";
-
-
+import { ErrorHandlerClass } from "../utils/index.js";
 
 export const multerMiddleware = ({
   filePath = "general",
   allowedExtensions = extensions.Images,
 }) => {
-  // disk storage engine
-  // memory storage engine
-  const destinationPath = path.resolve(`src/uploads/${filePath}`);
-  // check if the folder exists
-  if (!fs.existsSync(destinationPath)) {
-    // create the folder
-    fs.mkdirSync(destinationPath, { recursive: true });
-  }
   const storage = multer.diskStorage({
     // destination
     destination: (req, file, cb) => {
-      cb(null, destinationPath);
+      // Create the upload directory if it doesn't exist
+      const uploadDir = path.join(process.cwd(), "uploads", filePath);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
     },
     // filename
     filename: (req, file, cb) => {
@@ -45,11 +40,11 @@ export const multerMiddleware = ({
     }
 
     cb(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,
-        'Error in multer middleware'
+        "Error in multer middleware"
       ),
       false
     );
@@ -58,7 +53,9 @@ export const multerMiddleware = ({
   return multer({ fileFilter, storage });
 };
 
-export const multerHost = ({ allowedExtensions = extensions.Images }={}) => {
+export const multerHost = ({
+  allowedExtensions = extensions.Images.concat(extensions.Documents),
+} = {}) => {
   const storage = multer.diskStorage({});
 
   // fileFilter
@@ -68,11 +65,11 @@ export const multerHost = ({ allowedExtensions = extensions.Images }={}) => {
     }
 
     cb(
-      new ErrorHandlerCalss(
+      new ErrorHandlerClass(
         `Invalid file type, only ${allowedExtensions} images are allowed`,
         400,
         `Multer error`,
-        'Error in multer host middleware'
+        "Error in multer host middleware"
       ),
       false
     );

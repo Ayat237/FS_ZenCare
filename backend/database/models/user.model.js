@@ -1,8 +1,8 @@
-import mongoose, { Schema, Model, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
 import { logger, Provider, systemRoles } from "../../src/utils/index.js";
-import MongooseDatabase from "../mongoDatabase.js";
-import { hash, hashSync } from "bcryptjs";
+import { hashSync } from "bcryptjs";
+import { Gender } from "../../src/utils/enums.utils.js";
 
 const userSchema = new Schema(
   {
@@ -33,7 +33,7 @@ const userSchema = new Schema(
       required: true,
     },
     mobilePhone: {
-      type: [String],
+      type: String,
       required: true,
     },
     role: {
@@ -69,6 +69,12 @@ const userSchema = new Schema(
       unique: true,
       sparse: true,
     }, // sparse allows null values to be non-unique
+    gender: {
+      type: String,
+      enum: Object.values(Gender),
+      default: Gender.OTHER,
+      required: true,
+    },
   },
   { timestamps: true }
 );
@@ -96,6 +102,21 @@ class UserModel extends BaseModel {
         error: error.message,
         stack: error.stack,
         email,
+      });
+      throw error;
+    }
+  }
+
+  async findByEmailOrUserName(email, userName) {
+    try {
+      const result = await this.database.findByEmailOrUserName(email, userName);
+      return result;
+    } catch (error) {
+      logger.error("Failed to find user by email or user name in repository", {
+        error: error.message,
+        stack: error.stack,
+        email,
+        userName,
       });
       throw error;
     }

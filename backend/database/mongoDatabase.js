@@ -1,16 +1,37 @@
 import mongoose from "mongoose";
 import IDatabase from "./interfaces/IDatabase.js";
-import { logger } from "../src/utils/index.js";
-import { Medication, Patient, User } from "./models/index.js";
+import {
+  User,
+  Patient,
+  Doctor,
+  Address,
+  MedicalHistory,
+  Medication,
+  Prescription,
+  Drug,
+  Slot,
+  Appointment,
+} from "./models/index.js";
+import { logger } from "../src/utils/logger.utils.js";
 
 class MongooseDatabase extends IDatabase {
   constructor(uri) {
     super();
     this.uri = uri;
     this.model = {
-      patient: Patient,
       user: User,
+      patient: Patient,
+      doctor: Doctor,
+      Doctor: Doctor,
       medication: Medication,
+      prescription: Prescription,
+      medicalHistory: MedicalHistory,
+      drug: Drug,
+      address: Address,
+      slot: Slot,
+      Slot: Slot,
+      appointment: Appointment,
+      Appointment: Appointment,
     };
   }
 
@@ -57,7 +78,6 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-
   async updateById(collection, id, data) {
     try {
       const model = this.model[collection];
@@ -95,18 +115,66 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findOne(collection, query = {}) {
+  async findDocument(collection, query = {}, options = {}) {
     try {
       const model = this.model[collection];
       if (!model) {
         throw new Error(`Model for collection ${collection} not found`);
       }
-      const result = await model.findOne(query);
-     // if (!result) throw new Error("Document not found");
-      logger.debug(`Found one document in ${collection}`, { query });
+
+      // Build the query starting with findOne
+      let queryBuilder = model.find(query);
+
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+
+      const result = await queryBuilder.exec();
+
+      logger.debug(`Found documents in ${collection}`, { query, options });
+
       return result;
     } catch (error) {
-      logger.error(`Failed to find one document in ${this.model.modelName}`, {
+      logger.error(`Failed to find documents in ${this.model.modelName}`, {
         error: error.message,
         stack: error.stack,
         query,
@@ -114,7 +182,75 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-  async findById(collection, id,options={}) {
+  async findOne(collection, query = {}, options = {}) {
+    try {
+      const model = this.model[collection];
+      if (!model) {
+        throw new Error(`Model for collection ${collection} not found`);
+      }
+
+      // Build the query starting with findOne
+      let queryBuilder = model.findOne(query);
+
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+
+      const result = await queryBuilder.exec();
+
+      logger.debug(`Found one document in ${collection}`, { query, options });
+
+      return result;
+    } catch (error) {
+      logger.error(`Failed to find one document in ${this.model.modelName}`, {
+        error: error.message,
+        stack: error.stack,
+        query,
+        options,
+      });
+      throw error;
+    }
+  }
+  async findById(collection, id, options = {}) {
     try {
       const model = this.model[collection];
       let query = model.findById(id);
@@ -160,12 +296,9 @@ class MongooseDatabase extends IDatabase {
       }
 
       const result = await query.exec();
-      console.log(result);
-      
-      if (!result) throw new Error("Document not found");
 
       logger.debug(`Found one document in ${collection}`, { id });
-      
+
       return result;
     } catch (error) {
       logger.error(`Failed to find one document in ${this.model.modelName}`, {
@@ -177,9 +310,89 @@ class MongooseDatabase extends IDatabase {
     }
   }
 
+  async deleteManyDocuments(collection, query = {}) {
+    try {
+      const model = this.model[collection];
+      const result = await model.deleteMany(query);
+      logger.info(`Deleted ${result.deletedCount} documents in ${collection}`);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async findOneAndDeleteDocument(collection, query = {}, options = {}) {
+    try {
+      const model = this.model[collection];
+      // Build the query starting with findOneAndDelete
+      let queryBuilder = model.findOneAndDelete(query);
+
+      // Apply query options dynamically
+      if (options.select) {
+        queryBuilder = queryBuilder.select(options.select);
+      }
+
+      if (options.populate) {
+        queryBuilder = queryBuilder.populate(options.populate);
+      }
+
+      if (options.sort) {
+        queryBuilder = queryBuilder.sort(options.sort);
+      }
+
+      if (options.limit) {
+        queryBuilder = queryBuilder.limit(options.limit);
+      }
+
+      if (options.skip) {
+        queryBuilder = queryBuilder.skip(options.skip);
+      }
+      if (options.lean) {
+        queryBuilder = queryBuilder.lean();
+      }
+      if (options.conditions) {
+        // Add additional conditions to the query
+        queryBuilder = queryBuilder.setQuery({
+          ...queryBuilder.getQuery(),
+          ...options.conditions,
+        });
+      }
+
+      if (options.fields) {
+        // Alternative to `select` for specific field projections
+        queryBuilder = queryBuilder.select(options.fields);
+      }
+
+      if (options.execOptions) {
+        // Pass additional execution options (e.g., collation, session)
+        queryBuilder = queryBuilder.setOptions(options.execOptions);
+      }
+
+      const result = await queryBuilder.exec();
+
+      logger.debug(`Found one document in ${collection}`, { query, options });
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+  async saveDocument(collection, document) {
+    try {
+      const model = this.model[collection];
+      const modelInstance =
+        document instanceof model ? document : new model(document);
+
+      // Save the document
+      return await modelInstance.save();
+    } catch (error) {
+      throw error;
+    }
+  }
   async findByEmail(email) {
     try {
       const user = await this.model.user.findOne({ email });
+      logger.info("User found by email:", { user });
       return user;
     } catch (error) {
       logger.error("Error in finding user by email:", {
@@ -189,17 +402,18 @@ class MongooseDatabase extends IDatabase {
       throw error;
     }
   }
-
-  async saveDocument(collection, document) {
+  async findByEmailOrUserName(email, userName) {
     try {
-
-      const model = this.model[collection];
-      const modelInstance =
-      document instanceof model ? document : new model(document); 
-      
-       // Save the document
-       return  await modelInstance.save();;
+      const user = await this.model.user.findOne({
+        $or: [{ email }, { userName }],
+      });
+      logger.info("User found by email or user name:", { user });
+      return user;
     } catch (error) {
+      logger.error("Error in finding user by email or user name:", {
+        error: error.message,
+        stack: error.stack,
+      });
       throw error;
     }
   }

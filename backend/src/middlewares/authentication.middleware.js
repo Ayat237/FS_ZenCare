@@ -1,24 +1,20 @@
 import jwt from "jsonwebtoken";
-import { ErrorHandlerCalss, logger } from "../utils/index.js";
+import { ErrorHandlerClass, logger } from "../utils/index.js";
 import dotenv from "dotenv";
 import { UserModel } from "../../database/models/index.js";
 import database from "../../database/databaseConnection.js";
 import redisClient from "../utils/redis.utils.js";
 
-import { config } from "dotenv";
-import path from "path";
-config  ({ path: path.resolve("config\.dev.env") });
-
-//dotenv.config();
+dotenv.config();
 const userModel = new UserModel(database);
 
-export const  authenticattion = () => {
+export const authenticattion = () => {
   return async (req, res, next) => {
     try {
       const { token } = req.headers;
       if (!token) {
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "No token provided or invalid header format",
             401,
             "Authentication Error",
@@ -29,7 +25,7 @@ export const  authenticattion = () => {
 
       if (!token.startsWith("Bearer_")) {
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "Invalid header format",
             401,
             "Authentication Error",
@@ -41,7 +37,7 @@ export const  authenticattion = () => {
       const originalToken = token.split("_")[1];
       if (!originalToken) {
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "No token provided",
             401,
             "Authentication Error",
@@ -50,15 +46,14 @@ export const  authenticattion = () => {
         );
       }
 
-      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET; 
-      console.log("loginSecretKey",loginSecretKey);
+      const loginSecretKey = process.env.ACCESS_TOKEN_SECRET;
       let decodedToken;
       try {
-       decodedToken = jwt.verify(originalToken,loginSecretKey);
+        decodedToken = jwt.verify(originalToken, loginSecretKey);
       } catch (jwtError) {
         if (jwtError.name === "TokenExpiredError") {
           return next(
-            new ErrorHandlerCalss(
+            new ErrorHandlerClass(
               "Token has expired",
               401,
               "Authentication Error",
@@ -67,7 +62,7 @@ export const  authenticattion = () => {
           );
         }
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "Invalid token",
             401,
             "Authentication Error",
@@ -86,7 +81,7 @@ export const  authenticattion = () => {
       );
       if (isBlacklisted) {
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "Token is blacklisted",
             401,
             "Authentication Error",
@@ -94,17 +89,15 @@ export const  authenticattion = () => {
           )
         );
       }
-      
-      
+
       const user = await userModel.findById(decodedToken.userId, {
         select: "-password",
         populate: "patientID doctorID",
       });
-     
-      
+
       if (!user) {
         return next(
-          new ErrorHandlerCalss(
+          new ErrorHandlerClass(
             "User not found",
             404,
             "Authentication Error",
@@ -119,7 +112,7 @@ export const  authenticattion = () => {
     } catch (error) {
       logger.error("Authentication middleware error", error);
       next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           error.message,
           500,
           "Authentication Error",

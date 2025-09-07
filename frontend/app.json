@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "ZenCare",
+    "slug": "ZenCare",
+    "version": "1.0.0",
+    "newArchEnabled": true,
+    "orientation": "portrait",
+    "icon": "./src/assets/images/ZenCare.png",
+    "userInterfaceStyle": "light",
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    },
+    "splash": {
+      "image": "./src/assets/images/ZenCare.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ZenCare to use your location."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show your position on the map."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/ZenCare.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.loaytamer10.ZenCare",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "web": {
+      "favicon": "./src/assets/images/ZenCare.png"
+    },
+    "owner": "loaytamer10"
+  }
+}

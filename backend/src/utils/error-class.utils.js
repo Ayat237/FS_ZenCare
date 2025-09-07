@@ -1,7 +1,7 @@
 
 
 
-export class ErrorHandlerCalss{
+export class ErrorHandlerClass{
     constructor(message,stausCode,stack,position,data){
         this.message = message;
         this.stausCode = stausCode;

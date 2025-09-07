@@ -1,11 +1,18 @@
-import { ErrorHandlerCalss } from "../utils/index.js";
+import { ErrorHandlerClass } from "../utils/index.js";
 
 export const authorization = (allowedRules) => {
   return async (req, res, next) => {
     try {
       const user = req.authUser; // logedin user
-      if (!allowedRules.includes(user.role)) {
-        return next (new ErrorHandlerCalss(
+      // Check if user has at least one allowed role
+      const hasAllowedRole = Array.isArray(allowedRules) 
+        ? user.role.some(role => allowedRules.includes(role))
+        : user.role.includes(allowedRules);
+      
+      if (!hasAllowedRole) {
+        console.log("user", user.role);
+        console.log("allowedRules", allowedRules);
+        return next (new ErrorHandlerClass(
           "Unauthorized Access",
           403,
           "You are not authorized to perform this action",
@@ -15,7 +22,7 @@ export const authorization = (allowedRules) => {
       next();
     } catch (error) {
       return next(
-        new ErrorHandlerCalss(
+        new ErrorHandlerClass(
           error.message,
           500,
           error.stack,
