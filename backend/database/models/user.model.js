@@ -1,8 +1,7 @@
-import mongoose, { Schema, Model, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import BaseModel from "./base.model.js";
 import { logger, Provider, systemRoles } from "../../src/utils/index.js";
-import MongooseDatabase from "../mongoDatabase.js";
-import { hash, hashSync } from "bcryptjs";
+import { hashSync } from "bcryptjs";
 
 const userSchema = new Schema(
   {
@@ -33,7 +32,7 @@ const userSchema = new Schema(
       required: true,
     },
     mobilePhone: {
-      type: [String],
+      type: String,
       required: true,
     },
     role: {
