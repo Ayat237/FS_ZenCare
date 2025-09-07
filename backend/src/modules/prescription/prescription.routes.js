@@ -1,0 +1,44 @@
+import { Router } from "express";
+import * as prescriptionController from "./prescription.controller.js";
+import { authenticattion, authorization, errorHandling, validation } from "../../middlewares/index.js";
+import { possibleRoles } from "../../utils/system-roles.utils.js";
+import * as VSchema from "./prescription.validation.js";
+
+
+const prescriptionRouter = Router();
+
+prescriptionRouter.post(
+    "/create-prescription",
+    validation(VSchema.createPrescriptionSchema),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.createPrescription)
+)
+
+
+prescriptionRouter.post(
+    "/accepted-prescription",
+    errorHandling(validation(VSchema.acceptAndAddPrescriptionSchema)),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.acceptAndAddPrescription)
+)
+
+
+
+prescriptionRouter.delete(
+    "/delete-prescription/:prescriptionId",
+    errorHandling(validation(VSchema.deletePrescriptionSchema)),
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.deletePrescription)
+)
+
+
+prescriptionRouter.get(
+    "/prescriptions-history",
+    authenticattion(),
+    authorization(possibleRoles.PATIENT),
+    errorHandling(prescriptionController.historicalPrescriptions)
+)
+export { prescriptionRouter };

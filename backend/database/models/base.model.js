@@ -20,16 +20,23 @@ class BaseModel {
     return await this.database.deleteById(this.collection,id);
   }
 
-  async find(query = {}) {
-    return await this.database.findDocument(this.collection, query);
+  async find(query = {}, options = {}) {
+    return await this.database.findDocument(this.collection, query,options);
   }
 
   async findById(id,options={}) {
     return await this.database.findById(this.collection, id,options);
   }
 
-  async findOne(query = {}) {
-    return await this.database.findOne(this.collection,query);
+  async findOne(query = {},options = {}) {
+    return await this.database.findOne(this.collection,query,options);
+  }
+
+  async findOneAndDelete(query = {},options = {}) {
+    return await this.database.findOneAndDeleteDocument(this.collection,query,options);
+  }
+  async deleteMany(query = {}) {
+    return await this.database.deleteManyDocuments(this.collection,query);
   }
 
   async save(document) {

@@ -22,7 +22,7 @@ class IDatabase {
     throw new Error("Method 'deleteById' must be implemented");
   }
 
-  async find(model,query = {}) {
+  async find(model,query = {},options = {}) {
     throw new Error("Method 'find' must be implemented");
   }
 
@@ -30,8 +30,16 @@ class IDatabase {
     throw new Error("Method 'findById' must be implemented");
   }
 
-  async findOne(model,query = {}) {
+  async findOne(model,query = {},options = {}) {
     throw new Error("Method 'findOne' must be implemented");
+  }
+
+  async findOneAndDelete(model,query = {},options = {}) {
+    throw new Error("Method 'findOneAndDelete' must be implemented");
+  }
+
+  async deleteMany(model,query = {}) {
+    throw new Error("Method 'deleteMany' must be implemented");
   }
   async save(model, data) {
     throw new Error("Method 'save' must be implemented");

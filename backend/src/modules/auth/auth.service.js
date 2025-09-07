@@ -66,8 +66,11 @@ export const completeLogin = async (user, selectedRole, selectedId, res) => {
       refreshToken,
       user: {
         id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
         userName: user.userName,
         email: user.email,
+        mobilePhone: user.mobilePhone,
         role: selectedRole,
         activeRole: selectedRole,
         profileImage,
